@@ -9,12 +9,6 @@ public class CombatLoop : MonoBehaviour
     [SerializeField] private GroundScroller groundScroller;
     [SerializeField] private BackdropScroller backdropScroller;
 
-    private const string RunningStateName = "MoveFWD_Normal_InPlace_SwordAndShield";
-    private const string VictoryStateName = "Victory_Battle_SwordAndShield";
-    private const string VictoryTriggerParam = "Victory";
-    private const string DieStateName = "Die01_SwordAndShield";
-    private const string DieTriggerParam = "Die";
-
     private Monster currentMonster;
     private float tickTimer;
     private bool hasOpenedOnCurrent;
@@ -149,12 +143,12 @@ public class CombatLoop : MonoBehaviour
         PushSuspend();
 
         suppressMovement = true;
-        animator.SetBool("IsMoving", false);
-        animator.SetTrigger(VictoryTriggerParam);
+        animator.SetBool(AnimParams.IsMoving, false);
+        animator.SetTrigger(AnimParams.Victory);
 
         const float SafetyTimeout = 5f;
         float elapsed = 0f;
-        while (elapsed < SafetyTimeout && !animator.GetCurrentAnimatorStateInfo(0).IsName(VictoryStateName))
+        while (elapsed < SafetyTimeout && !animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Victory))
         {
             elapsed += Time.deltaTime;
             yield return null;
@@ -162,7 +156,7 @@ public class CombatLoop : MonoBehaviour
 
         elapsed = 0f;
         while (elapsed < SafetyTimeout &&
-               (animator.IsInTransition(0) || animator.GetCurrentAnimatorStateInfo(0).IsName(VictoryStateName)))
+               (animator.IsInTransition(0) || animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Victory)))
         {
             elapsed += Time.deltaTime;
             yield return null;
@@ -184,11 +178,11 @@ public class CombatLoop : MonoBehaviour
         // 발동할 준비가 된 궁극기는 이 트리거 위에도 똑같이 hard-Play()로 덮어써버린다.
         PushSuspend();
 
-        animator.SetTrigger(DieTriggerParam);
+        animator.SetTrigger(AnimParams.Die);
 
         const float SafetyTimeout = 5f;
         float elapsed = 0f;
-        while (elapsed < SafetyTimeout && !animator.GetCurrentAnimatorStateInfo(0).IsName(DieStateName))
+        while (elapsed < SafetyTimeout && !animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Die))
         {
             elapsed += Time.deltaTime;
             yield return null;
@@ -196,7 +190,7 @@ public class CombatLoop : MonoBehaviour
 
         elapsed = 0f;
         while (elapsed < SafetyTimeout &&
-               (animator.IsInTransition(0) || animator.GetCurrentAnimatorStateInfo(0).IsName(DieStateName)))
+               (animator.IsInTransition(0) || animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Die)))
         {
             elapsed += Time.deltaTime;
             yield return null;
@@ -220,7 +214,7 @@ public class CombatLoop : MonoBehaviour
         // 단순히 존재하는 것(아직 화면 밖에서 걸어 들어오는 중)만으로는 멈출 이유가
         // 안 되고, 도착해서 타격을 주고받을 준비가 된 몬스터만이 그 이유가 된다.
         bool shouldBeMoving = !suppressMovement && !IsIdleHeld && (currentMonster == null || !currentMonster.HasArrived);
-        if (weaponSwing != null) weaponSwing.CharacterAnimator?.SetBool("IsMoving", shouldBeMoving);
+        if (weaponSwing != null) weaponSwing.CharacterAnimator?.SetBool(AnimParams.IsMoving, shouldBeMoving);
 
         if (SuppressNewAttacks || RiposteInProgress) return;
 
@@ -255,7 +249,7 @@ public class CombatLoop : MonoBehaviour
     {
         bool isRunning = false;
         if (!IsSuspended && weaponSwing != null && weaponSwing.CharacterAnimator != null)
-            isRunning = weaponSwing.CharacterAnimator.GetCurrentAnimatorStateInfo(0).IsName(RunningStateName);
+            isRunning = weaponSwing.CharacterAnimator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Running);
 
         if (groundScroller != null) groundScroller.IsScrolling = isRunning;
         if (backdropScroller != null) backdropScroller.IsScrolling = isRunning;

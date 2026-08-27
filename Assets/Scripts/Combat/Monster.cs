@@ -117,7 +117,6 @@ public class Monster : MonoBehaviour
     // 아니라 클로즈업 카메라에 맞춰 조정된 것이기 때문이다.
     [SerializeField] private float hitImpactVfxScale = 1.6f;
 
-    private const string AttackTriggerParam = "Attack";
     private const string AttackUltimateParam = "AttackUltimate";
     // 탄막이 지속되는 동안 Attack03을 계속 열어둔다 - 이 상태를 벗어나는 건 클립 자체의
     // 0.333초 길이가 아니라 이 값에 의해 결정된다(컨트롤러의 Attack03 -> Idle 전환 참고).
@@ -177,7 +176,7 @@ public class Monster : MonoBehaviour
 
     public void PlayAttackAnimation()
     {
-        CharacterAnimator?.SetTrigger(AttackTriggerParam);
+        CharacterAnimator?.SetTrigger(AnimParams.Attack);
         WeaponSwing?.PlaySwing();
 
         if (CharacterAnimator == null && WeaponSwing == null)
@@ -194,7 +193,7 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         // 전에 커진 몸이 시각적으로 플레이어와 겹치거나 파묻어버린다.
         stoppingDistance = stopDistance * transform.localScale.x;
         HasArrived = false;
-        CharacterAnimator?.SetBool("IsMoving", true);
+        CharacterAnimator?.SetBool(AnimParams.IsMoving, true);
     }
 
     private void Update()
@@ -207,7 +206,7 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         if (toTarget.magnitude <= stoppingDistance)
         {
             HasArrived = true;
-            CharacterAnimator?.SetBool("IsMoving", false);
+            CharacterAnimator?.SetBool(AnimParams.IsMoving, false);
 
             // 엘리트와 보스는 둘 다 패링 결투로 싸운다: 예고 동작을 보인 뒤 타격한다.
             // 일반 몬스터는 그냥 고정된 타이머로 서로 타격을 주고받는다.
@@ -446,7 +445,7 @@ public void SetMovement(Transform target, float speed, float stopDistance)
             if (barrage) animator.SetBool(UltimateActiveParam, true);
             // 여기서 일반 스윙의 트리거가 아직 소비되지 않은 채 남아있을 수 있다;
             // 그대로 세팅된 채 두면 탄막이 머신을 놓아주는 순간 엉뚱한 공격이 발동한다.
-            animator.ResetTrigger(AttackTriggerParam);
+            animator.ResetTrigger(AnimParams.Attack);
             animator.SetTrigger(AttackUltimateParam);
 
             // 트리거는 애니메이터 자체의 업데이트 패스가 돌기 전까지 소비되지 않으므로,
@@ -748,7 +747,7 @@ public void SetMovement(Transform target, float speed, float stopDistance)
 
             if (CharacterAnimator != null)
             {
-                CharacterAnimator.SetTrigger("Die");
+                CharacterAnimator.SetTrigger(AnimParams.Die);
                 Destroy(gameObject, deathAnimDuration);
             }
             else

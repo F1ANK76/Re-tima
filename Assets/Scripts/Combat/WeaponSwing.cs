@@ -66,7 +66,7 @@ public class WeaponSwing : MonoBehaviour
 
         if (CharacterAnimator != null && Time.time >= nextAnimTriggerAllowedTime)
         {
-            CharacterAnimator.SetTrigger("Attack");
+            CharacterAnimator.SetTrigger(AnimParams.Attack);
             nextAnimTriggerAllowedTime = Time.time + attackAnimSettleDuration;
         }
     }

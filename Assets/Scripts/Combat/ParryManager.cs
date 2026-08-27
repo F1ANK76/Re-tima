@@ -18,10 +18,7 @@ public class ParryManager : MonoBehaviour
     private const float ParryWindowDuration = 0.5f;
     private const int CooldownSeconds = 3;
 
-    private const string DefendStateName = "Defend_SwordAndShield";
-    private const string IdleStateName = "Idle_Battle_SwordAndShield";
-    private const string RiposteStateName = "Attack04_SwordAndShiled";
-    // Attack04_SwordAndShiled 자체의 클립 길이(FBX 임포트 데이터 기준 30fps에서 0-16 프레임)와
+    // PlayerAnimStates.Riposte 자체의 클립 길이(FBX 임포트 데이터 기준 30fps에서 0-16 프레임)와
     // 일치한다 - WeaponSwing이 Attack01의 임팩트 타이밍에 쓰는 것과 같은 규칙이다.
     private const float RiposteAnimDuration = 16f / 30f;
     // Teleport 프리팹의 가장 긴 서브 시스템 수명과 일치시켜서, 화려한 연출 도중에
@@ -116,7 +113,7 @@ private IEnumerator ParryWindowRoutine()
         // Animator.Play는 블렌딩 없이 해당 스테이트로 바로 점프하므로, 진행 중인
         // 공격 스윙을 끝까지 기다리지 않고 즉시 끊어버린다.
         Animator animator = weaponSwing != null ? weaponSwing.CharacterAnimator : null;
-        if (animator != null) animator.Play(DefendStateName, 0, 0f);
+        if (animator != null) animator.Play(PlayerAnimStates.Defend, 0, 0f);
 
         // 방패 이펙트 자체의 지속 시간이 패링 윈도우와 정확히 일치하므로, 성공 여부와
         // 상관없이 시도 전체 동안 계속 떠 있는다.
@@ -126,9 +123,9 @@ private IEnumerator ParryWindowRoutine()
 
         // 윈도우가 진행되는 동안 다른 무언가(성공한 패링의 리포스트, 새로운 공격, 죽음,
         // 승리)가 이미 애니메이터를 가져가지 않았을 때만 idle로 되돌려 받는다.
-        if (animator != null && animator.GetCurrentAnimatorStateInfo(0).IsName(DefendStateName))
+        if (animator != null && animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Defend))
         {
-            animator.Play(IdleStateName, 0, 0f);
+            animator.Play(PlayerAnimStates.Idle, 0, 0f);
         }
 
         // 여전히 열려 있다는 건 윈도우 동안 아무도 이걸 소비하지 않았다는 뜻 - 타이밍을 놓친 시도다.
@@ -164,12 +161,12 @@ public bool TryConsumeParry()
         // 카운터와 겹치지 않고 그 뒤를 잇도록 한다.
         if (combatLoop != null) combatLoop.RiposteInProgress = true;
 
-        animator.Play(RiposteStateName, 0, 0f);
+        animator.Play(PlayerAnimStates.Riposte, 0, 0f);
         yield return new WaitForSeconds(RiposteAnimDuration);
 
-        if (animator.GetCurrentAnimatorStateInfo(0).IsName(RiposteStateName))
+        if (animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Riposte))
         {
-            animator.Play(IdleStateName, 0, 0f);
+            animator.Play(PlayerAnimStates.Idle, 0, 0f);
         }
 
         if (combatLoop != null) combatLoop.RiposteInProgress = false;

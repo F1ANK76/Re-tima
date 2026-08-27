@@ -18,10 +18,6 @@ public class UltimateManager : MonoBehaviour
     private const float ChargeDuration = 30f;
     private const float DamageMultiplier = 3f;
 
-    private const string UltimateStateName = "JumpFull_Spin_RM_SwordAndShield";
-    private const string IdleStateName = "Idle_Battle_SwordAndShield";
-    // CombatLoop 자체의 RunningStateName과 일치한다 - 안전하게 끼어들 수 있는 또 다른 상태.
-    private const string RunningStateName = "MoveFWD_Normal_InPlace_SwordAndShield";
     private const float UltimateAnimDuration = 24f / 30f;
     // 클립 자체의 루트 모션 커브를 보면 캐릭터는 24프레임 중 19프레임(30fps)째에 이미
     // 지면 높이로 돌아와 있다 - 이게 실제 착지 순간이며, 전체 길이에서 대충 추측한
@@ -146,7 +142,7 @@ public class UltimateManager : MonoBehaviour
         if (animator.IsInTransition(0)) return false;
 
         var state = animator.GetCurrentAnimatorStateInfo(0);
-        return state.IsName(IdleStateName) || state.IsName(RunningStateName);
+        return state.IsName(PlayerAnimStates.Idle) || state.IsName(PlayerAnimStates.Running);
     }
 
     private IEnumerator PlayUltimate()
@@ -161,7 +157,7 @@ public class UltimateManager : MonoBehaviour
         if (combatLoop != null) combatLoop.PushSuspend();
 
         Animator animator = weaponSwing != null ? weaponSwing.CharacterAnimator : null;
-        if (animator != null) animator.Play(UltimateStateName, 0, 0f);
+        if (animator != null) animator.Play(PlayerAnimStates.Ultimate, 0, 0f);
 
         yield return new WaitForSeconds(LandingDelay);
 
@@ -175,9 +171,9 @@ public class UltimateManager : MonoBehaviour
 
         yield return new WaitForSeconds(UltimateAnimDuration - LandingDelay);
 
-        if (animator != null && animator.GetCurrentAnimatorStateInfo(0).IsName(UltimateStateName))
+        if (animator != null && animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Ultimate))
         {
-            animator.Play(IdleStateName, 0, 0f);
+            animator.Play(PlayerAnimStates.Idle, 0, 0f);
         }
 
         if (combatLoop != null) combatLoop.PopSuspend();
