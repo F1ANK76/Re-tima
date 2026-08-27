@@ -1,11 +1,11 @@
 using System.Collections;
 using UnityEngine;
 
-// Equipment counterpart to StatPotionPickup, same three beats (toss, settle, run-over) and the
-// same grade aura/sparkle language - only the visual differs: a single Sword or Shield mesh
-// (tinted by grade) instead of a per-stat vial. Equip/mastery effects are applied by
-// EquipmentDropManager.CompleteDrop on contact, not at drop time, so a pickup dropped but never
-// reached (player dies first, etc.) never pays out.
+// StatPotionPickup에 대응하는 장비 버전으로, 동일한 세 박자(던지기, 안착, 달려가서 줍기)와
+// 동일한 등급 아우라/반짝임 표현을 사용한다 - 다른 점은 시각적 요소뿐이다: 스탯별 유리병
+// 대신 등급에 따라 색이 입혀진 단일 Sword 또는 Shield 메시를 사용한다. 장착/숙련 효과는
+// 드롭 시점이 아니라 접촉 시 EquipmentDropManager.CompleteDrop에서 적용되므로, 드롭됐지만
+// 끝내 닿지 못한 아이템(플레이어가 먼저 죽는 등)은 절대 효과를 지급하지 않는다.
 public class EquipmentDropPickup : MonoBehaviour
 {
     [Header("Toss + bounce (beat 1)")]
@@ -21,21 +21,21 @@ public class EquipmentDropPickup : MonoBehaviour
     private float approachSpeed = 5f;
 
     [Header("Visual (per equipment type)")]
-    // One mesh per type, same as StatPotionPickup's atkVisualPrefab/hpVisualPrefab - rarity
-    // reads entirely through the aura/sparkle/size ramp below, not a different model per grade.
+    // 타입별로 메시 하나씩, StatPotionPickup의 atkVisualPrefab/hpVisualPrefab과 동일한 방식이다 -
+    // 희귀도는 등급별로 다른 모델이 아니라 아래의 아우라/반짝임/크기 램프만으로 표현된다.
     [SerializeField] private GameObject swordVisualPrefab;
     [SerializeField] private GameObject shieldVisualPrefab;
     [SerializeField] private float visualBaseScale = 0.4f;
-    // Applied on top of whatever material the mesh imports with - the generated FBXs
-    // reference their PBR textures by external side-car file path (a model.fbm folder),
-    // which a single downloaded .fbx never carries, so the imported material has no
-    // texture and renders invisible. Overriding here keeps material setup independent
-    // of whatever the FBX import happens to resolve.
+    // 메시가 임포트될 때 딸려오는 재질이 무엇이든 그 위에 덮어씌운다 - 생성된 FBX들은
+    // PBR 텍스처를 외부 사이드카 파일 경로(model.fbm 폴더)로 참조하는데, 다운로드한 .fbx
+    // 파일 하나만으로는 그게 딸려오지 않으므로 임포트된 재질에는 텍스처가 없어 화면에
+    // 보이지 않게 렌더링된다. 여기서 덮어씌우면 FBX 임포트가 어떻게 해석되든 재질
+    // 설정이 그와 무관하게 유지된다.
     [SerializeField] private Material swordMaterial;
     [SerializeField] private Material shieldMaterial;
-    // The shield mesh is authored as a disc lying in the XZ plane (face pointing up), so
-    // dropped as-authored it reads as a bowl on the ground rather than a shield. Rotating it
-    // upright is per-asset framing, not something the drop logic should hardcode.
+    // 방패 메시는 XZ 평면에 눕혀진 원반 형태로 제작되어 있어(면이 위를 향함), 제작된
+    // 그대로 떨어뜨리면 방패가 아니라 바닥에 놓인 그릇처럼 보인다. 똑바로 세우도록
+    // 회전시키는 것은 애셋별 프레이밍 문제이지, 드롭 로직에 하드코딩할 사항이 아니다.
     [SerializeField] private Vector3 swordVisualEuler = Vector3.zero;
     [SerializeField] private Vector3 shieldVisualEuler = new Vector3(90f, 0f, 0f);
 
@@ -57,24 +57,26 @@ public class EquipmentDropPickup : MonoBehaviour
     private static readonly float[] HopDurations = { 0.42f, 0.26f, 0.18f, 0.14f };
 
     private Renderer[] renderers;
-    // Just the mesh's own renderer(s), not the aura/sparkle quads added afterward in
-    // SpawnAura - exposed so EquipmentPreviewRig can frame the UI icon on the item's actual
-    // silhouette instead of guessing a fixed camera distance that fits every grade/mesh.
+    // SpawnAura에서 나중에 추가되는 아우라/반짝임 쿼드가 아니라 메시 자체의 렌더러(들)만을
+    // 가리킨다 - 모든 등급/메시에 맞는 고정 카메라 거리를 추측하는 대신 EquipmentPreviewRig가
+    // 아이템의 실제 실루엣에 맞춰 UI 아이콘을 프레이밍할 수 있도록 외부에 노출한다.
     public Renderer[] VisualRenderers => renderers;
     private EquipmentType equipType;
     private StatGrade grade;
     private Transform player;
     private CombatLoop combatLoop;
     private EquipmentDropManager dropManager;
-    // See StatPotionPickup's identical field for why this is needed - HandlePlayerDied can
-    // StopAllCoroutines mid-toss, before this ever reaches its own PopIdleHold call.
+    // 왜 필요한지는 StatPotionPickup의 동일한 필드를 참고 - HandlePlayerDied가 던지는
+    // 도중에 StopAllCoroutines를 호출할 수 있어, 이 코드가 자신의 PopIdleHold 호출에
+    // 도달하기도 전에 멈춰버릴 수 있다.
     private bool idleHoldActive;
     private Vector3 restScale;
     private float restBottomOffset;
     private Material auraMaterial;
     private Material sparkleMaterial;
-    // A per-instance copy of the shared sword/shield material, tinted by grade - the shared
-    // asset itself must stay untouched since every pickup in flight references the same one.
+    // 등급에 따라 색이 입혀진, 공용 sword/shield 재질의 인스턴스별 복사본이다 - 현재
+    // 활성화된 모든 픽업이 동일한 공용 애셋을 참조하므로, 그 원본 애셋 자체는 절대
+    // 건드리지 않아야 한다.
     private Material visualMaterialInstance;
 
     public void Initialize(EquipmentType equipType, StatGrade grade, Transform player, CombatLoop combatLoop, float approachSpeed, EquipmentDropManager dropManager)
@@ -113,9 +115,9 @@ public class EquipmentDropPickup : MonoBehaviour
         GameEvents.OnPlayerDied -= HandlePlayerDied;
     }
 
-    // See StatPotionPickup.HandlePlayerDied - same bug (this pickup's coroutine runs
-    // independently of StageManager's death sequence and kept sliding into/paying out to an
-    // already-dead player), same fix.
+    // StatPotionPickup.HandlePlayerDied 참고 - 동일한 버그(이 픽업의 코루틴이
+    // StageManager의 사망 시퀀스와 무관하게 계속 실행되어 이미 죽은 플레이어에게 계속
+    // 다가가거나 효과를 지급해버림)에 대한 동일한 수정이다.
     private void HandlePlayerDied()
     {
         StopAllCoroutines();
@@ -157,9 +159,9 @@ public class EquipmentDropPickup : MonoBehaviour
         Material overrideMaterial = equipType == EquipmentType.Sword ? swordMaterial : shieldMaterial;
         if (overrideMaterial != null)
         {
-            // Instanced rather than shared: tinting _BaseColor below multiplies straight onto
-            // whatever this material already is, so mutating the shared asset would recolor
-            // every sword/shield currently on screen, not just this one.
+            // 공유가 아니라 인스턴스화한다: 아래에서 _BaseColor를 틴트하면 이 재질이 원래
+            // 갖고 있던 값에 그대로 곱해지므로, 공용 애셋을 수정해버리면 이것뿐 아니라 현재
+            // 화면에 있는 모든 sword/shield의 색이 바뀌어버린다.
             visualMaterialInstance = new Material(overrideMaterial)
             {
                 color = GradeVisuals.GetColor(grade)
@@ -247,9 +249,10 @@ public class EquipmentDropPickup : MonoBehaviour
         return mat;
     }
 
-    // Shares the exact star-glint and radial-glow textures StatPotionPickup builds, generated
-    // independently here (a private static cache per class) since the two never share a class
-    // hierarchy - cheap 64x64 textures, not worth wiring a shared asset for.
+    // StatPotionPickup이 만드는 것과 정확히 같은 별빛/방사형 광채 텍스처를 사용하지만,
+    // 두 클래스가 클래스 계층을 공유하지 않으므로 여기서 독립적으로 생성한다(클래스별
+    // private static 캐시) - 어차피 64x64짜리 저렴한 텍스처라 공용 애셋으로 연결할
+    // 가치가 없다.
     private static Texture2D sparkleTexture;
     private static Texture2D SparkleTexture
     {

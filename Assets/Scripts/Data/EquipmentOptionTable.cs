@@ -1,20 +1,20 @@
 using UnityEngine;
 
-// Value ranges for the extra option a stone reroll can put on a piece of equipment.
+// 스톤 리롤이 장비에 부여할 수 있는 추가 옵션의 값 범위.
 //
-// Unlike EquipmentGradeBonus (a fixed number per grade), an option rolls a RANGE inside its
-// grade, so two Legendary rolls are not interchangeable and there is a reason to keep
-// rerolling after the first good one. Only a roll that beats what the slot already carries is
-// kept, which is what makes the spread matter instead of averaging out over time.
+// 등급당 고정 수치인 EquipmentGradeBonus와 달리, 옵션은 해당 등급 내에서 하나의 범위(RANGE)를
+// 굴린다. 그래서 Legendary 두 개를 굴려도 서로 같지 않으며, 좋은 값 하나를 얻은 뒤에도 계속
+// 리롤할 이유가 생긴다. 슬롯이 이미 가진 값을 능가하는 롤만 유지되므로, 시간이 지나 평균으로
+// 수렴하는 게 아니라 이 편차 자체가 의미를 갖게 된다.
 //
-// Bands sit alongside EquipmentGradeBonus's own per-grade numbers rather than dwarfing them.
-// Adjacent grades touch at their shared edge (Normal 1-2, Rare 2-3, ...) rather than
-// overlapping, so grade is still the dominant factor in a roll's value - a lucky low grade
-// can at best tie the next grade up, never clear beat it.
+// 각 구간은 EquipmentGradeBonus 자체의 등급별 수치를 압도하지 않도록 그 옆에 나란히 위치한다.
+// 인접한 등급끼리는 겹치지 않고 경계에서 맞닿으며(Normal 1-2, Rare 2-3, ...), 그래서 롤의
+// 가치를 결정하는 지배적 요인은 여전히 등급이다 - 운 좋은 낮은 등급이라 해봐야 잘해야 다음
+// 등급과 동률일 뿐, 확실히 능가할 수는 없다.
 public static class EquipmentOptionTable
 {
-    // Red stone -> the sword's ATK option, matching the game's existing color language where
-    // ATK drops as a RedVial and HP as a GreenVial.
+    // 빨간 스톤 -> 검의 ATK 옵션, ATK는 RedVial로 HP는 GreenVial로 드롭되는 게임의 기존
+    // 색상 체계와 일치시켰다.
     private static readonly Vector2[] AttackRanges =
     {
         new Vector2(1f, 2f),        // Normal
@@ -24,7 +24,7 @@ public static class EquipmentOptionTable
         new Vector2(7f, 10f),       // Legendary
     };
 
-    // Green stone -> the shield's HP option.
+    // 초록 스톤 -> 방패의 HP 옵션.
     private static readonly Vector2[] HpRanges =
     {
         new Vector2(5f, 10f),       // Normal
@@ -39,9 +39,9 @@ public static class EquipmentOptionTable
         Vector2 range = GetRange(statType, grade);
         float value = Random.Range(range.x, range.y);
 
-        // ATK is carried and displayed to one decimal (the player's own attack power is
-        // fractional); HP is only ever a whole number, so rounding here stops a rolled option
-        // showing as "+41.7 HP" against an otherwise integer stat.
+        // ATK는 소수점 첫째 자리까지 표시된다(플레이어 자신의 공격력이 소수 값이기 때문); HP는
+        // 항상 정수이므로, 여기서 반올림을 해주지 않으면 원래 정수인 스탯인데 롤된 옵션이
+        // "+41.7 HP"처럼 표시되는 일이 생긴다.
         return statType == StatType.Attack ? Mathf.Round(value * 10f) / 10f : Mathf.Round(value);
     }
 

@@ -2,31 +2,31 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-// The bottom-center gauge that builds toward the substage's elite.
+// 서브스테이지의 엘리트를 향해 차오르는 화면 하단 중앙 게이지.
 public class BossGaugeView : MonoBehaviour
 {
     [SerializeField] private RectTransform fillRect;
     [SerializeField] private Text percentText;
 
-    // How long a kill's worth of fill takes to animate in - the bar rising is the "차오르는"
-    // read; snapping the fill instantly would lose that entirely.
+    // 처치 한 번어치의 채움이 애니메이션되는 데 걸리는 시간 - 바가 상승하는 게 바로
+    // "차오르는" 느낌을 주는 부분이며, 즉시 채워버리면 그 느낌이 완전히 사라진다.
     [SerializeField] private float fillTweenDuration = 0.35f;
     [SerializeField] private float readyFlashDuration = 0.5f;
     [SerializeField] private float readyPunchScale = 1.18f;
 
     [Header("Boss icon (right end of the bar)")]
-    // Marks what the bar is filling toward - the fill arriving at a waiting icon is what tells
-    // the player "filling this summons that", without any text to read.
-    // A white silhouette works best here: both states are driven purely by Image.color, so an
-    // already-colored sprite would fight the tint.
+    // 바가 무엇을 향해 채워지고 있는지를 표시한다 - 채움이 대기 중인 아이콘에 도달하는
+    // 것 자체가, 별도의 텍스트 없이도 "이걸 채우면 저게 소환된다"는 걸 플레이어에게 알려준다.
+    // 여기엔 흰색 실루엣이 가장 잘 맞는다: 두 상태 모두 순전히 Image.color로만 제어되므로,
+    // 이미 색이 입혀진 스프라이트를 쓰면 틴트와 충돌한다.
     [SerializeField] private Sprite bossIconSprite;
     [SerializeField] private float bossIconSize = 44f;
-    // Gap between the icon's edge and the bar's right edge. The icon is positioned from its
-    // own half-width plus this, so it always sits fully inside the bar rather than overhanging
-    // it - with enough margin left over for the 100% flourish's punch on the whole gauge.
+    // 아이콘 가장자리와 바의 오른쪽 가장자리 사이의 간격. 아이콘은 자신의 절반 너비에
+    // 이 값을 더한 만큼 안쪽으로 배치되므로, 바 밖으로 튀어나오지 않고 항상 바 안에
+    // 완전히 들어간다 - 게이지 전체가 100% 연출에서 펀치될 때를 위한 여유도 남겨둔다.
     [SerializeField] private float bossIconInset = 6f;
-    // Both states are white; only the opacity separates them, so the icon never changes hue
-    // and never moves. Faded while the gauge is still building, solid once it's full.
+    // 두 상태 모두 흰색이며, 오직 불투명도만 다르므로 아이콘은 색조가 바뀌지도 움직이지도
+    // 않는다. 게이지가 아직 차오르는 중일 땐 흐릿하게, 가득 차면 완전히 선명하게 보인다.
     [SerializeField] private Color bossIconDimColor = new Color(1f, 1f, 1f, 0.5f);
     [SerializeField] private Color bossIconReadyColor = Color.white;
 
@@ -40,9 +40,9 @@ public class BossGaugeView : MonoBehaviour
     private int displayedPercent;
     private Coroutine gaugeRoutine;
 
-    // From a fill reaching 100 to the punch/flash flourish finishing - StageManager reads
-    // this so it can time the elite's spawn + "Elite Boss !" announcement to land right as
-    // this flourish settles, instead of drifting apart on its own unrelated timer.
+    // 채움이 100에 도달한 시점부터 펀치/플래시 연출이 끝날 때까지의 시간 - StageManager가
+    // 이 값을 읽어서, 자체적인 무관한 타이머로 따로 놀지 않고 엘리트 스폰 + "Elite Boss !"
+    // 알림이 이 연출이 마무리되는 바로 그 순간에 맞춰 나오도록 타이밍을 잡는다.
     public float ReadyFlourishDuration => fillTweenDuration + readyFlashDuration;
 
     private void Awake()
@@ -70,9 +70,10 @@ public class BossGaugeView : MonoBehaviour
     {
         if (gaugeRoutine != null) StopCoroutine(gaugeRoutine);
 
-        // A drop (any new value lower than what's on screen) is the substage resetting the
-        // gauge for the next grind, not progress draining away - that snaps instantly rather
-        // than animating backward, which would read as a penalty that never happened.
+        // 값이 하락하는 경우(화면에 표시된 값보다 낮은 새 값)는 진행도가 깎이는 게 아니라
+        // 다음 판을 위해 서브스테이지가 게이지를 리셋하는 것이다 - 이건 애니메이션 없이
+        // 즉시 스냅한다. 뒤로 애니메이션되면 실제로는 일어나지도 않은 페널티처럼 보이기
+        // 때문이다.
         if (percent <= displayedPercent)
         {
             ApplyPercent(percent);
@@ -124,9 +125,9 @@ public class BossGaugeView : MonoBehaviour
         bossIconImage.color = ready ? bossIconReadyColor : bossIconDimColor;
     }
 
-    // The payoff for filling the bar: a quick punch-scale on the whole gauge plus a white
-    // flash on the fill, timed to land right as StageManager's own delay is about to spawn
-    // the elite - "the gauge maxing out is what summoned this".
+    // 바를 다 채운 것에 대한 보상 연출: 게이지 전체에 빠른 펀치 스케일을 주고 채움 부분에는
+    // 흰색 플래시를 더하며, StageManager 자체의 딜레이가 엘리트를 스폰하려는 바로 그
+    // 순간에 맞춰지도록 타이밍을 잡는다 - "게이지가 가득 찬 게 이걸 소환했다"는 인상을 준다.
     private IEnumerator PlayReadyFlourish()
     {
         float t = 0f;
@@ -135,14 +136,15 @@ public class BossGaugeView : MonoBehaviour
             t += Time.unscaledDeltaTime;
             float p = Mathf.Clamp01(t / readyFlashDuration);
 
-            // Punch out quickly, settle back over the remainder - same shape as the stat-drop
-            // popup's own pop-in, reused here for the same "landed with a bit of weight" read.
+            // 빠르게 펀치되었다가 나머지 시간 동안 서서히 안착한다 - 스탯 드롭 팝업 자체의
+            // 팝인과 동일한 곡선 형태로, 여기서도 같은 "묵직하게 착지했다"는 느낌을 주려고
+            // 재사용했다.
             float scaleT = Mathf.Clamp01(p / 0.35f);
             float scale = Mathf.Lerp(1f, readyPunchScale, EaseOutBack(scaleT));
             if (scaleT >= 1f) scale = Mathf.Lerp(readyPunchScale, 1f, EaseOutQuad(Mathf.InverseLerp(0.35f, 1f, p)));
             transform.localScale = Vector3.one * scale;
 
-            // Flash bright, then fade back to the fill's own color rather than lingering white.
+            // 밝게 번쩍인 뒤, 흰색으로 계속 남아있지 않고 채움 자체의 색으로 다시 페이드된다.
             float flash = 1f - EaseOutQuad(p);
             if (fillImage != null) fillImage.color = Color.Lerp(fillBaseColor, Color.white, flash);
             if (percentText != null) percentText.color = Color.Lerp(textBaseColor, Color.white, flash);
@@ -155,8 +157,8 @@ public class BossGaugeView : MonoBehaviour
         if (percentText != null) percentText.color = textBaseColor;
     }
 
-    // Parented to the bar and added last, so it draws over the fill - the fill sweeps in
-    // underneath the icon rather than clipping it.
+    // 바에 자식으로 붙이고 마지막에 추가하여 채움 위에 그려진다 - 채움이 아이콘을 가리며
+    // 지나가는 게 아니라 아이콘 아래로 훑고 지나간다.
     private void BuildBossIcon()
     {
         if (barRect == null || bossIconSprite == null) return;
@@ -165,14 +167,14 @@ public class BossGaugeView : MonoBehaviour
         go.transform.SetParent(barRect, false);
 
         var iconRect = go.GetComponent<RectTransform>();
-        // Pinned to the bar's right edge, vertically centred on it, so it stays at the end of
-        // the bar whatever the bar's own width resolves to on a given resolution.
+        // 바의 오른쪽 가장자리에 고정되고 세로로는 가운데 정렬되어, 특정 해상도에서 바의
+        // 너비가 실제로 어떻게 결정되든 항상 바 끝에 위치한다.
         iconRect.anchorMin = new Vector2(1f, 0.5f);
         iconRect.anchorMax = new Vector2(1f, 0.5f);
         iconRect.pivot = new Vector2(0.5f, 0.5f);
         iconRect.sizeDelta = new Vector2(bossIconSize, bossIconSize);
-        // Pulled left by its own half-width plus the inset, which is what keeps it inside the
-        // bar instead of hanging off the end.
+        // 자신의 절반 너비에 inset을 더한 만큼 왼쪽으로 당겨지는데, 이게 바 끝에 걸쳐
+        // 늘어지지 않고 바 안쪽에 머물게 해준다.
         iconRect.anchoredPosition = new Vector2(-(bossIconSize * 0.5f + bossIconInset), 0f);
 
         bossIconImage = go.AddComponent<Image>();

@@ -2,91 +2,97 @@ using System.Collections;
 using Benjathemaker;
 using UnityEngine;
 
-// Spawned by StatDropManager in place of the old instant-apply. Three beats, in order:
-//   1. The player stops dead (idle) while the potion (a RedVial for ATK, GreenVial for HP -
-//      see SpawnVisual) is tossed past the monster and bounces to a rest on the ground.
-//   2. The moment it settles, the player is released back into motion.
-//   3. The potion closes the remaining gap at ground level and pays out on contact.
-// The player never actually walks anywhere in this game (CombatLoop's "running" is a fixed
-// in-place animation - see GroundScroller/BackdropScroller for the illusion of movement), so
-// beat 3 has to move the potion instead: it slides in at exactly the pace monsters walk at,
-// flat along the floor and at a constant speed, which is the world coming toward a running
-// player. Deliberately NOT a homing/magnet pull - nothing accelerates toward the player and
-// nothing lifts off the ground, because the read is the player running over it, not the
-// potion flying to them.
+// 기존의 즉시 적용 방식 대신 StatDropManager가 스폰한다. 순서대로 세 박자로 진행된다:
+//   1. 몬스터를 지나쳐 던져진 물약(ATK는 RedVial, HP는 GreenVial - SpawnVisual 참고)이
+//      바닥에 튕기며 안착하는 동안 플레이어는 완전히 멈춰(idle) 있는다.
+//   2. 물약이 안착하는 순간, 플레이어는 다시 움직임 상태로 풀려난다.
+//   3. 물약이 지면 높이에서 남은 거리를 좁혀 접촉 시 효과를 지급한다.
+// 이 게임에서 플레이어는 실제로는 어디로도 걸어가지 않는다(CombatLoop의 "달리기"는
+// 제자리 고정 애니메이션이며, 이동한다는 착각은 GroundScroller/BackdropScroller가
+// 만들어낸다 - 그쪽 참고), 그래서 3번 박자는 대신 물약을 움직여야 한다: 물약은
+// 몬스터가 걷는 것과 정확히 같은 속도로, 바닥을 따라 평평하게, 일정한 속도로
+// 미끄러져 들어오는데, 이는 곧 달리는 플레이어를 향해 세계가 다가오는 것과 같다.
+// 의도적으로 유도/자석 끌림 방식이 아니다 - 플레이어를 향해 가속하는 것도, 바닥에서
+// 떠오르는 것도 전혀 없다. 왜냐하면 여기서 읽혀야 하는 것은 물약이 플레이어에게
+// 날아가는 게 아니라 플레이어가 그 위를 달려서 지나가는 것이기 때문이다.
 public class StatPotionPickup : MonoBehaviour
 {
     [Header("Toss + bounce (beat 1)")]
-    // The whole toss-and-settle, start to rest.
+    // 던져지고 안착하기까지 전체 과정, 시작부터 정지까지.
     [SerializeField] private float landDuration = 0.75f;
-    // How far past the death point it's thrown, directly away from the player - the monster
-    // dies between the two, so this is what puts the potion down "behind" it.
+    // 사망 지점을 지나 플레이어 반대 방향으로 얼마나 멀리 던져지는지 - 몬스터는
+    // 그 둘 사이에서 죽으므로, 이 값이 물약을 몬스터 "뒤편"에 놓이게 만드는 요인이다.
     [SerializeField] private float tossDistance = 1.4f;
-    // Peak of the opening arc. Every rebound after it is a fraction of this (see HopHeights).
+    // 첫 포물선 궤적의 정점. 이후의 모든 재반동은 이 값의 일부다(HopHeights 참고).
     [SerializeField] private float tossHeight = 1.1f;
 
     [Header("Run-over (beats 2-3)")]
-    // Beat 2: the settled potion sits untouched this long. GroundScroller/BackdropScroller
-    // ease their scroll in over ~0.4s rather than snapping to full speed, so the player is
-    // still getting up to pace for a moment after being released - the potion holding still
-    // through that is what keeps the two reading as the same motion.
+    // 2번 박자: 안착한 물약이 이 시간만큼 그대로 정지해 있는다. GroundScroller/
+    // BackdropScroller는 곧바로 최고 속도로 스냅되지 않고 약 0.4초에 걸쳐 스크롤
+    // 속도를 이징한다. 즉 플레이어는 풀려난 직후에도 잠시 동안 속도를 붙이는 중인데,
+    // 그동안 물약이 가만히 멈춰있어야 둘이 같은 동작으로 읽힌다.
     [SerializeField] private float settleHoldDuration = 0.2f;
-    // Close enough to count as underfoot. Compared flat (XZ only): the potion rests on the
-    // floor while the player's transform is their capsule's centre, so a true 3D distance
-    // would never get this small.
+    // 발밑에 있다고 간주할 만큼 충분히 가까운 거리. 평면(XZ만)으로 비교한다: 물약은
+    // 바닥에 놓여있는 반면 플레이어의 transform은 캡슐의 중심이므로, 진짜 3D 거리로
+    // 비교하면 이렇게 작은 값까지 절대 내려가지 않는다.
     [SerializeField] private float pickupRadius = 0.45f;
-    // Backstop only. At approach speed nothing should ever take this long; without it a null
-    // or unreachable player would leave the potion sliding forever.
+    // 그저 안전장치일 뿐이다. 접근 속도라면 이만큼 오래 걸릴 일은 원래 없어야 한다;
+    // 이게 없으면 player가 null이거나 도달 불가능할 때 물약이 영원히 미끄러지게 된다.
     [SerializeField] private float approachTimeout = 6f;
 
-    // Set from StageConfigSO.monsterMoveSpeed by StatDropManager - the potion has to close
-    // distance at the same rate a monster walking in does, or the two read as the player
-    // running at two different speeds.
+    // StatDropManager가 StageConfigSO.monsterMoveSpeed 값으로 설정한다 - 물약은
+    // 몬스터가 걸어 들어오는 것과 같은 속도로 거리를 좁혀야 한다. 그렇지 않으면
+    // 플레이어가 두 가지 다른 속도로 달리는 것처럼 보이게 된다.
     private float approachSpeed = 5f;
 
     [Header("Visual (per stat type)")]
-    // ATK drops as a RedVial, HP as a GreenVial - the vial's own color is left completely
-    // untouched (no grade tint/emission on it) so ATK vs HP stays readable at a glance no
-    // matter the grade. Rarity lives entirely in the aura below instead.
+    // ATK는 RedVial로, HP는 GreenVial로 드롭된다 - 물약 자체의 색은 완전히 그대로
+    // 둔다(등급 틴트/발광 없음), 그래야 등급에 관계없이 ATK인지 HP인지 한눈에
+    // 구분된다. 희귀도는 대신 아래의 아우라에서 전적으로 표현된다.
     [SerializeField] private GameObject atkVisualPrefab;
     [SerializeField] private GameObject hpVisualPrefab;
-    // Both vials measure ~2.23 tall at scale 1 (much taller/thinner than the old icon mesh) -
-    // this is the "Normal" size the grade ramp (GetPotionScale) then scales up from.
+    // 두 물약 모두 스케일 1일 때 높이가 약 2.23이다(예전 아이콘 메시보다 훨씬
+    // 크고 얇다) - 이것이 등급 램프(GetPotionScale)가 그 이후로 확대해나가는
+    // 기준이 되는 "Normal" 크기다.
     [SerializeField] private float visualBaseScale = 0.4f;
 
     [Header("Grade aura")]
-    // All three aura layers are driven by GradeVisuals.GetAuraStrength (0.2 at Normal, 1 at
-    // Legendary) multiplied into these ceilings, so grade reads as depth of glow rather than
-    // size alone. Size is deliberately NOT part of the ramp - the potion mesh already grows
-    // per grade (GetPotionScale), and growing the halo on top of that doubled up.
+    // 세 아우라 레이어 모두 GradeVisuals.GetAuraStrength(Normal일 때 0.2, Legendary일 때
+    // 1)를 이 상한값들에 곱해서 구동되므로, 등급은 크기만이 아니라 광채의 깊이로도
+    // 표현된다. 크기는 의도적으로 이 램프에 포함시키지 않았다 - 물약 메시는 이미
+    // 등급에 따라 커지고 있어서(GetPotionScale), 헤일로까지 그 위에 함께 키우면
+    // 중복되어 버린다.
     [SerializeField] private float auraSize = 1.5f;
-    // Additive halo brightness. Multiplied into the grade color, so a Normal drop is a faint
-    // white wash and a Legendary one a solid green bloom.
+    // 가산 헤일로 밝기. 등급 색상에 곱해지므로, Normal 드롭은 흐릿한 흰색 번짐으로,
+    // Legendary는 짙은 초록빛 블룸으로 보인다.
     [SerializeField] private float auraBrightnessMax = 1.7f;
-    // The potion also throws colored light onto the ground around it - this is what makes it
-    // read as *emitting* an aura rather than just having a decal pasted behind it.
+    // 물약은 주변 바닥에도 색이 있는 빛을 던진다 - 이것이 뒤에 데칼을 붙여놓은 게
+    // 아니라 실제로 아우라를 *내뿜는* 것처럼 보이게 만드는 요소다.
     [SerializeField] private float auraLightIntensityMax = 3f;
     [SerializeField] private float auraLightRange = 2.6f;
 
     [Header("Twinkle sparkles")]
-    // Star glints orbiting the vial, each blinking on its own offset phase so something is
-    // always catching the light - a single pulsing halo reads as "glowing", this reads as
-    // "반짝반짝". Staggered rather than synchronised: four stars flashing in unison would
-    // look like one flashing light, not a shimmer.
+    // 물약 주위를 도는 별빛 반짝임들로, 각각 서로 다른 위상 오프셋으로 깜빡여서
+    // 항상 무언가는 빛을 반사하고 있는 것처럼 보인다 - 헤일로 하나가 맥동하면
+    // "빛나는" 느낌이지만, 이건 "반짝반짝"하는 느낌을 준다. 동기화하지 않고
+    // 어긋나게 배치한다: 별 네 개가 동시에 번쩍이면 반짝임이 아니라 그냥 깜빡이는
+    // 조명 하나처럼 보이게 된다.
     [SerializeField] private int sparkleCount = 4;
-    // In root-local units, so the ring widens with the potion's own grade scale.
+    // 루트 로컬 단위이므로, 물약 자체의 등급 스케일에 맞춰 고리도 함께 넓어진다.
     [SerializeField] private float sparkleOrbitRadius = 0.5f;
     [SerializeField] private float sparkleSize = 0.6f;
-    // Additive stars need more punch than the soft halo to register as a glint at this size.
+    // 가산 별들은 이 크기에서 반짝임으로 인지되려면 부드러운 헤일로보다 더 강한
+    // 임팩트가 필요하다.
     [SerializeField] private float sparkleBrightnessMax = 2.4f;
-    // Full blink cycles per second, per star.
+    // 별 하나당 초당 완전한 깜빡임 사이클 수.
     [SerializeField] private float sparkleBlinkSpeed = 1.1f;
-    // Slow drift of the whole ring, so the glints aren't pinned to fixed screen positions.
+    // 고리 전체가 천천히 회전하여, 반짝임들이 화면상 고정된 위치에 박혀있지 않게 한다.
     [SerializeField] private float sparkleOrbitSpeed = 35f;
 
-    // Successive hops: the opening toss, then decaying rebounds. Each is a sine arc leaving
-    // and returning to exactly ground level, so the run reads as unbroken contact instead of
-    // a shape that snaps off the floor between bounces. Durations sum to 1.
+    // 연속된 도약: 첫 번째 던지기, 그 다음 점점 줄어드는 재반동들. 각 도약은 정확히
+    // 지면 높이에서 시작해 지면 높이로 돌아오는 사인 곡선 궤적이라, 튕길 때마다
+    // 바닥에서 뚝뚝 끊기는 형태가 아니라 끊김 없이 이어지는 접촉으로 보인다.
+    // 지속시간들의 합은 1이다.
     private static readonly float[] HopHeights = { 1f, 0.34f, 0.13f, 0.05f };
     private static readonly float[] HopDurations = { 0.42f, 0.26f, 0.18f, 0.14f };
 
@@ -96,24 +102,25 @@ public class StatPotionPickup : MonoBehaviour
     private float amount;
     private Transform player;
     private CombatLoop combatLoop;
-    // Tracks whether PushIdleHold has been called and not yet matched by PopIdleHold - needed
-    // because HandlePlayerDied below can cut TossThenRunOver off with StopAllCoroutines at any
-    // point in its three beats, including mid-toss before it ever reaches its own PopIdleHold
-    // call. Without this, dying mid-toss would strand CombatLoop's idle hold permanently on,
-    // and the player would never be allowed to run again even after respawning.
+    // PushIdleHold가 호출되었는데 아직 PopIdleHold로 짝이 맞춰지지 않았는지를 추적한다 -
+    // 아래의 HandlePlayerDied가 TossThenRunOver를 세 박자 중 어느 시점에서든
+    // StopAllCoroutines로 끊어버릴 수 있기 때문에 필요하다. 던지는 도중 자신의
+    // PopIdleHold 호출에 도달하기도 전에 끊기는 경우도 포함된다. 이게 없으면 던지는
+    // 도중 죽었을 때 CombatLoop의 idle hold가 영구히 켜진 채로 남아, 리스폰 후에도
+    // 플레이어가 다시는 달릴 수 없게 된다.
     private bool idleHoldActive;
     private Vector3 restScale;
-    // Pivot-to-mesh-bottom distance at restScale, measured rather than guessed - a bigger
-    // grade grows the mesh around its pivot in both directions, so a fixed lift sinks a
-    // large potion's bottom below the floor by exactly however much it grew. Measuring this
-    // per-instance keeps the bottom flush with the ground at every size, with no per-grade
-    // constant to hand-tune.
+    // restScale 상태에서 피벗부터 메시 바닥까지의 거리로, 추측이 아니라 실측한 값이다 -
+    // 등급이 높을수록 메시는 피벗을 중심으로 양방향으로 커지므로, 고정된 상승값을
+    // 쓰면 큰 물약일수록 커진 만큼 바닥 아래로 파묻혀버린다. 인스턴스마다 이 값을
+    // 직접 측정하면 등급별로 손으로 조정할 상수 없이도 모든 크기에서 바닥에 딱
+    // 맞게 놓인다.
     private float restBottomOffset;
-    // Built in code per instance (the tint differs per grade), so nothing else will collect it
-    // when this object goes away - see OnDestroy.
+    // 인스턴스마다 코드로 생성된다(등급별로 색조가 다르므로), 이 오브젝트가 사라질
+    // 때 다른 누구도 대신 수거해주지 않는다 - OnDestroy 참고.
     private Material auraMaterial;
-    // One material shared by all of this potion's sparkles - same reason as auraMaterial, it's
-    // built in code so nothing else will collect it (see OnDestroy).
+    // 이 물약의 모든 반짝임이 공유하는 재질 하나 - auraMaterial과 같은 이유로,
+    // 코드로 생성되어 다른 누구도 대신 수거해주지 않는다(OnDestroy 참고).
     private Material sparkleMaterial;
 
     public void Initialize(StatType statType, StatGrade grade, float amount, Transform player, CombatLoop combatLoop, float approachSpeed)
@@ -126,20 +133,20 @@ public class StatPotionPickup : MonoBehaviour
         if (approachSpeed > 0.01f) this.approachSpeed = approachSpeed;
 
         SpawnVisual();
-        // The prefab's authored scale is the Normal size - rarer grades read as visibly
-        // bigger potions, not just a different color, on top of that.
+        // 프리팹에 제작된 그대로의 스케일이 Normal 크기다 - 더 희귀한 등급은 단지 색만
+        // 다른 게 아니라 그 위에 눈에 띄게 더 큰 물약으로 보인다.
         restScale = transform.localScale * GradeVisuals.GetPotionScale(grade);
 
         transform.localScale = restScale;
         restBottomOffset = ComputeBottomOffset();
 
-        // Strictly after ComputeBottomOffset: the halo quad extends well below the vial, so a
-        // renderer measured into those bounds would push the whole potion up off the ground by
-        // the height of its own glow.
+        // 반드시 ComputeBottomOffset 이후에 호출해야 한다: 헤일로 쿼드는 물약보다 훨씬
+        // 아래까지 뻗어있어서, 그 바운드까지 포함해서 측정하면 물약 전체가 자기 자신의
+        // 광채 높이만큼 공중에 떠버린다.
         SpawnAura();
 
-        // Beat 1 begins here: CombatLoop.Update() reads this and holds the player in idle
-        // rather than letting them run on while the potion is still in the air.
+        // 여기서 1번 박자가 시작된다: CombatLoop.Update()가 이 값을 읽어, 물약이 아직
+        // 공중에 있는 동안에는 플레이어를 계속 달리게 두지 않고 idle 상태로 붙잡아둔다.
         if (combatLoop != null)
         {
             combatLoop.PushIdleHold();
@@ -159,12 +166,13 @@ public class StatPotionPickup : MonoBehaviour
         GameEvents.OnPlayerDied -= HandlePlayerDied;
     }
 
-    // A kill and the player's own death can land in the same beat - the monster that just
-    // dropped this dies to the same hit that kills the player. Left alone, this pickup's
-    // coroutine runs on completely independent of StageManager's death sequence (its
-    // StopAllCoroutines only reaches its own coroutines, not this object's), so the potion
-    // kept sliding into a player who was already dead and even paid out its stat afterward.
-    // Freezing it in place here is what the death sequence actually shows instead.
+    // 몬스터 처치와 플레이어 자신의 사망이 같은 순간에 일어날 수 있다 - 방금 이걸
+    // 떨어뜨린 몬스터가 플레이어를 죽인 것과 같은 타격에 죽는 경우다. 그냥 두면 이
+    // 픽업의 코루틴은 StageManager의 사망 시퀀스와 완전히 무관하게 계속 실행되고
+    // (StageManager의 StopAllCoroutines는 자기 자신의 코루틴에만 영향을 미치지, 이
+    // 오브젝트의 코루틴에는 미치지 않는다), 그래서 물약이 이미 죽은 플레이어에게
+    // 계속 미끄러져 들어가고 심지어 스탯까지 지급해버렸다. 여기서 제자리에 멈춰
+    // 세우는 것이 사망 시퀀스가 실제로 보여줘야 하는 모습이다.
     private void HandlePlayerDied()
     {
         StopAllCoroutines();
@@ -176,9 +184,9 @@ public class StatPotionPickup : MonoBehaviour
         }
     }
 
-    // Distance from this transform's pivot down to the bottom of its rendered mesh, at
-    // whatever scale is currently applied. Combines every renderer in case the visual has
-    // more than one part.
+    // 현재 적용된 스케일 기준으로, 이 transform의 피벗에서부터 렌더링된 메시의
+    // 바닥까지의 거리. 비주얼이 여러 파츠로 이루어진 경우를 대비해 모든 렌더러를
+    // 합산한다.
     private float ComputeBottomOffset()
     {
         if (renderers == null || renderers.Length == 0) return 0f;
@@ -189,8 +197,9 @@ public class StatPotionPickup : MonoBehaviour
         return transform.position.y - combined.min.y;
     }
 
-    // Instantiates the RedVial/GreenVial matching this drop's stat type as a child - the
-    // asset itself now carries that identity instead of a shared icon mesh tinted by hand.
+    // 이 드롭의 스탯 타입에 맞는 RedVial/GreenVial을 자식 오브젝트로 인스턴스화한다 -
+    // 이제는 손으로 색을 입힌 공용 아이콘 메시가 아니라 애셋 자체가 그 정체성을
+    // 갖고 있다.
     private void SpawnVisual()
     {
         GameObject prefab = statType == StatType.Attack ? atkVisualPrefab : hpVisualPrefab;
@@ -205,18 +214,18 @@ public class StatPotionPickup : MonoBehaviour
         visual.transform.localRotation = Quaternion.identity;
         visual.transform.localScale = Vector3.one * visualBaseScale;
 
-        // This asset ships with its own idle rotate/float/scale loop - PlayToss/PlayRunOver
-        // below already drive this object's position and scale every frame, so the two would
-        // fight over the same transform if this were left running.
+        // 이 애셋에는 자체적인 idle 회전/부유/스케일 루프가 기본으로 딸려있다 - 아래의
+        // PlayToss/PlayRunOver가 이미 매 프레임 이 오브젝트의 위치와 스케일을 제어하고
+        // 있으므로, 이걸 그대로 두면 둘이 같은 transform을 두고 서로 충돌하게 된다.
         SimpleGemsAnim anim = visual.GetComponent<SimpleGemsAnim>();
         if (anim != null) Destroy(anim);
 
         renderers = visual.GetComponentsInChildren<Renderer>();
     }
 
-    // Two layers on one billboarded object: an additive halo quad (the visible glow) and a
-    // point light (colored light thrown onto the ground). Both take their color from the grade
-    // and their strength from GetAuraStrength.
+    // 빌보드 오브젝트 하나에 두 레이어: 가산 헤일로 쿼드(눈에 보이는 광채)와
+    // 포인트 라이트(바닥에 던지는 색이 있는 빛). 둘 다 색상은 등급에서, 세기는
+    // GetAuraStrength에서 가져온다.
     private void SpawnAura()
     {
         float strength = GradeVisuals.GetAuraStrength(grade);
@@ -224,8 +233,9 @@ public class StatPotionPickup : MonoBehaviour
 
         GameObject aura = GameObject.CreatePrimitive(PrimitiveType.Quad);
         aura.name = "GradeAura";
-        // CreatePrimitive ships a collider; this is a purely visual object and nothing here
-        // uses physics (pickup is a distance check, see PlayRunOver).
+        // CreatePrimitive는 콜라이더를 기본으로 붙여서 나온다; 이건 순전히 시각적인
+        // 오브젝트일 뿐이고 여기서는 물리를 전혀 사용하지 않는다(픽업 판정은 거리
+        // 계산이다, PlayRunOver 참고).
         Destroy(aura.GetComponent<Collider>());
 
         aura.transform.SetParent(transform, false);
@@ -240,8 +250,9 @@ public class StatPotionPickup : MonoBehaviour
         light.color = color;
         light.intensity = auraLightIntensityMax * strength;
         light.range = auraLightRange;
-        // Shadows off: this is a glow, and a small prop casting real shadows over the fight
-        // would draw far more attention than "은은하게" allows (and costs a shadow map).
+        // 그림자 끔: 이건 그냥 광채일 뿐인데, 작은 소품이 전투 위에 실제 그림자를
+        // 드리우면 "은은하게"가 허용하는 것보다 훨씬 더 시선을 빼앗는다(게다가
+        // 섀도우맵 비용도 든다).
         light.shadows = LightShadows.None;
 
         aura.AddComponent<Billboard>();
@@ -250,9 +261,10 @@ public class StatPotionPickup : MonoBehaviour
         SpawnSparkles(color, strength);
     }
 
-    // A ring of blinking star glints. All of them share one material (same tint), so the
-    // per-star twinkle is driven purely by transform scale - independent phases without
-    // needing one material instance per star to animate a color on.
+    // 깜빡이는 별빛들로 이루어진 고리. 모두 하나의 머티리얼을 공유하며(같은
+    // 색조), 그래서 별마다의 반짝임은 순전히 transform 스케일만으로 표현된다 -
+    // 색상을 애니메이션시키기 위해 별마다 머티리얼 인스턴스를 따로 만들 필요
+    // 없이 독립적인 위상을 가질 수 있다.
     private void SpawnSparkles(Color color, float strength)
     {
         if (sparkleCount <= 0) return;
@@ -278,8 +290,8 @@ public class StatPotionPickup : MonoBehaviour
             sparkle.GetComponent<MeshRenderer>().material = sparkleMaterial;
 
             sparkle.AddComponent<Billboard>();
-            // Phase spread across the ring: star i starts 1/count of a cycle behind star i-1,
-            // so the blinks chase each other around instead of firing together.
+            // 위상을 고리 전체에 분산시킨다: 별 i는 별 i-1보다 1/count 사이클만큼 늦게
+            // 시작하므로, 깜빡임들이 동시에 번쩍이지 않고 서로를 쫓아가듯 이어진다.
             sparkle.AddComponent<StatPotionSparkle>()
                    .Initialize(sparkleSize, sparkleBlinkSpeed, (float)i / sparkleCount);
         }
@@ -289,17 +301,17 @@ public class StatPotionPickup : MonoBehaviour
     {
         var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
 
-        // Additive transparent: URP needs the surface/blend properties AND the matching
-        // keyword/queue set by hand, since this material is built in code rather than through
-        // the shader GUI that normally keeps those in sync.
+        // 가산 투명: 이 머티리얼은 평소 그 값들을 자동으로 맞춰주는 셰이더 GUI가 아니라
+        // 코드로 생성되므로, URP에서는 surface/blend 속성과 이에 맞는 키워드/큐 설정을
+        // 직접 손으로 맞춰줘야 한다.
         mat.SetFloat("_Surface", 1f);
         mat.SetFloat("_Blend", 2f);
         mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
         mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
         mat.SetFloat("_ZWrite", 0f);
-        // Both faces: Billboard orients local +Z away from the camera, so which side of the
-        // quad ends up facing the viewer depends on that convention - drawing both sides makes
-        // the halo visible regardless.
+        // 양면 렌더링: Billboard는 로컬 +Z가 카메라 반대쪽을 향하도록 정렬하므로, 쿼드의
+        // 어느 면이 결국 뷰어를 향하는지는 그 규약에 달려있다 - 양면을 모두 그리면
+        // 어느 쪽이든 헤일로가 확실히 보인다.
         mat.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
         mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
         mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
@@ -310,9 +322,9 @@ public class StatPotionPickup : MonoBehaviour
         return mat;
     }
 
-    // Four-point star glint, shared by every sparkle on every potion. A soft radial blob
-    // (GlowTexture) reads as a lamp; the cross-shaped falloff below is what actually reads as
-    // a twinkle at this size.
+    // 모든 물약의 모든 반짝임이 공유하는 4갈래 별빛 텍스처. 부드러운 방사형 뭉치
+    // (GlowTexture)는 그냥 램프처럼 보인다; 아래의 십자 모양 감쇠가 이 크기에서
+    // 실제로 반짝임처럼 보이게 만드는 요소다.
     private static Texture2D sparkleTexture;
     private static Texture2D SparkleTexture
     {
@@ -334,16 +346,16 @@ public class StatPotionPickup : MonoBehaviour
             {
                 for (int x = 0; x < size; x++)
                 {
-                    // Normalized to the quad's half-extent, so the spikes reach its edges.
+                    // 쿼드의 절반 크기로 정규화하여, 뾰족한 끝이 가장자리까지 닿도록 한다.
                     float dx = Mathf.Abs(x - center) / center;
                     float dy = Mathf.Abs(y - center) / center;
 
-                    // Two crossed needles: each arm stays bright along its own axis while
-                    // falling off sharply across it, which is what gives the star its points
-                    // instead of a diamond.
+                    // 십자로 교차하는 두 개의 바늘: 각 팔은 자기 축을 따라서는 밝음을 유지하지만
+                    // 그 축을 가로지르는 방향으로는 급격히 감쇠한다. 이것이 마름모가 아니라
+                    // 별 모양의 뾰족함을 만들어내는 요소다.
                     float horizontal = Falloff(dx) * Needle(dy);
                     float vertical = Falloff(dy) * Needle(dx);
-                    // Round core so the arms meet in a bright centre rather than a seam.
+                    // 둥근 중심부를 두어, 팔들이 이음매가 아니라 밝은 중심에서 만나도록 한다.
                     float core = Falloff(Mathf.Sqrt(dx * dx + dy * dy) * 2.6f);
 
                     float v = Mathf.Clamp01(horizontal + vertical + core);
@@ -357,18 +369,19 @@ public class StatPotionPickup : MonoBehaviour
         }
     }
 
-    // Smooth 1->0 over [0,1], squared for a tighter falloff.
+    // [0,1] 구간에서 1->0으로 부드럽게 감쇠하며, 더 좁은 감쇠를 위해 제곱한다.
     private static float Falloff(float d)
     {
         float f = Mathf.SmoothStep(1f, 0f, Mathf.Clamp01(d));
         return f * f;
     }
 
-    // Very tight falloff across an arm's width - anything off the axis dies almost at once.
+    // 팔의 폭을 가로질러 매우 좁게 감쇠한다 - 축에서 조금만 벗어나도 거의
+    // 즉시 사라진다.
     private static float Needle(float d) => Mathf.Clamp01(1f - Mathf.Clamp01(d) * 14f);
 
-    // One soft radial falloff shared by every potion ever dropped - the texture is identical
-    // for all of them, only the tint differs (that lives on the per-instance material).
+    // 지금까지 드롭된 모든 물약이 공유하는 하나의 부드러운 방사형 감쇠 텍스처 -
+    // 텍스처 자체는 전부 동일하고, 색조만 다르다(그건 인스턴스별 머티리얼에 있다).
     private static Texture2D glowTexture;
     private static Texture2D GlowTexture
     {
@@ -394,8 +407,8 @@ public class StatPotionPickup : MonoBehaviour
                     float dy = (y - center) / center;
                     float r = Mathf.Sqrt(dx * dx + dy * dy);
 
-                    // Squared smoothstep: bright core falling off to nothing well inside the
-                    // quad's edge, so the halo never shows a hard square boundary.
+                    // 제곱한 smoothstep: 밝은 중심부가 쿼드의 가장자리에 닿기 훨씬 전에 이미
+                    // 0으로 감쇠되어, 헤일로에 딱딱한 사각형 경계가 절대 보이지 않는다.
                     float falloff = Mathf.SmoothStep(1f, 0f, Mathf.Clamp01(r));
                     falloff *= falloff;
 
@@ -413,8 +426,9 @@ public class StatPotionPickup : MonoBehaviour
     {
         yield return PlayToss();
 
-        // Beat 2: the toss owned "stay put"; releasing it drops the player straight back into
-        // CombatLoop's default "nothing in range, keep moving" state.
+        // 2번 박자: 던지는 동안은 "제자리에 머물기"가 주도권을 갖고 있었다; 이를
+        // 풀어주면 플레이어는 곧바로 CombatLoop의 기본 상태인 "범위 내에 아무것도
+        // 없으면 계속 이동"으로 돌아간다.
         if (combatLoop != null) combatLoop.PopIdleHold();
         idleHoldActive = false;
 
@@ -424,14 +438,15 @@ public class StatPotionPickup : MonoBehaviour
         Collect();
     }
 
-    // Arcs away from the player and bounces down to a stop, all inside landDuration.
+    // 플레이어로부터 멀어지는 포물선을 그리며 튕겨서 정지하기까지, 전부
+    // landDuration 안에 이루어진다.
     private IEnumerator PlayToss()
     {
         Vector3 startPos = transform.position;
         float groundY = ResolveGroundY() + restBottomOffset;
 
-        // Straight back along the player-to-potion line, so wherever the monster died the
-        // potion always lands on the far side of it rather than off to one side.
+        // 플레이어에서 물약으로 이어지는 직선을 따라 곧장 뒤쪽으로 - 몬스터가
+        // 어디서 죽든 물약은 항상 옆이 아니라 그 너머 쪽에 떨어지게 된다.
         Vector3 away = Vector3.right;
         if (player != null)
         {
@@ -451,12 +466,12 @@ public class StatPotionPickup : MonoBehaviour
             t += Time.deltaTime;
             float p = Mathf.Clamp01(t / landDuration);
 
-            // Pops to full size over the opening arc, not the whole sequence - it should be
-            // fully formed by the time it first hits the ground.
+            // 전체 시퀀스가 아니라 첫 포물선 궤적 동안 완전한 크기로 커진다 - 처음
+            // 바닥에 닿을 때는 이미 완전히 형성되어 있어야 한다.
             transform.localScale = restScale * Mathf.Clamp01(p / 0.3f);
 
-            // Decelerating: most of the ground is covered by the first hop, the rebounds
-            // barely creep forward - which is what a thrown object shedding speed looks like.
+            // 감속: 대부분의 거리는 첫 번째 도약에서 이동하고, 이후 재반동들은 거의
+            // 앞으로 나아가지 않는다 - 이것이 던져진 물체가 속도를 잃어가는 모습이다.
             Vector3 flat = Vector3.Lerp(startPos, landingPos, EaseOutQuad(p));
             flat.y = Mathf.Lerp(startPos.y, groundY, EaseOutQuad(p)) + tossHeight * HopHeight(p);
             transform.position = flat;
@@ -468,9 +483,9 @@ public class StatPotionPickup : MonoBehaviour
         transform.position = landingPos;
     }
 
-    // Ground-locked approach at a flat, constant speed - the world sliding past a running
-    // player. Runs until the potion is underfoot rather than for a fixed duration, so the
-    // distance it actually has to cover sets how long the run takes.
+    // 지면에 고정된 채 일정한 속도로 접근한다 - 달리는 플레이어를 스쳐 지나가는
+    // 세계와 같은 느낌이다. 정해진 시간이 아니라 물약이 발밑에 올 때까지
+    // 실행되므로, 실제로 이동해야 할 거리가 얼마나 오래 걸릴지를 결정한다.
     private IEnumerator PlayRunOver()
     {
         float restY = transform.position.y;
@@ -483,8 +498,8 @@ public class StatPotionPickup : MonoBehaviour
 
             Vector3 pos = transform.position;
 
-            // Flattened: the potion tracks the player's position on the floor plane and stays
-            // at its own resting height the whole way, so it slides rather than rises.
+            // 평면화: 물약은 바닥 평면상에서 플레이어의 위치를 추적하며 이동하는 내내
+            // 자기 안착 높이를 유지한다. 그래서 떠오르지 않고 미끄러진다.
             Vector3 toPlayer = player.position - pos;
             toPlayer.y = 0f;
 
@@ -498,9 +513,10 @@ public class StatPotionPickup : MonoBehaviour
         }
     }
 
-    // The player's own collider bottom is the ground line everything else in this game snaps
-    // to (Monster.SpawnUltimateImpactVfx does exactly this) - there's no ground collider to
-    // raycast against. Falling back to the spawn height keeps the toss sane if it's missing.
+    // 이 게임의 다른 모든 것이 기준으로 삼는 지면 라인은 플레이어 자신의 콜라이더
+    // 바닥이다(Monster.SpawnUltimateImpactVfx도 정확히 이렇게 한다) - 레이캐스트할
+    // 바닥 콜라이더가 따로 없다. 이게 없을 경우엔 스폰 높이로 대체해서 던지기
+    // 동작이 이상해지지 않도록 한다.
     private float ResolveGroundY()
     {
         if (player == null) return transform.position.y;
@@ -509,8 +525,8 @@ public class StatPotionPickup : MonoBehaviour
         return playerCollider != null ? playerCollider.bounds.min.y : transform.position.y;
     }
 
-    // Normalized height across the hop sequence: 1 at the opening arc's peak, 0 at every
-    // ground contact and at rest.
+    // 도약 시퀀스 전체에 걸친 정규화된 높이: 첫 포물선 정점에서 1, 매 지면
+    // 접촉 시와 정지 상태에서 0.
     private static float HopHeight(float p)
     {
         float cursor = 0f;
@@ -540,10 +556,11 @@ public class StatPotionPickup : MonoBehaviour
             else pc.IncreaseMaxHp(amount);
         }
 
-        // Drives both the existing "+N STAT" popup and the player's buff aura VFX - the
-        // pickup moment is now what those react to instead of the kill itself. Deliberately
-        // no pose here: the player is mid-run (see PlayRunOver) and should stay that way -
-        // eating this is a beat in the run, not a stop for it.
+        // 기존의 "+N STAT" 팝업과 플레이어의 버프 아우라 VFX를 둘 다 구동한다 - 이제는
+        // 처치 순간이 아니라 픽업 순간에 이것들이 반응한다. 여기서 의도적으로 별도의
+        // 포즈를 넣지 않았다: 플레이어는 달리는 중이며(PlayRunOver 참고) 그 상태를
+        // 유지해야 한다 - 이걸 먹는 것은 달리기를 멈추는 게 아니라 달리기 중의 한
+        // 박자일 뿐이다.
         GameEvents.RaiseStatDropGained(grade, statType, amount);
 
         Destroy(gameObject);
@@ -556,17 +573,19 @@ public class StatPotionPickup : MonoBehaviour
     }
 }
 
-// The aura's own fade-in and idle pulse, kept separate so StatPotionPickup stays focused on
-// the toss/run-over sequence - and so the glow keeps breathing on its own through every beat
-// of that sequence without it having to drive the effect frame by frame.
+// 아우라 자체의 페이드인과 idle 맥동 효과로, StatPotionPickup이 던지기/달려가기
+// 시퀀스에만 집중할 수 있도록 별도로 분리해두었다 - 또한 그 시퀀스의 매 박자마다
+// StatPotionPickup이 매 프레임 이 효과를 직접 구동하지 않아도 광채가 알아서
+// 계속 숨쉬듯 움직이게 하기 위해서다.
 public class StatPotionAuraMotion : MonoBehaviour
 {
-    // Matches the potion's own pop-in, so the glow arrives with the vial rather than snapping
-    // on at full strength while the mesh is still scaling up.
+    // 물약 자체의 등장 애니메이션과 맞춰서, 메시가 아직 커지는 중인데 광채만
+    // 갑자기 최고 강도로 켜지지 않고 물약과 함께 나타나도록 한다.
     [SerializeField] private float fadeInDuration = 0.25f;
-    // Continuous breathing. Deeper than the original 0.14 - at that amplitude the pulse was
-    // technically running but invisible across the potion's ~1.5s life. Still a swell rather
-    // than a strobe; the sharp "반짝" is the sparkles' job (see StatPotionSparkle).
+    // 지속적인 숨쉬기 효과. 원래 값이던 0.14보다 더 깊게 잡았다 - 그 진폭에서는
+    // 맥동이 기술적으로는 동작했지만 물약의 약 1.5초 수명 동안 눈에 거의 보이지
+    // 않았다. 여전히 확 튀는 스트로브가 아니라 은은한 부풀림 정도다; 날카로운
+    // "반짝"은 반짝임(sparkle)들의 몫이다(StatPotionSparkle 참고).
     [SerializeField] private float pulseAmplitude = 0.3f;
     [SerializeField] private float pulseSpeed = 3f;
 
@@ -579,9 +598,10 @@ public class StatPotionAuraMotion : MonoBehaviour
     private void Awake()
     {
         var meshRenderer = GetComponent<MeshRenderer>();
-        // sharedMaterial, not material: SpawnAura already assigned a material built for this
-        // one potion, and the instancing getter would hand back a *copy* that StatPotionPickup's
-        // OnDestroy doesn't know about and therefore never cleans up.
+        // material이 아니라 sharedMaterial: SpawnAura가 이미 이 물약 하나만을 위해
+        // 만들어진 머티리얼을 할당해뒀는데, 인스턴싱 게터를 쓰면 *복사본*을 돌려받게
+        // 되고 StatPotionPickup의 OnDestroy는 그 복사본의 존재를 모르므로 절대
+        // 정리되지 않는다.
         if (meshRenderer != null) material = meshRenderer.sharedMaterial;
         auraLight = GetComponent<Light>();
 
@@ -602,8 +622,8 @@ public class StatPotionAuraMotion : MonoBehaviour
     }
 }
 
-// Slowly rotates the whole sparkle ring. Separate from the individual blinks so the glints
-// drift around the potion instead of sitting at fixed screen positions the entire time.
+// 전체 반짝임 고리를 천천히 회전시킨다. 개별 깜빡임과는 별개로 동작하여,
+// 반짝임들이 화면상 고정된 위치에 계속 머물지 않고 물약 주변을 떠돈다.
 public class StatPotionSparkleRing : MonoBehaviour
 {
     private float degreesPerSecond;
@@ -616,15 +636,18 @@ public class StatPotionSparkleRing : MonoBehaviour
     }
 }
 
-// One star glint's blink. Drives localScale only - every sparkle on a potion shares a single
-// material, so animating scale is what lets each one blink on its own phase without needing a
-// material instance per star.
+// 별빛 반짝임 하나의 깜빡임을 담당. localScale만 제어한다 - 물약의 모든
+// 반짝임이 단일 머티리얼을 공유하므로, 별마다 머티리얼 인스턴스를 따로
+// 만들지 않고도 각자 자기 위상으로 깜빡이게 하려면 스케일을 애니메이션시키는
+// 방법을 쓴다.
 public class StatPotionSparkle : MonoBehaviour
 {
-    // Raising the sine to a high power turns a smooth wave into a narrow spike: a quick flash
-    // with a long dark gap, which is what separates a twinkle from a throb.
+    // 사인 값을 높은 거듭제곱으로 올리면 부드러운 파형이 좁은 스파이크로
+    // 바뀐다: 긴 어두운 간격 사이에 짧고 빠른 섬광이 생기는데, 이것이 맥동과
+    // 반짝임을 구분짓는 요소다.
     private const float BlinkSharpness = 5f;
-    // Never fully vanishes; a star popping in from literally nothing reads as a glitch.
+    // 절대 완전히 사라지지 않는다; 별이 정말 아무것도 없는 상태에서 갑자기
+    // 튀어나오면 마치 오류(글리치)처럼 보인다.
     private const float MinScaleFactor = 0.12f;
 
     private float restScale;

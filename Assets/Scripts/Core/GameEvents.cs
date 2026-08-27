@@ -4,27 +4,24 @@ public static class GameEvents
 {
     public static event Action<Monster> OnMonsterSpawned;
     public static event Action<Monster> OnMonsterDied;
-    // Fires on every point of player-dealt damage - both the normal swing (PlayerCharacter.
-    // Attack) and the ultimate (UltimateManager) land on Monster.TakeDamage, so this single
-    // hook covers both without either system needing its own damage-number plumbing.
+    // 플레이어가 가하는 모든 피해 지점마다 발생한다 - 일반 공격(PlayerCharacter.Attack)과
+    // 궁극기(UltimateManager) 모두 결국 Monster.TakeDamage로 귀결되므로, 이 훅 하나로
+    // 두 시스템 모두를 커버하며 각자 자체적인 데미지 표시 배관을 만들 필요가 없다.
     public static event Action<Monster, float> OnMonsterDamaged;
     public static event Action<PlayerStats> OnPlayerStatsChanged;
     public static event Action<int, int> OnStageChanged;
     public static event Action<int> OnBossGaugeChanged;
-    // Fires whenever a monster kill rolls a successful stat drop, carrying the rolled
-    // grade/stat/amount so UI (popup, stat panel) can react without re-deriving the roll.
+    // 몬스터 처치가 스탯 드롭 성공 롤을 만들어낼 때마다 발생하며, 롤된 등급/스탯/수치를 함께
+    // 실어 보내서 UI(팝업, 스탯 패널)가 그 롤을 다시 계산하지 않고도 반응할 수 있게 한다.
     public static event Action<StatGrade, StatType, float> OnStatDropGained;
-    // Fires on every collected sword/shield, carrying that pickup's own type/grade - whether
-    // or not it actually beat the equipped grade, it always feeds the mastery meter (see
-    // EquipmentDropManager.CompleteDrop), so every pickup is worth announcing.
+    // 획득한 모든 sword/shield에서 발생하며, 그 픽업 자체의 타입/등급을 실어 보낸다 - 실제로
+    // 장착된 등급을 넘었는지 여부와 무관하게 항상 숙련도 게이지에 반영되므로
+    // (EquipmentDropManager.CompleteDrop 참고), 모든 픽업이 알릴 가치가 있다.
     public static event Action<EquipmentType, StatGrade> OnEquipmentPickedUp;
-    // Fires whenever a slot's stone count changes - carrying the new total and the delta, so
-    // a pickup popup can say "+4" while a counter readout just takes the total.
+    // 슬롯의 스톤 개수가 변할 때마다 발생하며, 새 총합과 델타를 함께 실어 보낸다 - 그래서
+    // 픽업 팝업은 "+4"라고 표시할 수 있고, 카운터 표시는 총합만 그대로 가져다 쓰면 된다.
     public static event Action<StatType, int, int> OnStonesChanged;
     public static event Action OnPlayerDied;
-
-    // Phase 2 hook (parry) - declared only, nothing raises or subscribes yet.
-    public static event Action<bool> OnParryResult;
 
     public static void RaiseMonsterSpawned(Monster monster) => OnMonsterSpawned?.Invoke(monster);
     public static void RaiseMonsterDied(Monster monster) => OnMonsterDied?.Invoke(monster);
@@ -36,5 +33,4 @@ public static class GameEvents
     public static void RaiseEquipmentPickedUp(EquipmentType equipType, StatGrade grade) => OnEquipmentPickedUp?.Invoke(equipType, grade);
     public static void RaiseStonesChanged(StatType statType, int total, int delta) => OnStonesChanged?.Invoke(statType, total, delta);
     public static void RaisePlayerDied() => OnPlayerDied?.Invoke();
-    public static void RaiseParryResult(bool success) => OnParryResult?.Invoke(success);
 }

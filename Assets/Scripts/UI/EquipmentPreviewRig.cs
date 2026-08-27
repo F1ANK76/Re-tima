@@ -1,25 +1,24 @@
 using UnityEngine;
 
-// One miniature "display case" for the equip panel: a small stationary camera looking at a
-// tiny stage far from the playable area, rendering to a texture a RawImage reads from.
+// 장비 패널을 위한 작은 "진열장" 하나: 플레이 가능한 영역에서 멀리 떨어진 작은 무대를 바라보는
+// 고정된 소형 카메라가 있고, 그 렌더링 결과를 RawImage가 텍스처로 읽어 사용한다.
 //
-// Reuses EquipmentDropPickup's own mesh/material/aura spawning (Initialize) for the displayed
-// item rather than duplicating that ~250 lines - the toss/run-over coroutine it would normally
-// start is stopped before it gets to run more than its opening (synchronous) step, so the item
-// just sits there already "landed", but its aura glow and sparkle twinkle (driven by Update,
-// not the coroutine) keep animating exactly as they do on a real drop.
+// 표시할 아이템을 위해 약 250줄 분량을 중복 작성하는 대신 EquipmentDropPickup 자체의
+// mesh/material/aura 생성 로직(Initialize)을 재사용한다 - 원래라면 시작되었을 던지기/굴러가는
+// 코루틴은 첫 (동기적인) 단계 이상 진행되기 전에 정지되므로, 아이템은 이미 "착지한" 상태로
+// 그 자리에 놓이지만, (코루틴이 아니라 Update로 구동되는) 오라 발광과 반짝임 효과는 실제
+// 드롭 때와 똑같이 계속 애니메이션된다.
 public class EquipmentPreviewRig : MonoBehaviour
 {
-    // Higher than the icon actually displays at (see EquipmentPanelView.IconSize) - the extra
-    // resolution plus MSAA is what keeps the item's own 1024px texture from reading as a
-    // blurry smear once downsized into a ~96px UI icon.
+    // 실제 아이콘이 표시되는 크기보다 크게 잡는다(EquipmentPanelView.IconSize 참고) - 이렇게
+    // 여유 있는 해상도에 MSAA까지 더해야 아이템 자체의 1024px 텍스처가 약 96px UI 아이콘으로
+    // 축소될 때 흐릿하게 뭉개지지 않는다.
     private const int TextureResolution = 256;
     private const int TextureAntiAliasing = 4;
 
     private const float CameraFieldOfView = 45f;
-    // How much of the vertical frame the item's bounding sphere should fill - short of 1 so
-    // there is always a small margin, regardless of how a given mesh's proportions differ
-    // from another's.
+    // 아이템의 바운딩 스피어가 수직 프레임에서 차지해야 할 비율 - 1보다 약간 작게 잡아서,
+    // 메시마다 비율이 서로 다르더라도 항상 약간의 여백이 남도록 한다.
     private const float FrameFill = 0.62f;
     private const float MinBoundsRadius = 0.05f;
 
@@ -53,36 +52,36 @@ public class EquipmentPreviewRig : MonoBehaviour
         previewCamera.targetTexture = renderTexture;
     }
 
-    // Swaps in a freshly-initialized pickup at the stage origin, discarding whatever was
-    // showing before - simplest correct way to change grade/type is to not reuse the instance.
+    // 이전에 표시되던 것을 버리고, 무대 원점에 새로 초기화된 픽업을 갈아 끼운다 -
+    // 등급/타입을 바꾸는 가장 단순하고 확실한 방법은 인스턴스를 재사용하지 않는 것이다.
     public void Show(EquipmentType equipType, StatGrade grade)
     {
         Clear();
         if (pickupPrefab == null) return;
 
         current = Instantiate(pickupPrefab, transform.position, Quaternion.identity, transform);
-        // "player"/combatLoop/dropManager are all irrelevant here - the toss coroutine that
-        // would use them never gets to run past its opening frame (see below).
+        // "player"/combatLoop/dropManager는 여기서는 전부 의미가 없다 - 이것들을 사용할 던지기
+        // 코루틴은 어차피 첫 프레임을 넘어서까지 실행되지 않는다(아래 참고).
         current.Initialize(equipType, grade, transform, null, 0f, null);
         current.StopAllCoroutines();
 
-        // Initialize starts that coroutine with `StartCoroutine(TossThenRunOver())`, whose
-        // first line is itself a `yield return` on the toss sub-coroutine - Unity runs an
-        // enumerator synchronously up to its first suspension point, so PlayToss's opening
-        // "shrink to zero, then grow toward a point away from the player" already executed
-        // one partial step before the StopAllCoroutines call above could reach it. Resetting
-        // the resting pose here is what actually lands it centred and at full size instead of
-        // wherever that partial step left it.
+        // Initialize는 `StartCoroutine(TossThenRunOver())`로 해당 코루틴을 시작하는데, 그
+        // 첫 줄 자체가 던지기 서브 코루틴에 대한 `yield return`이다 - Unity는 enumerator를
+        // 첫 중단 지점까지는 동기적으로 실행하므로, 위의 StopAllCoroutines 호출이 닿기 전에
+        // 이미 PlayToss의 시작 부분인 "0으로 축소했다가 플레이어에게서 먼 지점을 향해
+        // 커지는" 동작이 한 단계 부분적으로 실행되어 버린다. 여기서 정지 상태의 포즈를 다시
+        // 설정해줘야 그 부분 실행이 남겨둔 위치가 아니라 실제로 중앙에, 원래 크기로 놓이게
+        // 된다.
         current.transform.localPosition = Vector3.zero;
         current.transform.localScale = Vector3.one * GradeVisuals.GetPotionScale(grade);
 
         FrameOnVisual();
     }
 
-    // Points the camera at the item's actual rendered bounds and backs it off just far enough
-    // to fill a consistent fraction of the frame - without this, a tall thin sword and a wide
-    // flat shield (or a Normal vs. a 2x-scaled Legendary) would each occupy a different amount
-    // of the icon, which is what "인is inconsistent" reads as.
+    // 카메라를 아이템의 실제 렌더링 바운드에 맞춰 겨냥하고, 프레임에서 항상 일정한 비율을
+    // 차지하도록 딱 필요한 만큼만 뒤로 물린다 - 이렇게 하지 않으면 길고 얇은 검과 넓고 납작한
+    // 방패(또는 Normal과 2배 스케일된 Legendary)가 아이콘 안에서 서로 다른 크기를 차지하게
+    // 되어 "일관성이 없다"는 인상을 준다.
     private void FrameOnVisual()
     {
         Renderer[] visualRenderers = current.VisualRenderers;
@@ -96,9 +95,9 @@ public class EquipmentPreviewRig : MonoBehaviour
         float distance = (radius / Mathf.Sin(halfFovRad)) / FrameFill;
 
         previewCamera.transform.position = bounds.center - previewCamera.transform.forward * distance;
-        // Camera starts at identity rotation (facing local +Z); re-aim it at the item's actual
-        // centre rather than assuming that centre sits exactly on the stage origin, since a
-        // mesh's pivot is rarely its geometric middle.
+        // 카메라는 identity 회전 상태(로컬 +Z를 바라봄)로 시작한다; 그 중심이 정확히 무대
+        // 원점에 있다고 가정하지 않고 아이템의 실제 중심을 다시 겨냥하는데, 메시의 피벗이
+        // 기하학적 중심과 일치하는 경우는 거의 없기 때문이다.
         previewCamera.transform.rotation = Quaternion.LookRotation(bounds.center - previewCamera.transform.position);
     }
 

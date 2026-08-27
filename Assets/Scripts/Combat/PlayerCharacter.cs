@@ -6,20 +6,21 @@ public class PlayerCharacter : MonoBehaviour
     [SerializeField] private float startingMaxHp = 50f;
     [SerializeField] private float startingAttackPower = 1f;
     [SerializeField] private ParticleSystem hitVfx;
-    // Hovl's aura prefab (Play On Awake, 1s natural loop length) - kept inactive by default
-    // and just toggled on/off around a stat drop, rather than driven via Play()/Stop() like
-    // hitVfx, since simply activating it already plays one full cycle on its own.
+    // Hovl의 오라 프리팹(Play On Awake, 자체 루프 길이 1초) - 기본적으로 비활성 상태로
+    // 두고 스탯 드롭 시점을 기준으로 켜고 끄기만 한다. hitVfx처럼 Play()/Stop()으로
+    // 제어하지 않는 이유는, 단순히 활성화하는 것만으로 이미 한 사이클이 온전히
+    // 재생되기 때문이다.
     [SerializeField] private GameObject buffVfx;
 
-    // How long the hit flash stays up regardless of its own (much longer) particle
-    // lifetimes - every monster type (normal/elite/boss) lands here via TakeDamage.
+    // 피격 플래시 자체의 (훨씬 긴) 파티클 수명과 무관하게 얼마나 떠 있을지 - 모든
+    // 몬스터 타입(normal/elite/boss)의 공격이 TakeDamage를 거쳐 여기로 들어온다.
     private const float HitVfxDuration = 0.3f;
     private const float BuffVfxDuration = 1f;
 
     private PlayerStats stats;
     public PlayerStats Stats => stats ??= new PlayerStats(startingMaxHp, startingAttackPower);
 
-    // Phase 2 hook: set true while a successful parry grants invulnerability.
+    // 2단계용 훅: 패링 성공으로 무적이 부여되는 동안 true로 설정된다.
     public bool IsInvulnerable { get; set; } = false;
 
     private HealthBarView healthBarCache;
@@ -81,14 +82,14 @@ public class PlayerCharacter : MonoBehaviour
 
         if (Stats.IsDead)
         {
-            // HP stays at zero for the whole death animation - StageManager revives the
-            // player at full health once it finishes and the stage restarts.
+            // HP는 죽음 애니메이션이 재생되는 내내 0으로 유지된다 - StageManager가
+            // 애니메이션이 끝나면 플레이어를 풀피로 되살리고 스테이지를 재시작한다.
             GameEvents.RaisePlayerDied();
         }
     }
 
-    // Every stage run starts the player at full health, so a stage is always attempted
-    // from a clean slate rather than with whatever was left over from the last one.
+    // 모든 스테이지 시도는 플레이어를 풀피 상태로 시작한다 - 그래야 이전 판에서
+    // 남은 상태가 아니라 항상 깨끗한 상태로 스테이지를 시도하게 된다.
     public void RestoreToFullHp()
     {
         Stats.ResetToFull();

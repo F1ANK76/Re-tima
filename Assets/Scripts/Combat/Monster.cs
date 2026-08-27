@@ -20,9 +20,8 @@ public class Monster : MonoBehaviour
     private WeaponSwing WeaponSwing => weaponSwingCache ??= GetComponentInChildren<WeaponSwing>();
 
     [Header("Attack telegraph (Elite/Boss)")]
-    // Time from the attack starting to the hit landing, picked fresh each swing - the
-    // number the player actually has to react to. The charge (windup) clip is stretched
-    // to fill exactly this long.
+    // 공격이 시작되어 타격이 적중하기까지의 시간으로, 매 스윙마다 새로 뽑는다 - 플레이어가
+    // 실제로 반응해야 하는 숫자다. 충전(윈드업) 클립은 정확히 이 시간만큼 채우도록 늘어난다.
     [SerializeField] private float minTimeToImpact = 0.5f;
     [SerializeField] private float maxTimeToImpact = 2f;
     [SerializeField] private string windUpStateName = "AttackWindUp";
@@ -32,26 +31,26 @@ public class Monster : MonoBehaviour
     [SerializeField] private string plainAttackClipName = "Attack01";
     [SerializeField] private float windUpClipFallbackLength = 0.3f;
     [SerializeField] private float plainAttackClipFallbackLength = 1.333f;
-    // How far into the windup clip's own timeline the hit lands, as a fraction of its
-    // native (unstretched) length - there's no separate strike clip, the charge's own
-    // landing beat (it jumps then slams back down) IS the hit. For PowerUpNoWeapon this
-    // is the hard crouch around t=2.7s of its 2.933s length.
+    // 윈드업 클립 자체의 타임라인에서 타격이 어느 지점에 적중하는지를, 원래(늘리기 전)
+    // 길이에 대한 비율로 나타낸 값이다 - 별도의 타격 클립은 없고, 충전 동작 자체의
+    // 착지 비트(뛰어올랐다가 쿵 하고 내려찍는 순간)가 곧 타격이다. PowerUpNoWeapon의
+    // 경우 이는 2.933초 길이 중 t=2.7초 부근의 강한 웅크림 동작이다.
     [SerializeField] private float windUpImpactFraction = 0.92f;
-    // PowerUpNoWeapon opens with a hard arm whip (~74 degrees in a couple of frames) that
-    // reads as a bat swing in its own right - so the animator's Idle/Run -> AttackWindUp
-    // transitions enter the clip this far in, skipping it. Must match the offset set on
-    // those transitions: only the (impact - entry) slice actually plays, so the charge
-    // speed below is derived from that slice rather than the whole clip.
+    // PowerUpNoWeapon은 시작 부분에 강한 팔 휘두름(몇 프레임 만에 약 74도)이 있는데,
+    // 이것만으로도 방망이를 휘두르는 것처럼 보인다 - 그래서 애니메이터의 Idle/Run ->
+    // AttackWindUp 전환은 이 지점만큼 건너뛰고 클립에 진입한다. 저 전환들에 설정된
+    // 오프셋과 반드시 일치해야 한다: 실제로 재생되는 건 (임팩트 - 진입) 구간뿐이므로,
+    // 아래의 충전 속도는 전체 클립이 아니라 이 구간을 기준으로 계산된다.
     [SerializeField] private float windUpEntryOffset = 0.15f;
-    // Breathing room after a hit lands before the next charge may begin. Without it the
-    // landing sweep of one attack ran straight into the next attack's entry, which read as
-    // the bat being swung twice in a row.
+    // 타격이 적중한 뒤 다음 충전이 시작되기 전까지 두는 여유 시간. 이게 없으면 한
+    // 공격의 착지 스윙이 다음 공격의 진입 동작으로 바로 이어져버려서, 방망이를
+    // 연달아 두 번 휘두르는 것처럼 보였다.
     [SerializeField] private float postAttackPause = 0.45f;
 
-    // Second telegraph pattern (Boss only) - picked randomly each swing so the boss
-    // doesn't always telegraph the same way. Unlike the first pattern, this one has no
-    // charge/randomized delay: it just plays the untouched clip at its native speed, and
-    // the hit lands whenever the spear actually connects in that fixed timeline.
+    // 두 번째 텔레그래프 패턴(보스 전용) - 보스가 항상 같은 방식으로만 예고하지 않도록
+    // 매 스윙마다 무작위로 선택된다. 첫 번째 패턴과 달리 이쪽은 충전도, 무작위 지연도
+    // 없다: 그저 손대지 않은 클립을 원래 속도로 재생할 뿐이며, 타격은 그 고정된
+    // 타임라인 안에서 창이 실제로 닿는 순간에 적중한다.
     [SerializeField] private string attack2StateName = "Attack02";
     [SerializeField] private string attack2ClipName = "Attack02";
     [SerializeField] private float attack2ClipFallbackLength = 1.333f;
@@ -63,70 +62,73 @@ public class Monster : MonoBehaviour
     private const string AttackPattern2Param = "AttackPattern2";
 
     [Header("Ultimate attack (Elite/Boss)")]
-    // Mirrors the player's own ultimate: charges on a flat timer while the monster is
-    // fighting, then fires once as a heavy, unparryable hit instead of a regular swing.
+    // 플레이어 자신의 궁극기를 거울처럼 반영한다: 몬스터가 싸우는 동안 일정한
+    // 타이머로 충전되다가, 일반 스윙 대신 한 번 무겁고 패링 불가능한 타격으로 발동한다.
     [SerializeField] private float ultimateChargeDuration = 5f;
     [SerializeField] private float ultimateDamageMultiplier = 3f;
     [SerializeField] private string ultimateStateName = "Attack03";
-    // The Footman_Attack03 clip's internal take is (confusingly) named "Victory", which
-    // collides with the unrelated Victory state's own clip of the same name - looking it
-    // up by name through the animator's clip list would be ambiguous, so this is just the
-    // clip's real length instead of going through ResolveClipLength like the others.
+    // Footman_Attack03 클립의 내부 테이크 이름은 (헷갈리게도) "Victory"로 되어 있어서,
+    // 무관한 Victory 스테이트 자체의 동명 클립과 충돌한다 - 애니메이터의 클립 목록에서
+    // 이름으로 찾으면 모호해지므로, 다른 값들처럼 ResolveClipLength를 거치지 않고
+    // 그냥 클립의 실제 길이를 직접 적어둔 것이다.
     [SerializeField] private float ultimateClipFallbackLength = 10f / 3f;
     [SerializeField] private GameObject ultimateImpactVfxPrefab;
     [SerializeField] private float ultimateImpactVfxLifetime = 3f;
-    // Playback rate for the impact effect. The Hovl crystals fall at a pace tuned for a
-    // showcase scene, which drags next to the (already sped-up) attack animation.
+    // 임팩트 이펙트의 재생 속도. Hovl의 크리스탈은 쇼케이스 씬에 맞춰진 속도로
+    // 떨어지는데, 이는 (이미 빨라진) 공격 애니메이션 옆에서 보면 느리게 늘어져 보인다.
     [SerializeField] private float ultimateImpactVfxSpeed = 2f;
     [SerializeField] private UltimateGaugeView ultimateGaugeView;
 
     [Header("Ultimate laser barrage (Boss)")]
-    // Hovl "Laser AOE" - a ground tech-circle with a beam column above it. Null falls back
-    // to the old behaviour (one heavy hit at the end of the clip).
+    // Hovl "Laser AOE" - 위에 빔 기둥이 솟은 지면 테크서클 이펙트. null이면 예전 동작
+    // (클립 끝에 무거운 타격 한 번)으로 대체된다.
     [SerializeField] private GameObject ultimateLaserPrefab;
-    // How long the barrage keeps firing. Matched to Laser AOE's own 5s emission window so
-    // the held animation, the damage ticks and the effect all end together.
+    // 탄막이 발사를 계속하는 시간. Laser AOE 자체의 5초 방출 구간과 맞춰서, 유지되는
+    // 애니메이션과 데미지 틱, 이펙트가 모두 함께 끝나도록 한다.
     [SerializeField] private float ultimateBarrageDuration = 5f;
-    // A ring of strikes centred behind the player, walked around in order so it reads as a
-    // sweep closing in rather than everything landing at once.
+    // 플레이어 뒤쪽을 중심으로 한 타격의 고리로, 순서대로 이동하며 발동시켜서 전부
+    // 한꺼번에 적중하는 게 아니라 점점 조여드는 휩쓸기처럼 보이게 한다.
     [SerializeField] private int ultimateLaserCount = 8;
     [SerializeField] private float ultimateLaserRingRadius = 2.2f;
     [SerializeField] private float ultimateLaserBehindDistance = 2.6f;
     [SerializeField] private float ultimateLaserScale = 1f;
-    // Laser AOE's longest particle lifetime (4s) - the spawned object has to outlive its own
-    // emission by this much or the tail is cut off mid-fade.
+    // Laser AOE에서 가장 오래 사는 파티클의 수명(4초) - 스폰된 오브젝트는 자신의 방출이
+    // 끝난 뒤에도 이만큼은 더 살아있어야 하며, 그렇지 않으면 꼬리 부분이 페이드 도중에
+    // 잘려버린다.
     [SerializeField] private float ultimateLaserLingerSeconds = 4f;
-    // When ultimateLaserCount is 1 the barrage becomes a single circle held on the ground
-    // under the player for its whole duration, ticking a flat (not AttackPower-scaled) amount
-    // of damage on a fixed clock instead of splitting one lump sum across ring positions.
+    // ultimateLaserCount가 1이면 탄막은 플레이어 발밑 지면에 전체 지속시간 동안 유지되는
+    // 단일 서클이 되며, 한 덩어리의 데미지를 고리 위치들에 나눠 주는 대신 고정된 주기로
+    // (AttackPower에 비례하지 않는) 고정값 데미지를 틱마다 준다.
     [SerializeField] private float ultimateTickDamage = 5f;
     [SerializeField] private float ultimateTickInterval = 0.5f;
 
     [Header("Hit impact (on the player, every landed attack)")]
-    // Null on a prefab that shouldn't show one (default) - only the stage-2 roster has this
-    // wired to "Stones hit", so stage-1 monsters land damage exactly as before.
+    // 이펙트를 보여주지 않아야 하는 프리팹에서는 null이다(기본값) - 스테이지 2 로스터만
+    // "Stones hit"에 연결되어 있으므로, 스테이지 1 몬스터는 예전과 완전히 동일하게
+    // 데미지를 준다.
     [SerializeField] private GameObject hitImpactVfxPrefab;
     [SerializeField] private float hitImpactVfxLifetime = 3f;
-    // The Hovl hit effects emit their bright layers (glow/flash) over roughly the first 0.1s
-    // of a 1s cycle, which at native speed is over before it registers as a hit landing.
-    // Under 1 stretches that burst out so the blow actually reads; the lifetime above is
-    // divided by this so cleanup still tracks the real runtime.
+    // Hovl 피격 이펙트는 밝은 레이어(glow/flash)를 1초 사이클 중 대략 처음 0.1초에 걸쳐
+    // 방출하는데, 원래 속도로는 타격이 적중했다고 인식되기도 전에 끝나버린다. 1보다
+    // 작은 값으로 그 버스트를 늘려서 타격이 실제로 느껴지게 한다; 위의 수명 값은 이
+    // 값으로 나눠서 실제 재생 시간을 그대로 추적하도록 한다.
     [SerializeField] private float hitImpactVfxSpeed = 0.4f;
-    // Sized up from the demo-scene default, which is tuned for a close-up camera rather than
-    // this game's pulled-back combat framing.
+    // 데모 씬 기본값보다 크게 키운 값이다. 기본값은 이 게임의 뒤로 빠진 전투 프레이밍이
+    // 아니라 클로즈업 카메라에 맞춰 조정된 것이기 때문이다.
     [SerializeField] private float hitImpactVfxScale = 1.6f;
 
     private const string AttackTriggerParam = "Attack";
     private const string AttackUltimateParam = "AttackUltimate";
-    // Holds Attack03 open for the whole barrage - its exit is gated on this rather than on
-    // the clip's own 0.333s length (see the Attack03 -> Idle transition in the controller).
+    // 탄막이 지속되는 동안 Attack03을 계속 열어둔다 - 이 상태를 벗어나는 건 클립 자체의
+    // 0.333초 길이가 아니라 이 값에 의해 결정된다(컨트롤러의 Attack03 -> Idle 전환 참고).
     private const string UltimateActiveParam = "UltimateActive";
     private float ultimateChargeTimer;
 
     private bool animatorSearched;
     private Animator characterAnimator;
-    // Not every monster model ships with a rig/AnimatorController (some are still raw
-    // static imports) - models without one fall back to the coded lunge/shrink below.
+    // 모든 몬스터 모델이 리그/AnimatorController를 갖추고 있는 건 아니다(아직 순수
+    // 정적 임포트 상태인 것도 있다) - 이게 없는 모델은 아래의 코드로 짠 돌진/축소
+    // 연출로 대체된다.
     private Animator CharacterAnimator
     {
         get
@@ -147,8 +149,8 @@ public class Monster : MonoBehaviour
     private bool normalLoopStarted;
     private float attackInterval;
 
-    // Used for pacing the coded lunge fallback, and as the impact-delay fallback for
-    // monsters with neither a WeaponSwing nor a WeaponSwing-reported delay to borrow.
+    // 코드로 짠 돌진 대체 연출의 속도 조절에 쓰이며, WeaponSwing도 없고 빌려올
+    // WeaponSwing 보고 지연값도 없는 몬스터의 임팩트 지연 대체값으로도 쓰인다.
     [SerializeField] private float fallbackAttackImpactDelay = 0.3f;
     [SerializeField] private float deathAnimDuration = 1f;
 
@@ -165,9 +167,9 @@ public class Monster : MonoBehaviour
         HealthBar?.SetHealth(CurrentHp, MaxHp);
     }
 
-    // Halts the attack loop without destroying the monster - used when the player dies,
-    // so the monster just stands there for the death animation instead of vanishing
-    // mid-fight or continuing to swing at a player that's already lying on the ground.
+    // 몬스터를 파괴하지 않고 공격 루프만 멈춘다 - 플레이어가 죽었을 때 쓰이며, 그래야
+    // 전투 도중 사라지거나 이미 쓰러진 플레이어를 계속 공격하는 대신, 몬스터가 죽음
+    // 애니메이션 동안 그냥 가만히 서 있게 된다.
     public void StopAttacking()
     {
         StopAllCoroutines();
@@ -188,8 +190,8 @@ public void SetMovement(Transform target, float speed, float stopDistance)
     {
         moveTarget = target;
         moveSpeed = speed;
-        // Bigger monsters need to stop farther away, or their scaled-up body visually
-        // overlaps/buries the player before the capsules are actually touching.
+        // 더 큰 몬스터는 더 멀리서 멈춰야 한다, 그렇지 않으면 캡슐이 실제로 닿기도
+        // 전에 커진 몸이 시각적으로 플레이어와 겹치거나 파묻어버린다.
         stoppingDistance = stopDistance * transform.localScale.x;
         HasArrived = false;
         CharacterAnimator?.SetBool("IsMoving", true);
@@ -207,15 +209,16 @@ public void SetMovement(Transform target, float speed, float stopDistance)
             HasArrived = true;
             CharacterAnimator?.SetBool("IsMoving", false);
 
-            // Elite and Boss both fight as parry duels: they telegraph, then strike.
-            // Normal monsters just trade hits on a fixed timer.
+            // 엘리트와 보스는 둘 다 패링 결투로 싸운다: 예고 동작을 보인 뒤 타격한다.
+            // 일반 몬스터는 그냥 고정된 타이머로 서로 타격을 주고받는다.
             if (!bossLoopStarted && (Type == MonsterType.Boss || Type == MonsterType.Elite))
             {
                 bossLoopStarted = true;
                 StartCoroutine(TelegraphAttackLoop());
 
-                // Boss-only: the elite shares the telegraph duel above, but not the
-                // gauge-charged heavy hit - that stays the boss encounter's own escalation.
+                // 보스 전용: 엘리트는 위의 텔레그래프 결투는 공유하지만, 게이지로
+                // 충전되는 강력한 타격은 공유하지 않는다 - 그건 보스 전투만의
+                // 고유한 상승 요소로 남는다.
                 if (Type == MonsterType.Boss) StartCoroutine(UltimateChargeLoop());
             }
             else if (!normalLoopStarted && Type == MonsterType.Normal)
@@ -231,8 +234,8 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         transform.forward = toTarget.normalized;
     }
 
-    // Fallback attack flourish for models with neither a rig/Animator nor a WeaponSwing
-    // sword to swing - a quick forward-and-back lunge toward the player.
+    // 리그/Animator도, 휘두를 WeaponSwing 검도 없는 모델을 위한 대체 공격 연출 -
+    // 플레이어를 향해 앞으로 갔다가 다시 뒤로 돌아오는 짧은 돌진.
     private IEnumerator LungeAttack()
     {
         Vector3 restPosition = transform.position;
@@ -258,8 +261,8 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         transform.position = restPosition;
     }
 
-    // Fallback death flourish for models with no Animator/Die state: shrink away instead
-    // of just popping out of existence.
+    // Animator/Die 스테이트가 없는 모델을 위한 대체 죽음 연출: 그냥 뿅 하고 사라지는
+    // 대신 점점 줄어들며 사라진다.
     private IEnumerator ShrinkAndDestroy()
     {
         Vector3 startScale = transform.localScale;
@@ -276,9 +279,9 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         Destroy(gameObject);
     }
 
-    // Elite/Boss: charge for a random stretch, and the charge clip's own landing beat
-    // (it jumps then slams back down) is the hit - no separate strike clip. A parry
-    // landed any time before that negates it.
+    // 엘리트/보스: 무작위 길이만큼 충전하며, 충전 클립 자체의 착지 비트(뛰어올랐다가
+    // 쿵 하고 내려찍는 순간)가 곧 타격이다 - 별도의 타격 클립은 없다. 그 전 어느
+    // 시점에든 패링이 성공하면 무효화된다.
     private IEnumerator TelegraphAttackLoop()
     {
         CharacterAnimator?.SetBool(UseTelegraphParam, true);
@@ -288,24 +291,25 @@ public void SetMovement(Transform target, float speed, float stopDistance)
 
         while (!IsDead)
         {
-            // Checked at the top of every cycle rather than the middle of one, so this can
-            // only ever replace a swing that hasn't started yet - never cut off a strike
-            // already in flight.
+            // 사이클 중간이 아니라 매 사이클의 맨 처음에 확인하므로, 이 검사는 아직
+            // 시작하지 않은 스윙만 대체할 수 있을 뿐 - 이미 진행 중인 타격을 끊는
+            // 일은 절대 없다.
             if (ultimateChargeTimer >= ultimateChargeDuration)
             {
                 yield return PlayUltimateAttack();
                 ultimateChargeTimer = 0f;
-                // Same spacing the other two patterns get below - this branch used to
-                // `continue` straight past it, so an ultimate ran into the next charge
-                // with no gap at all.
+                // 아래의 다른 두 패턴이 받는 것과 같은 간격이다 - 이 분기는 예전에
+                // 이 부분을 건너뛰고 바로 `continue`했었는데, 그러면 궁극기가 아무런
+                // 틈도 없이 곧바로 다음 충전으로 이어졌다.
                 if (postAttackPause > 0f) yield return new WaitForSeconds(postAttackPause);
                 continue;
             }
 
             Animator animator = CharacterAnimator;
 
-            // Only the Boss has a second pattern to mix in - Elite always telegraphs the
-            // same way. Each swing rolls independently, so the boss can repeat a pattern.
+            // 두 번째 패턴을 섞어 쓰는 건 보스뿐이다 - 엘리트는 항상 같은 방식으로만
+            // 예고한다. 매 스윙마다 독립적으로 뽑으므로, 보스는 같은 패턴을 연달아
+            // 낼 수도 있다.
             bool usePattern2 = Type == MonsterType.Boss && Random.value < 0.5f;
             animator?.SetBool(AttackPattern2Param, usePattern2);
 
@@ -315,8 +319,8 @@ public void SetMovement(Transform target, float speed, float stopDistance)
 
             if (usePattern2)
             {
-                // No charge, no randomized delay - just the untouched clip at its own
-                // pace, with the hit landing whenever the spear actually connects.
+                // 충전도, 무작위 지연도 없다 - 그저 손대지 않은 클립을 원래 속도로
+                // 재생할 뿐이며, 타격은 창이 실제로 닿는 순간에 적중한다.
                 activeState = attack2StateName;
                 activeLength = attack2Length;
                 impactTime = attack2ImpactTime;
@@ -325,17 +329,17 @@ public void SetMovement(Transform target, float speed, float stopDistance)
             }
             else
             {
-                // No separate strike clip - the windup is stretched so its own landing
-                // beat (windUpImpactFraction) lands right at timeToImpact, and the hit
-                // fires there instead of handing off to a second animation.
+                // 별도의 타격 클립은 없다 - 윈드업 클립 자체의 착지 비트(windUpImpactFraction)가
+                // 정확히 timeToImpact 시점에 오도록 늘려지며, 두 번째 애니메이션으로
+                // 넘기는 대신 그 지점에서 타격이 발동한다.
                 activeState = windUpStateName;
                 activeLength = windUpLength;
                 impactTime = windUpLength * windUpImpactFraction;
 
                 float timeToImpact = Random.Range(minTimeToImpact, maxTimeToImpact);
-                // Only the slice from the entry offset to the impact beat actually plays,
-                // so the charge is stretched against that slice - scaling by the full
-                // clip length instead would land the hit early by the skipped portion.
+                // 실제로 재생되는 건 진입 오프셋부터 임팩트 비트까지의 구간뿐이므로,
+                // 충전은 그 구간을 기준으로 늘려진다 - 대신 전체 클립 길이를 기준으로
+                // 스케일링하면 건너뛴 부분만큼 타격이 일찍 적중해버릴 것이다.
                 float playedFraction = Mathf.Max(0.05f, windUpImpactFraction - windUpEntryOffset);
                 float chargeDuration = Mathf.Max(0.05f, timeToImpact / playedFraction);
 
@@ -346,10 +350,10 @@ public void SetMovement(Transform target, float speed, float stopDistance)
 
             if (animator != null)
             {
-                // Follow the animator instead of a stopwatch. The trigger isn't consumed
-                // until the machine is back in Idle, and the state blends add their own
-                // slop, so a precomputed schedule lands the damage before the spear
-                // visually arrives.
+                // 스톱워치 대신 애니메이터를 따라간다. 트리거는 머신이 다시 Idle로
+                // 돌아갈 때까지 소비되지 않고, 스테이트 블렌딩도 자체적인 오차를
+                // 더하므로, 미리 계산해둔 스케줄로는 창이 시각적으로 도착하기 전에
+                // 데미지가 먼저 들어가 버린다.
                 yield return WaitForStrikeImpact(animator, activeState, activeLength, impactTime);
             }
             else
@@ -376,13 +380,13 @@ public void SetMovement(Transform target, float speed, float stopDistance)
                 yield return new WaitForSeconds(Mathf.Max(0f, activeLength - impactTime));
             }
 
-            // Separates one attack's landing sweep from the next one's entry, so two
-            // charges in a row don't blur into a single double-swing.
+            // 한 공격의 착지 스윙과 다음 공격의 진입 동작을 분리해줘서, 연달아 두 번
+            // 충전하는 게 하나의 이중 스윙처럼 뭉개져 보이지 않게 한다.
             if (postAttackPause > 0f) yield return new WaitForSeconds(postAttackPause);
         }
     }
 
-    // Runs until the strike state has played far enough for the spear to reach the player.
+    // 창이 플레이어에게 닿을 만큼 타격 스테이트가 충분히 재생될 때까지 실행된다.
     private IEnumerator WaitForStrikeImpact(Animator animator, string strikeState, float strikeLength, float impactTime)
     {
         const float SafetyTimeout = 8f;
@@ -398,8 +402,8 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         }
     }
 
-    // Holds until the machine is genuinely idle again, so the next Attack trigger is
-    // picked up immediately instead of queueing mid-strike.
+    // 머신이 진짜로 다시 idle 상태가 될 때까지 대기해서, 다음 Attack 트리거가 타격
+    // 도중에 큐잉되지 않고 즉시 반영되도록 한다.
     private IEnumerator WaitUntilIdle(Animator animator)
     {
         const float SafetyTimeout = 5f;
@@ -414,9 +418,9 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         }
     }
 
-    // Runs independently of the attack loop's own pacing so a long swing (or its charge)
-    // never delays the gauge - it only gates *when* the next loop iteration is allowed to
-    // fire the ultimate instead of a normal swing.
+    // 공격 루프 자체의 진행 속도와는 독립적으로 실행되어, 긴 스윙(또는 그 충전)이
+    // 게이지를 절대 지연시키지 않는다 - 이것이 결정하는 건 오직 다음 루프 반복에서
+    // *언제* 일반 스윙 대신 궁극기를 발동할 수 있는지뿐이다.
     private IEnumerator UltimateChargeLoop()
     {
         while (!IsDead)
@@ -427,11 +431,11 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         }
     }
 
-    // Heavy unparryable attack. With a laser prefab wired it becomes a sustained barrage:
-    // Attack03 (looping auto-fire) is held for ultimateBarrageDuration while a ring of laser
-    // strikes walks around the ground behind the player, each one landing its own share of
-    // the damage - the player is shot through repeatedly rather than taking a single hit.
-    // Without a prefab it falls back to the original one-hit-at-the-end behaviour.
+    // 무겁고 패링 불가능한 공격. 레이저 프리팹이 연결되어 있으면 지속적인 탄막으로
+    // 바뀐다: Attack03(반복 자동 발사)이 ultimateBarrageDuration 동안 유지되는 동안,
+    // 플레이어 뒤쪽 지면에서 레이저 타격의 고리가 순서대로 이동하며 각각 자기 몫의
+    // 데미지를 준다 - 플레이어는 한 번의 타격이 아니라 여러 번 관통당하는 셈이다.
+    // 프리팹이 없으면 원래의 끝에 한 방 타격하는 동작으로 대체된다.
     private IEnumerator PlayUltimateAttack()
     {
         Animator animator = CharacterAnimator;
@@ -440,15 +444,16 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         if (animator != null)
         {
             if (barrage) animator.SetBool(UltimateActiveParam, true);
-            // A regular swing's trigger can still be sitting unconsumed here; left set it
-            // fires a stray attack the moment the barrage releases the machine.
+            // 여기서 일반 스윙의 트리거가 아직 소비되지 않은 채 남아있을 수 있다;
+            // 그대로 세팅된 채 두면 탄막이 머신을 놓아주는 순간 엉뚱한 공격이 발동한다.
             animator.ResetTrigger(AttackTriggerParam);
             animator.SetTrigger(AttackUltimateParam);
 
-            // The trigger isn't consumed until the animator's own update pass, so the
-            // current state can still read as Idle/Run for a frame - wait for the machine
-            // to actually enter Attack03 before waiting for it to leave again, or this
-            // would fall straight through WaitUntilIdle without the attack ever playing.
+            // 트리거는 애니메이터 자체의 업데이트 패스가 돌기 전까지 소비되지 않으므로,
+            // 현재 상태는 한 프레임 동안 여전히 Idle/Run으로 읽힐 수 있다 - 머신이
+            // Attack03을 벗어나기를 기다리기 전에, 먼저 실제로 진입했는지부터
+            // 기다려야 한다. 그렇지 않으면 공격이 재생되지도 않은 채로 WaitUntilIdle을
+            // 바로 통과해버릴 것이다.
             yield return WaitForStateToStart(animator, ultimateStateName);
         }
         else if (!barrage)
@@ -460,8 +465,8 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         {
             yield return FireUltimateLaserRing();
 
-            // Released before the idle wait, since the transition out of Attack03 is what
-            // this bool gates - leaving it set would strand the boss in its firing pose.
+            // idle 대기 전에 해제한다. Attack03을 벗어나는 전환을 결정하는 게 바로 이
+            // bool이기 때문이다 - 세팅된 채로 두면 보스가 발사 포즈에 갇혀버린다.
             if (animator != null)
             {
                 animator.SetBool(UltimateActiveParam, false);
@@ -482,9 +487,9 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         }
     }
 
-    // Walks the ring one strike at a time so it sweeps around the player instead of all
-    // landing together. The ultimate's total damage is unchanged - it's just split across
-    // the strikes, so each one reads as a single bullet punching through.
+    // 고리를 한 번에 하나씩 순서대로 발동시켜서 전부 한꺼번에 적중하는 대신 플레이어
+    // 주위를 휩쓸도록 한다. 궁극기의 총 데미지는 변하지 않는다 - 그저 타격들에 나눠질
+    // 뿐이며, 각각이 하나의 탄환이 관통하는 것처럼 느껴진다.
     private IEnumerator FireUltimateLaserRing()
     {
         int count = Mathf.Max(1, ultimateLaserCount);
@@ -504,20 +509,21 @@ public void SetMovement(Transform target, float speed, float stopDistance)
             if (Player == null) yield break;
 
             SpawnUltimateLaser(i, count);
-            // Reuses the same on-player burst every other landed hit uses, so each pierce
-            // registers on the player themselves and not only as a circle on the ground.
+            // 다른 모든 적중한 타격이 쓰는 것과 같은 플레이어 위 버스트 이펙트를
+            // 재사용해서, 각 관통이 지면의 서클로만 보이지 않고 플레이어 자신에게도
+            // 나타나게 한다.
             SpawnHitImpactVfx();
-            // Deliberately not routed through ParryManager - the ultimate has always been
-            // unparryable, and a barrage the player could cancel with one parry would be
-            // weaker than the single hit it replaced.
+            // 의도적으로 ParryManager를 거치지 않는다 - 궁극기는 원래부터 패링 불가능한
+            // 공격이었으며, 패링 한 번으로 취소할 수 있는 탄막이라면 그것이 대체한
+            // 단일 타격보다도 약해질 것이다.
             Player.TakeDamage(damagePerHit);
 
             yield return new WaitForSeconds(interval);
         }
     }
 
-    // Single ground circle, held under the player for the whole barrage, ticking a flat
-    // amount of damage on a fixed clock rather than walking a ring of one-shot strikes.
+    // 탄막 전체 동안 플레이어 발밑에 유지되는 단일 지면 서클로, 원샷 타격의 고리를
+    // 순회하는 대신 고정된 주기로 고정값 데미지를 틱으로 준다.
     private IEnumerator FireUltimateLaserSingle()
     {
         if (Player == null) yield break;
@@ -536,7 +542,7 @@ public void SetMovement(Transform target, float speed, float stopDistance)
             if (Player == null) yield break;
 
             SpawnHitImpactVfx();
-            // Deliberately not routed through ParryManager - see FireUltimateLaserRing.
+            // 의도적으로 ParryManager를 거치지 않는다 - FireUltimateLaserRing 참고.
             Player.TakeDamage(ultimateTickDamage);
         }
     }
@@ -558,8 +564,8 @@ public void SetMovement(Transform target, float speed, float stopDistance)
 
         Transform target = Player.transform;
 
-        // "Behind" is measured along the line this monster is attacking down, so the ring
-        // frames the player from their back instead of sitting between the two of them.
+        // "뒤쪽"은 이 몬스터가 공격해 들어가는 선을 기준으로 측정되므로, 고리는 둘
+        // 사이가 아니라 플레이어의 등 쪽에서 감싸는 형태가 된다.
         Vector3 away = target.position - transform.position;
         away.y = 0f;
         away = away.sqrMagnitude > 0.0001f ? away.normalized : Vector3.forward;
@@ -569,8 +575,8 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         float angle = index / (float)count * Mathf.PI * 2f;
         Vector3 spawn = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * ultimateLaserRingRadius;
 
-        // The effect's tech-circle sits at its own origin, so that origin has to land on the
-        // ground - the player's transform is the capsule's centre, not their feet.
+        // 이펙트의 테크서클은 자신의 원점에 위치하므로, 그 원점이 지면에 닿아야 한다 -
+        // 플레이어의 transform은 발이 아니라 캡슐의 중심이다.
         Collider playerCollider = Player.GetComponent<Collider>();
         spawn.y = playerCollider != null ? playerCollider.bounds.min.y : target.position.y;
 
@@ -584,8 +590,9 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         GameObject vfx = Instantiate(ultimateLaserPrefab, spawn, Quaternion.identity);
         vfx.transform.localScale = Vector3.one * ultimateLaserScale;
 
-        // Every one of Laser AOE's 11 systems ships looping (built to be left running in its
-        // demo scene) - left alone each spawned ring would fire forever.
+        // Laser AOE의 11개 시스템은 전부 반복 재생으로 되어 있다(데모 씬에서 계속
+        // 실행되도록 만들어졌기 때문) - 그대로 두면 스폰된 각 고리가 영원히 발사될
+        // 것이다.
         foreach (ParticleSystem ps in vfx.GetComponentsInChildren<ParticleSystem>(true))
         {
             ParticleSystem.MainModule main = ps.main;
@@ -609,44 +616,47 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         }
     }
 
-    // Spawned fresh each time rather than kept as a persistent child - unlike the player's
-    // own hit VFX, several monsters could land this on the same player, and a shared child
-    // object would have them fighting over one Play()/Stop() instead of layering cleanly.
+    // 지속되는 자식 오브젝트로 유지하는 대신 매번 새로 스폰한다 - 플레이어 자신의
+    // 피격 VFX와 달리, 여러 몬스터가 동시에 같은 플레이어에게 이걸 적중시킬 수 있고,
+    // 공유된 자식 오브젝트라면 깔끔하게 겹쳐 쌓이는 대신 하나의 Play()/Stop()을
+    // 두고 서로 다투게 될 것이다.
     private void SpawnUltimateImpactVfx()
     {
         if (ultimateImpactVfxPrefab == null || Player == null) return;
 
-        // The effect's crater/burst sits at its own origin, so that origin has to land on
-        // the ground. The player's transform is the capsule's centre, not its feet, so
-        // spawning straight on it detonated the crystals at waist height - they read as
-        // bursting before they had finished falling.
+        // 이펙트의 크레이터/버스트는 자신의 원점에 위치하므로, 그 원점이 지면에
+        // 닿아야 한다. 플레이어의 transform은 발이 아니라 캡슐의 중심이므로, 거기에
+        // 바로 스폰하면 크리스탈이 허리 높이에서 터져버려 - 다 떨어지기도 전에
+        // 터지는 것처럼 보였다.
         Vector3 impactPoint = Player.transform.position;
         Collider playerCollider = Player.GetComponent<Collider>();
         if (playerCollider != null) impactPoint.y = playerCollider.bounds.min.y;
 
         GameObject vfx = Instantiate(ultimateImpactVfxPrefab, impactPoint, Quaternion.identity);
 
-        // The Hovl effects ship as looping systems (built to be left running in their demo
-        // scene), so a single cast would restart the whole crash-down partway through its
-        // own destroy timer and read as the effect firing twice. One cast = one cycle.
+        // Hovl 이펙트들은 반복 재생 시스템으로 되어 있어서(데모 씬에서 계속 실행되도록
+        // 만들어졌기 때문), 한 번만 사용해도 자신의 파괴 타이머 도중에 낙하 연출
+        // 전체가 재시작되어 이펙트가 두 번 발동한 것처럼 보일 것이다. 한 번의 사용 =
+        // 한 사이클.
         float speed = Mathf.Max(0.01f, ultimateImpactVfxSpeed);
         foreach (ParticleSystem ps in vfx.GetComponentsInChildren<ParticleSystem>(true))
         {
             ParticleSystem.MainModule main = ps.main;
             main.loop = false;
-            // Per-system, so every sub-emitter (crystals, flash, sparks, smoke) has to be
-            // set - one left at 1x would trail behind the rest of the effect.
+            // 시스템별로 설정해야 하므로, 모든 서브 이미터(크리스탈, 플래시, 스파크,
+            // 연기)에 다 세팅해야 한다 - 하나라도 1배속으로 남으면 나머지 이펙트보다
+            // 뒤처지게 된다.
             main.simulationSpeed = speed;
         }
 
-        // The effect now finishes in a fraction of its authored runtime, so the cleanup
-        // timer has to shrink with it or the emptied object lingers.
+        // 이펙트가 이제 원래 재생 시간의 일부 만에 끝나버리므로, 정리 타이머도 함께
+        // 줄여야 한다. 그렇지 않으면 텅 빈 오브젝트가 그대로 남아있게 된다.
         Destroy(vfx, ultimateImpactVfxLifetime / speed);
     }
 
-    // Fired alongside every landed attack (regular swing, telegraphed strike, and ultimate
-    // alike) - unlike SpawnUltimateImpactVfx this lands on the player's centre, not their
-    // feet, since it's meant to read as the blow connecting rather than a crater underfoot.
+    // 적중한 모든 공격(일반 스윙, 텔레그래프 타격, 궁극기 전부)과 함께 발동한다 -
+    // SpawnUltimateImpactVfx와 달리 이건 발밑의 크레이터가 아니라 타격이 맞닿는
+    // 느낌을 줘야 하므로, 플레이어의 발이 아니라 중심에서 나타난다.
     private void SpawnHitImpactVfx()
     {
         if (hitImpactVfxPrefab == null || Player == null) return;
@@ -656,19 +666,21 @@ public void SetMovement(Transform target, float speed, float stopDistance)
 
         float speed = Mathf.Max(0.01f, hitImpactVfxSpeed);
 
-        // Ships as a looping demo-scene system like the ultimate's own impact prefab - one
-        // hit should read as one burst, not a system left running behind it.
+        // 궁극기 자체의 임팩트 프리팹처럼 반복되는 데모 씬 시스템으로 되어 있다 -
+        // 한 번의 타격은 뒤에 계속 실행되는 시스템이 아니라 한 번의 버스트로 느껴져야
+        // 한다.
         foreach (ParticleSystem ps in vfx.GetComponentsInChildren<ParticleSystem>(true))
         {
             ParticleSystem.MainModule main = ps.main;
             main.loop = false;
-            // Per-system, same as the ultimate impact: one sub-emitter left at 1x would
-            // finish ahead of the rest and break the single-burst read.
+            // 궁극기 임팩트와 마찬가지로 시스템별로 설정한다: 서브 이미터 하나라도
+            // 1배속으로 남으면 나머지보다 먼저 끝나버려서 한 번의 버스트처럼 보이는
+            // 느낌이 깨진다.
             main.simulationSpeed = speed;
         }
 
-        // Slowing the effect down stretches its real runtime, so the cleanup timer has to
-        // grow with it or the object is destroyed mid-burst.
+        // 이펙트를 느리게 하면 실제 재생 시간이 늘어나므로, 정리 타이머도 함께 늘려야
+        // 한다. 그렇지 않으면 버스트 도중에 오브젝트가 파괴돼버린다.
         Destroy(vfx, hitImpactVfxLifetime / speed);
     }
 
@@ -686,15 +698,17 @@ public void SetMovement(Transform target, float speed, float stopDistance)
         return fallback;
     }
 
-    // Normal-only: attacks on its own fixed timer, independent of the player's attack
-    // tick, so a lethal player hit can never preempt this monster's own swing.
+    // 일반 몬스터 전용: 플레이어의 공격 틱과 무관하게 자기 자신의 고정 타이머로
+    // 공격하므로, 플레이어의 치명타가 이 몬스터 자신의 스윙을 선점하는 일은 절대
+    // 없다.
     private IEnumerator NormalAttackLoop()
     {
-        // Normal monsters play the untouched original clip - no charge, no split.
+        // 일반 몬스터는 손대지 않은 원본 클립을 그대로 재생한다 - 충전도, 분리도 없다.
         CharacterAnimator?.SetBool(UseTelegraphParam, false);
 
-        // Squeeze it into one attack interval, otherwise the next attack retriggers the
-        // clip partway through and it never finishes - the monster just twitches.
+        // 한 번의 공격 간격 안에 눌러 담는다, 그렇지 않으면 다음 공격이 클립이 끝나기도
+        // 전에 재트리거해버려서 클립이 절대 끝까지 재생되지 못하고 몬스터가 그냥
+        // 씰룩거리기만 하게 된다.
         float clipLength = ResolveClipLength(plainAttackClipName, plainAttackClipFallbackLength);
         if (attackInterval > 0.01f)
         {

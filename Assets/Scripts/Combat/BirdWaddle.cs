@@ -1,10 +1,9 @@
 using UnityEngine;
 
-// Cosmetic-only: lowers a bird monster's rig into more of a crouch and adds a
-// side-to-side rocking motion while its Animator's "IsMoving" bool is set (see
-// Monster.SetMovement). Attach to the same GameObject as the Animator (the rig root,
-// e.g. "C02") - never touches the Monster's own transform, so movement/collision/
-// facing are unaffected.
+// 순수 연출용: 새 몬스터의 리그를 좀 더 웅크린 자세로 낮추고, Animator의 "IsMoving"
+// bool이 켜져 있는 동안 좌우로 뒤뚱거리는 움직임을 더한다(Monster.SetMovement 참고).
+// Animator와 같은 GameObject(리그 루트, 예: "C02")에 붙인다 - Monster 자체의
+// transform은 절대 건드리지 않으므로 이동/충돌/방향 전환에는 영향이 없다.
 public class BirdWaddle : MonoBehaviour
 {
     [SerializeField] private Animator animator;
@@ -23,7 +22,7 @@ public class BirdWaddle : MonoBehaviour
     {
         if (animator == null) animator = GetComponent<Animator>();
 
-        // Permanent crouch - lower stance whether moving or idle.
+        // 항상 유지되는 웅크림 - 이동 중이든 대기 중이든 낮은 자세를 유지한다.
         transform.localPosition += Vector3.down * crouchAmount;
         basePosition = transform.localPosition;
         baseRotation = transform.localRotation;

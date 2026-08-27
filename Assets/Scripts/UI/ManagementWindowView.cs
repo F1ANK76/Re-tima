@@ -2,26 +2,26 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-// The management window behind the top-left button: a tab column down the left side (Stat,
-// Equip, Stone) and one content pane to the right of it. Built entirely in code, matching how
-// the rest of this UI is authored (TitleScreenView, EquipmentPanelView).
+// 좌측 상단 버튼 뒤에 뜨는 관리 창: 왼쪽에 세로로 늘어선 탭 열(Stat, Equip, Stone)과 그
+// 오른쪽의 콘텐츠 영역 하나로 구성된다. 이 UI의 다른 부분(TitleScreenView, EquipmentPanelView)이
+// 작성된 방식과 동일하게 전부 코드로 빌드한다.
 //
-// Each tab is a plain child object that gets shown or hidden - not rebuilt - so state that
-// lives in a tab (the equip panel's preview rigs, the stone tab's last roll result) survives
-// switching away and back.
+// 각 탭은 다시 빌드되는 게 아니라 단순히 보이거나 숨겨지는 자식 오브젝트다 - 그래서 탭 안에
+// 남아 있는 상태(장비 패널의 프리뷰 리그, 스톤 탭의 마지막 굴림 결과)는 다른 탭으로 갔다가
+// 돌아와도 그대로 유지된다.
 public class ManagementWindowView : MonoBehaviour
 {
     [SerializeField] private PlayerCharacter player;
     [SerializeField] private EquipmentDropManager equipmentDropManager;
     [SerializeField] private StoneDropManager stoneDropManager;
     [SerializeField] private StageManager stageManager;
-    // Same prefab the equip tab's embedded EquipmentPanelView previews from.
+    // Equip 탭에 임베드된 EquipmentPanelView가 프리뷰에 사용하는 것과 동일한 프리팹이다.
     [SerializeField] private EquipmentDropPickup previewPickupPrefab;
 
-    // Which main stage unlocks each tab. Stat is available from the very start (index 0 has
-    // no entry - it's never gated); Equip and Stone open exactly when their own drop starts
-    // dropping (EquipmentDropManager and StoneDropManager's own unlock stages), so the tab
-    // never advertises a system before there is anything in it to show.
+    // 각 탭이 어느 메인 스테이지에서 잠금 해제되는지. Stat은 처음부터 이용 가능하다(인덱스
+    // 0은 항목이 없다 - 절대 잠기지 않는다); Equip과 Stone은 각각의 드롭이 실제로 시작되는
+    // 시점(EquipmentDropManager와 StoneDropManager 자체의 잠금 해제 스테이지)에 정확히
+    // 열리므로, 보여줄 것이 아무것도 없는 상태에서 탭이 시스템을 먼저 광고하는 일은 없다.
     private static readonly int[] TabUnlockStage = { 1, 2, 3 };
 
     private const float WindowWidth = 760f;
@@ -48,16 +48,16 @@ public class ManagementWindowView : MonoBehaviour
     private readonly Image[] tabButtons = new Image[3];
     private readonly Button[] tabButtonComponents = new Button[3];
     private readonly Text[] tabLabels = new Text[3];
-    // Index 0 (Stat) starts true and never needs to change; 1 and 2 flip on once
-    // RefreshTabUnlocks sees the stage that unlocks them.
+    // 인덱스 0(Stat)은 처음부터 true이고 절대 바뀔 필요가 없다; 1과 2는 RefreshTabUnlocks가
+    // 각자를 잠금 해제하는 스테이지를 감지하는 순간 켜진다.
     private readonly bool[] tabUnlocked = { true, false, false };
     private int activeTab;
 
-    // Stat tab
+    // Stat 탭
     private Text statAtk;
     private Text statHp;
 
-    // Stone tab
+    // Stone 탭
     private Text atkStoneCount;
     private Text hpStoneCount;
     private Text atkOptionLine;
@@ -73,8 +73,8 @@ public class ManagementWindowView : MonoBehaviour
     {
         font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         Build();
-        // Applies the locked look before the very first paint - without this the two locked
-        // tabs would flash in unlocked for a frame at their built-in TabIdle color.
+        // 첫 페인트가 일어나기 전에 잠긴 외형을 적용한다 - 이게 없으면 잠긴 두 탭이 한
+        // 프레임 동안 기본 TabIdle 색으로 잠금 해제된 것처럼 잠깐 번쩍이게 된다.
         RefreshTabUnlocks();
         SelectTab(0);
     }
@@ -85,9 +85,10 @@ public class ManagementWindowView : MonoBehaviour
         GameEvents.OnStonesChanged += HandleStonesChanged;
         GameEvents.OnEquipmentPickedUp += HandleEquipmentChanged;
         GameEvents.OnStageChanged += HandleStageChangedForTabs;
-        // The window sits inactive for most of a run, missing OnStageChanged entirely while
-        // closed - re-derived from StageManager's own current stage on every open instead of
-        // trusting an event that could easily have fired while nobody was listening.
+        // 이 창은 플레이 도중 대부분의 시간을 비활성 상태로 있고, 닫혀 있는 동안에는
+        // OnStageChanged를 아예 놓치므로 - 아무도 구독하지 않고 있는 사이에 이미 발생했을
+        // 수 있는 이벤트를 신뢰하는 대신, 매번 열릴 때마다 StageManager의 현재 스테이지를
+        // 기준으로 다시 계산한다.
         RefreshTabUnlocks();
         RefreshAll();
     }
@@ -105,9 +106,9 @@ public class ManagementWindowView : MonoBehaviour
     private void HandleEquipmentChanged(EquipmentType t, StatGrade g) => RefreshAll();
     private void HandleStageChangedForTabs(int mainStage, int subStage) => RefreshTabUnlocks();
 
-    // Unlocks each tab once its own stage is reached, and never re-locks one already open -
-    // DebugJumpTo can walk the stage counter backward while testing, and a tab that had
-    // already unlocked shouldn't vanish because of that.
+    // 각 탭은 자신의 해금 스테이지에 도달하면 잠금 해제되고, 한번 열린 탭은 절대 다시
+    // 잠기지 않는다 - 테스트 중에는 DebugJumpTo가 스테이지 카운터를 거꾸로 되돌릴 수도
+    // 있는데, 이미 열렸던 탭이 그 때문에 사라져서는 안 되기 때문이다.
     private void RefreshTabUnlocks()
     {
         int stage = stageManager != null ? stageManager.MainStage : 1;
@@ -121,10 +122,10 @@ public class ManagementWindowView : MonoBehaviour
             if (tabLabels[i] != null) tabLabels[i].color = Color.white;
         }
 
-        // The active tab can never legitimately be a locked one post-unlock (locked tabs
-        // refuse selection - see SelectTab), so this only ever fires right after Awake, before
-        // RefreshTabUnlocks has run once. Belt-and-suspenders against building on tab 0 ever
-        // changing.
+        // 해금이 끝난 이후로는 활성 탭이 정상적으로 잠긴 탭일 수가 없다(잠긴 탭은 선택을
+        // 거부한다 - SelectTab 참고), 그래서 이 코드는 오직 Awake 직후, RefreshTabUnlocks가
+        // 아직 한 번도 실행되지 않은 시점에만 발동한다. 탭 0으로 빌드된다는 가정이 언젠가
+        // 바뀌더라도 대비하기 위한 이중 안전장치다.
         if (!tabUnlocked[activeTab]) SelectTab(0);
 
         ApplyTabColors();
@@ -200,16 +201,16 @@ public class ManagementWindowView : MonoBehaviour
         if (image != null) image.color = enabled ? ButtonReady : ButtonDisabled;
     }
 
-    // Spend a stone, roll a grade and a value inside it, and keep the roll only if it beats
-    // what the slot already carries. The update is automatic - there is no confirm step,
-    // because a roll that can only ever improve the slot has nothing to decide.
+    // 스톤 하나를 소모해서 등급과 그 안의 값을 굴리고, 슬롯에 이미 있는 것보다 나을 때만
+    // 그 결과를 적용한다. 업데이트는 자동이다 - 확인 절차가 없는데, 슬롯을 개선시킬 수만
+    // 있는 굴림에는 굳이 결정할 게 없기 때문이다.
     private void Reroll(StatType statType)
     {
         if (stoneDropManager == null || equipmentDropManager == null) return;
         if (!stoneDropManager.TryConsumeStone(statType)) return;
 
-        // Captured before TryApplyOption overwrites it, so a grade-up can be detected
-        // afterward purely from what the slot used to hold.
+        // TryApplyOption이 덮어쓰기 전에 미리 캡처해둔다 - 그래야 이후에 슬롯이 이전에
+        // 가지고 있던 값만으로 등급 상승 여부를 판별할 수 있다.
         StatGrade? previousGrade = equipmentDropManager.GetOptionGrade(statType);
 
         StatGrade grade = GradeRoller.RollStoneOption();
@@ -218,14 +219,14 @@ public class ManagementWindowView : MonoBehaviour
 
         string label = statType == StatType.Attack ? "ATK" : "HP";
         rollResultLine.text = $"{grade}   {label} +{EquipmentOptionTable.Format(statType, value)}";
-        // Colored by the grade that rolled, so what came up reads before the number does.
-        // Muted instead when the roll didn't beat the current option - the applied/discarded
-        // wording used to live on a second line below this one.
+        // 굴려서 나온 등급으로 색을 입혀서, 숫자보다 먼저 결과 등급이 눈에 들어오게 한다.
+        // 굴림이 현재 옵션을 넘어서지 못했을 때는 대신 Muted 색을 쓴다 - 예전에는
+        // 적용됨/버려짐 문구가 이 줄 아래 두 번째 줄에 따로 있었다.
         rollResultLine.color = applied ? GradeVisuals.GetPopupTextColor(grade) : Muted;
 
-        // Only a slot's grade actually climbing gets the flourish - a same-or-lower-grade
-        // roll (even one that still applied, e.g. a bigger value in the same grade) is a
-        // routine result, not a moment worth punching up.
+        // 슬롯의 등급이 실제로 올라갈 때만 연출이 재생된다 - 같은 등급 이하의 굴림(예:
+        // 같은 등급 안에서 값만 더 커져서 적용된 경우조차)은 그저 평범한 결과일 뿐,
+        // 강조할 만한 순간이 아니다.
         bool gradeUp = applied && (!previousGrade.HasValue || grade > previousGrade.Value);
         if (gradeUp)
         {
@@ -241,9 +242,9 @@ public class ManagementWindowView : MonoBehaviour
     private const float FlourishDuration = 0.35f;
     private const float PunchScale = 1.45f;
 
-    // Punch-scale + a quick white flash settling back to the grade's own color - the same
-    // "something good just happened" beat other games give a rarity upgrade, built from
-    // nothing but this row's own Text/RectTransform so it needs no extra VFX assets.
+    // 펀치 스케일 + 빠른 흰색 플래시가 다시 등급 고유 색으로 가라앉는 연출 - 다른
+    // 게임들이 희귀도 업그레이드에 주는 "뭔가 좋은 일이 방금 일어났다"는 느낌과 동일하며,
+    // 이 행 자체의 Text/RectTransform만으로 만들어지므로 별도의 VFX 애셋이 필요 없다.
     private IEnumerator PlayGradeUpFlourish(StatGrade grade)
     {
         RectTransform rt = rollResultLine.rectTransform;
@@ -255,8 +256,9 @@ public class ManagementWindowView : MonoBehaviour
             t += Time.deltaTime;
             float p = Mathf.Clamp01(t / FlourishDuration);
 
-            // Punch out fast, ease back to rest - most of the scale's life is spent settling,
-            // not peaking, so it reads as a snap rather than a slow balloon.
+            // 빠르게 튀어나갔다가 서서히 정지 상태로 돌아온다 - 스케일 변화의 대부분은
+            // 정점을 유지하는 게 아니라 다시 안착하는 데 쓰이므로, 천천히 부푸는 게 아니라
+            // 스냅처럼 읽힌다.
             float scale = 1f + (PunchScale - 1f) * (1f - p) * (1f - p);
             rt.localScale = Vector3.one * scale;
 
@@ -272,10 +274,9 @@ public class ManagementWindowView : MonoBehaviour
 
     private void SelectTab(int index)
     {
-        // Locked tabs already report Button.interactable = false, which stops a real click
-        // from reaching this - but SelectTab is also called directly (RefreshTabUnlocks'
-        // own safety call, the initial Awake selection), so the guard has to live here too,
-        // not just on the button.
+        // 잠긴 탭은 이미 Button.interactable = false 상태라 실제 클릭이 여기까지 도달하지
+        // 못한다 - 하지만 SelectTab은 직접 호출되기도 하므로(RefreshTabUnlocks 자체의
+        // 안전 호출, Awake의 초기 선택), 이 가드는 버튼뿐 아니라 여기에도 있어야 한다.
         if (!tabUnlocked[index]) return;
 
         activeTab = index;
@@ -300,7 +301,7 @@ public class ManagementWindowView : MonoBehaviour
         var bg = GetComponent<Image>();
         if (bg == null) bg = gameObject.AddComponent<Image>();
         bg.color = WindowBackground;
-        // Swallows clicks so the gameplay behind the window can't be hit through it.
+        // 클릭을 모두 삼켜서 창 뒤의 게임플레이가 이걸 통해 클릭되지 않도록 한다.
         bg.raycastTarget = true;
 
         BuildTitleBar();
@@ -394,22 +395,23 @@ public class ManagementWindowView : MonoBehaviour
         BuildStonePage(tabPages[2].transform);
     }
 
-    // Just the two live player stats - the equipment breakdown that used to sit under them
-    // is already the Equip tab's whole job, and repeating it here only invited the two
-    // readouts to disagree.
+    // 딱 두 개의 실시간 플레이어 스탯만 보여준다 - 예전에 그 아래에 있던 장비 세부 내역은
+    // 이제 Equip 탭이 온전히 담당하며, 여기에 그걸 반복해봐야 두 표시 값이 서로 어긋날
+    // 여지만 만들 뿐이다.
     private void BuildStatPage(Transform parent)
     {
         statAtk = CreateRow(parent, "Atk", 0, 22, Color.white);
         statHp = CreateRow(parent, "Hp", 1, 22, Color.white);
     }
 
-    // Hosts a second EquipmentPanelView so the tab shows exactly what the top-right button
-    // shows, rather than a hand-copied readout that could drift from it.
+    // 두 번째 EquipmentPanelView를 호스팅하여, 손으로 복사해서 어긋날 수 있는 표시 값이
+    // 아니라 우측 상단 버튼이 보여주는 것과 정확히 동일한 내용을 이 탭에서도 보여준다.
     private void BuildEquipPage(Transform parent)
     {
         var go = new GameObject("EquipPanel", typeof(RectTransform));
-        // Inactive first: EquipmentPanelView.Awake builds itself from these references, and
-        // adding the component to an already-active object would run that before Configure.
+        // 먼저 비활성화한다: EquipmentPanelView.Awake는 이 참조들을 바탕으로 스스로를
+        // 빌드하는데, 이미 활성 상태인 오브젝트에 컴포넌트를 추가하면 Configure보다
+        // 먼저 그게 실행되어 버린다.
         go.SetActive(false);
         go.transform.SetParent(parent, false);
 

@@ -1,28 +1,32 @@
 using System.Collections;
 using UnityEngine;
 
-// Stage 3's drop, and the third member of the family that already includes StatPotionPickup
-// (stage 1) and EquipmentDropPickup (stage 2). Same three beats in the same order - toss and
-// bounce to rest, a short settle, then a flat ground-level run-over that pays out on contact -
-// so all three stages' pickups read as the same "the player runs over it" motion.
+// 스테이지 3의 드롭이며, 이미 StatPotionPickup(스테이지 1)과 EquipmentDropPickup
+// (스테이지 2)이 있는 계열의 세 번째 구성원이다. 동일한 순서의 동일한 세 박자 -
+// 던지고 튕기며 안착, 짧은 정지, 그리고 접촉 시 효과를 지급하는 평평한 지면
+// 레벨의 달려가서 줍기 - 를 사용하여 세 스테이지의 픽업 모두가 "플레이어가
+// 그 위를 달려서 지나간다"는 동일한 동작으로 읽히게 한다.
 //
-// Unlike its two siblings, a stone has NO grade: every crystal that drops is the same stone
-// at the same size, and the only thing that varies is which of the two it is. Red is the ATK
-// stone and green the HP one, following the RedVial/GreenVial color language stage 1 already
-// established - so the aura is colored to match the crystal rather than to encode a rarity.
+// 다른 두 형제와 달리, 스톤에는 등급이 없다: 드롭되는 모든 크리스탈은 크기도
+// 같은 동일한 스톤이며, 유일하게 다른 것은 둘 중 어느 쪽이냐는 것뿐이다.
+// 빨강은 ATK 스톤, 초록은 HP 스톤으로, 스테이지 1이 이미 확립한 RedVial/
+// GreenVial 색상 언어를 그대로 따른다 - 그래서 아우라는 희귀도를 표현하는 게
+// 아니라 크리스탈 색에 맞춰져 있다.
 //
-// One other difference, forced by the visual being a Hovl Studio Crystal effect prefab rather
-// than a static mesh: the crystal is drawn as a PARTICLE (the root system renders the Crystal1
-// mesh), so at spawn there are no live particles and the renderer bounds are empty - the
-// bounds-measuring trick its siblings use to sit flush on the floor returns zero here. A fixed
-// authored offset is used instead.
+// 정적 메시가 아니라 Hovl Studio의 Crystal effect 프리팹을 비주얼로 사용하기
+// 때문에 생기는 또 하나의 차이점: 이 크리스탈은 파티클로 그려진다(루트
+// 시스템이 Crystal1 메시를 렌더링한다), 그래서 스폰 시점에는 살아있는
+// 파티클이 없어 렌더러 바운드가 비어있다 - 형제 픽업들이 바닥에 딱 맞게
+// 놓기 위해 쓰는 바운드 측정 트릭이 여기서는 0을 반환한다. 대신 미리
+// 정해둔 고정 오프셋을 사용한다.
 public class StoneDropPickup : MonoBehaviour
 {
     [Header("Toss + bounce (beat 1)")]
-    // Same arc shape as StatPotionPickup's, but thrown noticeably farther and higher than
-    // the potion's 1.4/1.1 - a stone is a bigger, heavier-reading object and the longer
-    // flight is what sells it. landDuration is stretched to match, since covering more ground
-    // in the same 0.75s would just look sped up rather than thrown harder.
+    // StatPotionPickup과 같은 궤적 형태지만, 물약의 1.4/1.1보다 눈에 띄게 더
+    // 멀리, 더 높이 던져진다 - 스톤은 더 크고 무겁게 느껴지는 오브젝트이며,
+    // 더 긴 비행이 그 느낌을 살려준다. landDuration도 이에 맞춰 늘렸는데, 같은
+    // 0.75초 안에 더 먼 거리를 이동시키면 세게 던져진 게 아니라 그냥 빨리
+    // 감기한 것처럼 보이기 때문이다.
     [SerializeField] private float landDuration = 0.9f;
     [SerializeField] private float tossDistance = 2.3f;
     [SerializeField] private float tossHeight = 2f;
@@ -33,29 +37,31 @@ public class StoneDropPickup : MonoBehaviour
     [SerializeField] private float approachTimeout = 6f;
 
     private float approachSpeed = 5f;
-    // Extra distance behind tossDistance, set per-instance when a kill drops more than one
-    // stone at once - each successive stone in the burst lands further back than the last, so
-    // the group reads as a trail rather than a stack landing on the same spot.
+    // tossDistance에 더해지는 추가 거리로, 한 번의 처치로 스톤이 여러 개 동시에
+    // 드롭될 때 인스턴스별로 설정된다 - 한 번에 쏟아지는 스톤들이 이전 것보다
+    // 하나씩 더 뒤에 떨어지도록 하여, 그룹 전체가 같은 지점에 쌓이는 게 아니라
+    // 흩뿌려진 궤적처럼 보이게 한다.
     private float extraTossDistance;
 
     [Header("Visual (per option type)")]
-    // Hovl Studio's "Crystal effect red" / "Crystal effect green". Both are self-contained
-    // looping systems with playOnAwake set, so instantiating one is all that is needed.
+    // Hovl Studio의 "Crystal effect red" / "Crystal effect green". 둘 다 playOnAwake가
+    // 설정된 독립적인 반복 재생 시스템이므로, 인스턴스화하기만 하면 그걸로 충분하다.
     [SerializeField] private GameObject attackVisualPrefab;
     [SerializeField] private GameObject hpVisualPrefab;
-    // One size for every stone - there are no grades, so nothing varies it.
+    // 모든 스톤이 같은 크기다 - 등급이 없으므로 이 값을 다르게 할 요소가 없다.
     [SerializeField] private float stoneScale = 0.825f;
-    // How far above the ground the crystal's pivot sits, as a MULTIPLE of stoneScale rather
-    // than an absolute distance. The crystal's pivot-to-bottom distance is exactly
-    // proportional to its scale (measured: 0.607 at scale 0.55, 0.910 at 0.825 - the same
-    // 1.103 ratio), so a fixed lift only ever looks right at one size and buries the stone at
-    // any larger one. Tuned against how the stone sat at its original 0.55/0.35 pairing;
-    // the raw particle bounds run wider than the visible crystal, so they overshoot.
+    // 크리스탈의 피벗이 지면 위로 얼마나 떠 있는지를, 절대 거리가 아니라
+    // stoneScale의 배수로 나타낸다. 크리스탈의 피벗-바닥 거리는 스케일에 정확히
+    // 비례한다(실측: 스케일 0.55일 때 0.607, 0.825일 때 0.910 - 동일한 1.103
+    // 비율), 그래서 고정된 상승값은 딱 한 크기에서만 맞고 그보다 큰 크기에서는
+    // 스톤이 파묻혀버린다. 원래 0.55/0.35 조합에서 스톤이 놓이던 모습을 기준으로
+    // 튜닝했다; 파티클의 원본 바운드는 눈에 보이는 크리스탈보다 더 넓게
+    // 잡히므로 실제보다 커 보인다.
     [SerializeField] private float groundLiftPerScale = 0.636f;
 
     [Header("Aura")]
-    // Colored to match the crystal itself, so the halo reinforces which stone it is instead
-    // of encoding a rarity the stone doesn't have.
+    // 크리스탈 자체와 색을 맞춰서, 헤일로가 스톤에 없는 희귀도를 표현하는 게
+    // 아니라 어떤 스톤인지를 더 강조해준다.
     [SerializeField] private Color attackAuraColor = new Color(1f, 0.28f, 0.2f);
     [SerializeField] private Color hpAuraColor = new Color(0.25f, 0.9f, 0.3f);
     [SerializeField] private float auraSize = 1.5f;
@@ -71,10 +77,12 @@ public class StoneDropPickup : MonoBehaviour
     private CombatLoop combatLoop;
     private StoneDropManager dropManager;
     private Vector3 restScale;
-    // Built in code per instance, so nothing else will collect it - see OnDestroy.
+    // 인스턴스마다 코드로 생성되므로, 다른 누구도 대신 수거해주지 않는다 -
+    // OnDestroy 참고.
     private Material auraMaterial;
-    // Same reason as StatPotionPickup's: HandlePlayerDied can cut the coroutine off mid-toss,
-    // before it ever reaches its own PopIdleHold call.
+    // StatPotionPickup과 동일한 이유: HandlePlayerDied가 던지는 도중에 코루틴을
+    // 끊어버릴 수 있어, 자신의 PopIdleHold 호출에 도달하기도 전에 멈출 수
+    // 있다.
     private bool idleHoldActive;
 
     public void Initialize(StatType statType, Transform player,
@@ -114,8 +122,9 @@ public class StoneDropPickup : MonoBehaviour
         GameEvents.OnPlayerDied -= HandlePlayerDied;
     }
 
-    // See StatPotionPickup.HandlePlayerDied - a drop from the kill that also killed the
-    // player must freeze where it is instead of sliding into (and paying out to) a corpse.
+    // StatPotionPickup.HandlePlayerDied 참고 - 플레이어를 죽인 처치와 동일한
+    // 처치에서 나온 드롭은 시체를 향해 계속 미끄러져 들어가(그리고 지급하지)
+    // 않고 그 자리에서 멈춰야 한다.
     private void HandlePlayerDied()
     {
         StopAllCoroutines();

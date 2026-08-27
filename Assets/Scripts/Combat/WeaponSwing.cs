@@ -6,20 +6,19 @@ public class WeaponSwing : MonoBehaviour
     [SerializeField] private float swingAngle = 70f;
     [SerializeField] private float swingDuration = 0.15f;
 
-    // Optional - only the player's sword has one wired up; monsters swing without it.
+    // 선택 사항 - 플레이어의 검에만 연결되어 있고, 몬스터는 이것 없이 스윙한다.
     [SerializeField] private ParticleSystem slashVfx;
 
-    // How long the attack animation takes to land its hit. Matches Attack01_SwordAndShiled's
-    // actual clip length (frames 0-16 at 30fps, per its FBX import data) - tune in the
-    // Inspector if the attack clip changes.
+    // 공격 애니메이션이 타격을 적중시키기까지 걸리는 시간. Attack01_SwordAndShiled의
+    // 실제 클립 길이(FBX 임포트 데이터 기준 30fps에서 0-16 프레임)와 일치한다 - 공격 클립이
+    // 바뀌면 인스펙터에서 조정할 것.
     [SerializeField] private float attackImpactDelay = 16f / 30f;
     public float AttackImpactDelay => attackImpactDelay;
 
-    // Total time for Attack01 to finish AND blend back into Idle: the Attack01 -> Idle
-    // transition in SwordAndShieldStance.controller starts at 90% of the clip and blends
-    // over 0.15s, so re-triggering before this elapses would cut the current swing off
-    // mid-animation. Retriggers that come in faster than this are skipped visually - the
-    // gameplay attack tick/damage timing is untouched.
+    // Attack01이 끝나고 Idle로 블렌딩되어 돌아오기까지 걸리는 총 시간: SwordAndShieldStance.controller의
+    // Attack01 -> Idle 전환은 클립의 90% 지점에서 시작해 0.15초에 걸쳐 블렌딩되므로, 이 시간이
+    // 지나기 전에 재트리거하면 현재 스윙이 애니메이션 도중에 잘려버린다. 이보다 빠르게 들어오는
+    // 재트리거는 시각적으로만 무시된다 - 게임플레이상의 공격 틱/데미지 타이밍에는 영향을 주지 않는다.
     [SerializeField] private float attackAnimSettleDuration = 0.9f * (16f / 30f) + 0.15f;
     private float nextAnimTriggerAllowedTime;
 
@@ -30,9 +29,9 @@ public class WeaponSwing : MonoBehaviour
     private bool animatorSearched;
     private Animator characterAnimator;
 
-    // The character model (with its own Animator) lives as a sibling under the same
-    // parent as this swing pivot, not as an ancestor - so we search sideways via the
-    // parent rather than GetComponentInParent.
+    // 캐릭터 모델(자체 Animator를 가진)은 이 스윙 피벗의 조상이 아니라, 같은 부모 아래의
+    // 형제(sibling)로 존재한다 - 그래서 GetComponentInParent 대신 부모를 거쳐
+    // 옆으로 검색한다.
     public Animator CharacterAnimator
     {
         get
@@ -58,8 +57,8 @@ public class WeaponSwing : MonoBehaviour
 
         if (slashVfx != null)
         {
-            // Cut off short so a fresh swing always starts its own clean burst instead of
-            // layering on top of whatever the interrupted swing's slash was still playing.
+            // 새 스윙이 항상 자신만의 깨끗한 이펙트로 시작하도록 짧게 끊는다 - 중단된 스윙의
+            // 슬래시가 아직 재생 중이던 것 위에 겹쳐 쌓이지 않도록.
             if (slashVfxRoutine != null) StopCoroutine(slashVfxRoutine);
             slashVfx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             slashVfxRoutine = StartCoroutine(PlaySlashVfxAtImpact());
@@ -72,9 +71,9 @@ public class WeaponSwing : MonoBehaviour
         }
     }
 
-    // Called when something else (a parry) needs to cut the current swing short instead
-    // of letting it play out - snaps the blade back to rest and clears the slash immediately
-    // rather than waiting for it to reach its own scheduled impact/settle timing.
+    // 다른 무언가(패링)가 현재 스윙을 끝까지 재생시키지 않고 중간에 끊어야 할 때 호출된다 -
+    // 예정된 타격/정착 타이밍에 도달할 때까지 기다리지 않고 즉시 칼날을 원위치로 되돌리고
+    // 슬래시를 제거한다.
     public void CancelSwing()
     {
         if (activeSwing != null)
@@ -92,9 +91,9 @@ public class WeaponSwing : MonoBehaviour
         if (slashVfx != null) slashVfx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
     }
 
-    // Timed off the same clip data as the animation itself (not the blade prop's own
-    // quick rotation) - the slash shows right as the blade actually lands, and clears
-    // the instant the attack animation finishes settling back to Idle.
+    // (블레이드 프롭 자체의 빠른 회전이 아니라) 애니메이션 자체와 동일한 클립 데이터를
+    // 기준으로 타이밍을 맞춘다 - 슬래시는 블레이드가 실제로 닿는 순간에 나타나고,
+    // 공격 애니메이션이 Idle로 정착을 마치는 즉시 사라진다.
     private IEnumerator PlaySlashVfxAtImpact()
     {
         yield return new WaitForSeconds(attackImpactDelay);
@@ -107,16 +106,16 @@ public class WeaponSwing : MonoBehaviour
 
     private IEnumerator SwingRoutine()
     {
-        // Start from the blade's current rotation, not restRotation, so an attack
-        // that interrupts a still-playing swing continues smoothly instead of snapping back first.
+        // restRotation이 아니라 블레이드의 현재 회전값에서 시작한다 - 그래야 아직 재생 중인
+        // 스윙을 끊고 들어온 공격이 먼저 원위치로 튕기지 않고 부드럽게 이어진다.
         Quaternion startRotation = transform.localRotation;
 
-        // Swing around the pivot's LOCAL X axis. Both the player and the monsters have their
-        // local X running along the camera's view axis (in opposite world directions, since they
-        // face each other), so this sweeps the blade across the screen plane where it stays fully
-        // visible - and the same angle automatically produces a mirrored swing for each side.
-        // Rotating around local Z instead swept the blade toward/away from the camera, where it
-        // foreshortened into a stub and looked like it vanished mid-attack.
+        // 피벗의 로컬 X축을 기준으로 스윙한다. 플레이어와 몬스터 모두 로컬 X축이 카메라의
+        // 시선축을 따라 놓여 있어서(서로 마주보고 있으므로 월드 방향은 반대) 블레이드가 화면
+        // 평면을 가로질러 완전히 보이는 상태로 휘둘러진다 - 같은 각도만으로도 양쪽 모두
+        // 자동으로 좌우 대칭된 스윙이 만들어진다. 대신 로컬 Z축을 기준으로 회전시키면
+        // 블레이드가 카메라 쪽으로/에서 멀어지는 방향으로 휘둘러져 원근 단축으로 짧아 보이고
+        // 공격 도중 사라지는 것처럼 보였다.
         Quaternion swungRotation = restRotation * Quaternion.Euler(swingAngle, 0f, 0f);
         float half = swingDuration * 0.5f;
 

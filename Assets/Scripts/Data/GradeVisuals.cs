@@ -1,11 +1,11 @@
 using UnityEngine;
 
-// Shared grade -> color ramp for anything that needs to read a drop's rarity visually
-// (stat drop popup text, the potion pickup's own tint/glow). Single source of truth so the
-// two never drift apart into showing different colors for the same grade.
+// 드롭 아이템의 희귀도를 시각적으로 표현해야 하는 모든 곳에서 공유하는 등급 -> 색상 램프
+// (스탯 드롭 팝업 텍스트, 포션 픽업 자체의 틴트/글로우). 단일 진실 공급원(single source of truth)으로 두어
+// 같은 등급인데 서로 다른 색으로 표시되며 어긋나는 일이 없도록 한다.
 public static class GradeVisuals
 {
-    // Normal->white, Rare->sky blue, Epic->purple, Unique->yellow, Legendary->light green.
+    // Normal->흰색, Rare->하늘색, Epic->보라색, Unique->노란색, Legendary->연두색.
     public static Color GetColor(StatGrade grade)
     {
         switch (grade)
@@ -18,15 +18,14 @@ public static class GradeVisuals
         }
     }
 
-    // Fill color for the floating pickup popups (see PopupText), as opposed to the softer
-    // ramp above that tints auras and panel borders. Same five-color identity, pushed to full
-    // saturation: the pale ramp reads as washed-out grey-ish text once it's a small glyph over
-    // live gameplay rather than a glow around an object.
+    // 오라와 패널 테두리를 물들이는 위쪽의 부드러운 램프와 달리, 떠오르는 픽업 팝업(PopupText 참고)의
+    // 채우기 색상. 동일한 다섯 색 정체성을 완전 채도로 밀어붙인 것 - 옅은 램프는 오브젝트 주변의 은은한
+    // 글로우일 때는 괜찮지만, 실제 게임플레이 위의 작은 글리프가 되는 순간 흐릿한 회색 텍스트처럼 보이기
+    // 때문이다.
     //
-    // Saturated rather than merely dark. Darkening these far enough to survive a bright sky
-    // pushes blue/purple/green toward the same muddy near-black and the grades stop being
-    // tellable apart - contrast is PopupText's black outline's job, so these only have to
-    // carry hue.
+    // 단순히 어둡게 하는 대신 채도를 높였다. 밝은 하늘 배경에서도 보이도록 이 색들을 충분히 어둡게
+    // 만들면 파랑/보라/초록이 전부 비슷한 탁한 거의 검정색으로 수렴해버려 등급을 구분할 수 없게 된다 -
+    // 대비는 PopupText의 검은 외곽선이 담당하므로, 여기서는 색조(hue)만 전달하면 된다.
     public static Color GetPopupTextColor(StatGrade grade)
     {
         switch (grade)
@@ -39,9 +38,9 @@ public static class GradeVisuals
         }
     }
 
-    // Multiplier against a caller's own "Epic" baseline size - Epic sits in the middle of
-    // the five grades, so it's the pivot the ramp scales up/down from rather than an
-    // endpoint. A caller applies this to whatever size it already uses for Epic.
+    // 호출자가 가진 자신만의 "Epic" 기준 크기에 곱하는 배율 - Epic은 다섯 등급 중 정중앙에
+    // 위치하므로, 끝점이 아니라 램프가 위아래로 스케일링되는 축(pivot)이 된다. 호출자는 이미
+    // Epic용으로 쓰고 있는 크기에 이 값을 곱해 적용한다.
     public static float GetSizeScale(StatGrade grade)
     {
         switch (grade)
@@ -54,11 +53,11 @@ public static class GradeVisuals
         }
     }
 
-    // How strongly a grade should announce itself, normalized 0..1 across the five grades.
-    // Callers multiply their own tuned maximums by this (aura brightness, light intensity,
-    // emissive strength), so "subtle at Normal, unmistakable at Legendary" is one ramp here
-    // rather than five hand-set numbers per effect. Never returns 0 - even a Normal drop
-    // carries a faint aura, it just has to read as the floor of the scale.
+    // 등급이 자신을 얼마나 강하게 드러내야 하는지, 다섯 등급에 걸쳐 0..1로 정규화한 값.
+    // 호출자는 자신이 튜닝한 최대값(오라 밝기, 라이트 세기, 이미시브 강도)에 이 값을 곱해 사용하므로,
+    // "Normal에서는 은은하게, Legendary에서는 확실하게"라는 규칙이 이펙트마다 다섯 개씩 손으로 정한
+    // 숫자가 아니라 여기 하나의 램프로 관리된다. 절대 0을 반환하지 않는다 - Normal 드롭도 희미한
+    // 오라를 가지며, 다만 이 스케일의 최저값으로 읽히기만 하면 된다.
     public static float GetAuraStrength(StatGrade grade)
     {
         switch (grade)
@@ -71,10 +70,10 @@ public static class GradeVisuals
         }
     }
 
-    // Multiplier against a caller's own "Normal" baseline size - unlike GetSizeScale above
-    // (which pivots on Epic, the middle grade), a dropped object's size reads best as an
-    // endpoint ramp: Normal is whatever size the caller already authored, and everything
-    // rarer is visibly bigger than that, not scaled down from something above it.
+    // 호출자가 가진 자신만의 "Normal" 기준 크기에 곱하는 배율 - 중간 등급인 Epic을 축으로 삼는
+    // 위쪽의 GetSizeScale과 달리, 드롭된 오브젝트의 크기는 끝점 램프로 표현하는 편이 가장 자연스럽다:
+    // Normal은 호출자가 이미 만들어 둔 크기 그대로이고, 그보다 희귀한 등급은 위에서 축소되는 것이
+    // 아니라 그보다 눈에 띄게 더 커지는 방식이다.
     public static float GetPotionScale(StatGrade grade)
     {
         switch (grade)

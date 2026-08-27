@@ -1,18 +1,17 @@
-// Fixed reward table for equipped gear - a sword or shield's grade decides its base bonus
-// outright. On top of that, every pickup of that type (upgrade or not) feeds a separate
-// uncapped mastery meter (see EquipmentDropManager) that converts to +1 ATK / +10 HP per full
-// 100% crossed - this is what gives a same-or-lower-grade pickup a reason to exist. No stage
-// scaling on any of this: a Legendary sword is always +20 ATK regardless of what stage it
-// dropped on.
+// 장착 장비의 고정 보상 테이블 - 검이나 방패의 등급이 기본 보너스를 그대로 결정한다.
+// 그와 별개로, 해당 타입의 모든 획득(업그레이드 여부와 무관하게)은 별도의
+// 상한 없는 숙련도(mastery) 게이지(EquipmentDropManager 참고)를 채우며, 100%를 가득 채울 때마다
+// +1 ATK / +10 HP로 전환된다 - 이것이 동급 이하 등급 아이템을 주워도 의미가 있게 만드는 이유다. 여기에는
+// 스테이지 스케일링이 전혀 없다: Legendary 검은 어느 스테이지에서 드롭됐든 항상 +20 ATK다.
 public static class EquipmentGradeBonus
 {
-    // Flat stat granted per mastery level, independent of grade.
+    // 등급과 무관하게 숙련도 레벨당 고정으로 부여되는 스탯.
     public const float SwordLevelAtkBonus = 1f;
     public const float ShieldLevelHpBonus = 10f;
 
-    // Percent of the mastery meter a single pickup of this grade fills - deliberately not
-    // proportional to the grade's own stat bonus (Legendary is 20x Normal's ATK but only 50x
-    // its mastery gain), so grinding low grades still contributes meaningfully over time.
+    // 이 등급의 아이템 하나를 주웠을 때 숙련도 게이지가 채워지는 비율 - 의도적으로 해당 등급의
+    // 스탯 보너스와 비례하지 않게 했다(Legendary는 Normal의 ATK 20배지만 숙련도 상승은 겨우 50배),
+    // 그래서 낮은 등급을 반복해서 파밍해도 시간이 지나면 여전히 유의미하게 기여한다.
     public static float GetProgressPercent(StatGrade grade)
     {
         switch (grade)

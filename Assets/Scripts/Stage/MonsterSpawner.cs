@@ -8,9 +8,9 @@ public class MonsterSpawner : MonoBehaviour
     [SerializeField] private MonsterDefinitionSO bossDefinition;
 
     [Header("Stage 2+ roster")]
-    // Each main stage gets its own cast: the footmen above are stage 1's, these take over
-    // from stage 2 on. Left empty, a slot silently falls back to the stage 1 entry, so a
-    // half-populated roster still spawns something instead of erroring out mid-run.
+    // 각 메인 스테이지마다 고유한 몬스터 구성을 가진다: 위쪽의 보병들은 스테이지 1의 것이고,
+    // 이것들은 스테이지 2부터 그 역할을 넘겨받는다. 슬롯을 비워두면 조용히 스테이지 1 항목으로
+    // 대체되므로, 절반만 채워진 구성이어도 실행 중 오류를 내는 대신 무언가는 스폰된다.
     [SerializeField] private MonsterDefinitionSO stage2MonsterDefinition;
     [SerializeField] private MonsterDefinitionSO stage2EliteDefinition;
     [SerializeField] private MonsterDefinitionSO stage2BossDefinition;
@@ -19,11 +19,11 @@ public class MonsterSpawner : MonoBehaviour
     [SerializeField] private Transform spawnPoint;
     [SerializeField] private Transform playerTransform;
 
-    // The bird cast is stage 2's specifically, NOT "stage 2 and everything after" - stage 3
-    // deliberately brings the stage 1 footmen back rather than introducing a third roster,
-    // and simply fights them at stage 3's numbers. GetNormalHp/GetNormalAttack below already
-    // key off mainStage, so the same prefabs arrive with stage 3 HP and damage without any
-    // per-stage roster work.
+    // 새 구성은 정확히 스테이지 2 전용이지, "스테이지 2 이후 전부"가 아니다 - 스테이지 3은
+    // 세 번째 몬스터 구성을 새로 도입하는 대신 의도적으로 스테이지 1의 보병들을 다시
+    // 불러오며, 단지 스테이지 3의 수치로 싸우게 할 뿐이다. 아래의 GetNormalHp/GetNormalAttack이
+    // 이미 mainStage를 기준으로 값을 정하므로, 스테이지별 구성 작업 없이도 동일한 프리팹이
+    // 스테이지 3의 HP와 공격력을 그대로 갖고 등장한다.
     private const int BirdRosterStage = 2;
 
     private static bool UsesBirdRoster(int mainStage) => mainStage == BirdRosterStage;
@@ -37,31 +37,31 @@ public class MonsterSpawner : MonoBehaviour
     private MonsterDefinitionSO ResolveBoss(int mainStage) =>
         UsesBirdRoster(mainStage) && stage2BossDefinition != null ? stage2BossDefinition : bossDefinition;
 
-    // Monsters spawn further right than the real engage point - off-screen - and simply
-    // walk in the whole way using their normal move speed/animation, instead of popping
-    // into place or snapping into position.
+    // 몬스터는 실제 교전 지점보다 더 오른쪽 - 화면 밖 - 에서 스폰되며, 제자리에 갑자기
+    // 나타나거나 순간이동하지 않고 평소 이동 속도/애니메이션 그대로 걸어 들어온다.
     [SerializeField] private float offscreenSpawnDistance = 8f;
 
     [SerializeField] private float eliteScale = 1.5f;
     [SerializeField] private float bossScale = 2f;
 
     [Header("HP curve")]
-    // An elite is worth this many of the normal monsters standing in the same substage.
+    // 엘리트 한 마리는 같은 서브스테이지의 일반 몬스터 이 개수만큼의 가치를 가진다.
     [SerializeField] private float eliteHpMultiplier = 10f;
-    // The boss is worth this many of the last elite the player fought before reaching it.
+    // 보스는 플레이어가 도달하기 전 마지막으로 싸운 엘리트의 이 배수만큼의 가치를 가진다.
     [SerializeField] private float bossHpMultiplier = 3f;
 
     [Header("Attack curve")]
-    // Attack keys off the main stage only, so every substage inside a stage hits equally
-    // hard: elite and boss are just multiples of what the normal monsters there deal.
+    // 공격력은 메인 스테이지에만 의존하므로, 한 스테이지 안의 모든 서브스테이지는
+    // 동일한 세기로 공격한다: 엘리트와 보스는 그 스테이지의 일반 몬스터 공격력에
+    // 배수를 곱한 값일 뿐이다.
     [SerializeField] private float eliteAttackMultiplier = 2f;
     [SerializeField] private float bossAttackMultiplier = 5f;
 
-    // Single source of truth for the per-substage HP curve, so the elite/boss multipliers
-    // are always relative to what normal monsters in that stage actually have.
+    // 서브스테이지별 HP 곡선에 대한 단일 진실 공급원(single source of truth)으로,
+    // 엘리트/보스 배수는 항상 해당 스테이지의 일반 몬스터가 실제로 갖는 값을 기준으로 한다.
     public static float GetNormalHp(int mainStage, int subStage) => (mainStage - 1) * 10 + subStage;
 
-    // Likewise for attack: stage 1 normals hit for 1, stage 2 for 2, and so on.
+    // 공격력도 마찬가지다: 스테이지 1의 일반 몬스터는 1의 피해를, 스테이지 2는 2를 주는 식이다.
     public static float GetNormalAttack(int mainStage) => mainStage;
 
     public Monster SpawnNormal(int mainStage, int subStage)
@@ -126,8 +126,8 @@ public class MonsterSpawner : MonoBehaviour
     {
         Vector3 spawnFrom = spawnPoint.position + new Vector3(offscreenSpawnDistance, 0f, 0f);
         GameObject instance = Instantiate(prefab, spawnFrom, spawnPoint.rotation);
-        // Multiply, don't replace: some prefabs (e.g. the final boss) already bake in
-        // their own base scale, and this must stack on top of that, not override it.
+        // 대입이 아니라 곱하기: 일부 프리팹(예: 최종 보스)은 이미 자체적인 기본 스케일을
+        // 갖고 있으며, 이 값은 그것을 덮어쓰는 게 아니라 그 위에 누적되어야 한다.
         instance.transform.localScale *= scaleMultiplier;
         SnapToGround(instance);
 
@@ -140,9 +140,9 @@ public class MonsterSpawner : MonoBehaviour
         return monster;
     }
 
-    // spawnPoint.position.y is calibrated for a scale-1 capsule resting on the ground;
-    // bigger prefabs (boss, final boss) need their pivot raised proportionally to their
-    // own scale so the capsule's bottom still lands exactly on the ground instead of sinking in.
+    // spawnPoint.position.y는 스케일 1인 캡슐이 바닥에 놓였을 때를 기준으로 보정되어
+    // 있다; 더 큰 프리팹(보스, 최종 보스)은 캡슐의 바닥이 바닥 속으로 파묻히지 않고
+    // 정확히 지면에 닿도록 자기 스케일에 비례해서 피벗을 올려줘야 한다.
     private void SnapToGround(GameObject instance)
     {
         Vector3 pos = instance.transform.position;

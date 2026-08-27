@@ -2,32 +2,32 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-// A slim gauge for one equipment slot's mastery meter - the same "차오르는" filling-bar
-// language as BossGaugeView, but for the progress that a duplicate or lower-grade pickup now
-// feeds instead of being wasted (see EquipmentDropManager.CompleteDrop). Unlike the boss gauge,
-// this one is meant to cross 100% repeatedly: each crossing is a level gained, and the bar
-// wraps back toward 0 rather than sitting capped.
+// 장비 슬롯 하나의 숙련도 게이지를 위한 얇은 바 - BossGaugeView와 같은 "차오르는" 채움 바
+// 방식을 쓰지만, 이번에는 중복이거나 낮은 등급의 픽업이 버려지는 대신 채워주는 진행도를
+// 표시한다(EquipmentDropManager.CompleteDrop 참고). 보스 게이지와 달리 이 게이지는 100%를
+// 반복해서 넘도록 설계되어 있다: 한 번 넘을 때마다 레벨이 오르며, 바는 상한에 멈춰있지 않고
+// 다시 0쪽으로 감긴다.
 //
-// Builds its own background/fill/label as children in code (matching TitleScreenView elsewhere
-// in this UI), but - unlike a fully standalone HUD element - leaves its OWN RectTransform
-// (position/size within whatever parent it's given) entirely to the caller when
-// anchorToBottomCenter is off, which is how EquipmentPanelView embeds one under each row.
+// (이 UI의 다른 곳에 있는 TitleScreenView와 마찬가지로) 배경/채움/라벨을 코드로 자식으로
+// 생성하지만 - 완전히 독립적인 HUD 요소와 달리, anchorToBottomCenter가 꺼져 있을 때는 자기
+// 자신의 RectTransform(부모 안에서의 위치/크기)을 전적으로 호출자에게 맡긴다. 이 방식으로
+// EquipmentPanelView가 각 행 아래에 하나씩 끼워 넣는다.
 public class EquipmentMasteryGaugeView : MonoBehaviour
 {
     [SerializeField] private EquipmentDropManager equipmentDropManager;
     [SerializeField] private EquipmentType equipType;
     [SerializeField] private Color fillColor = new Color(0.4f, 0.75f, 1f);
-    // Standalone-mode only (see anchorToBottomCenter): this bar's own height, and its distance
-    // from the screen's bottom edge - callers of a standalone bar place each instance at a
-    // different offset so multiple gauges stack rather than overlap.
+    // 독립 모드에서만 사용(anchorToBottomCenter 참고): 이 바 자체의 높이와 화면 하단
+    // 가장자리로부터의 거리 - 독립 바를 사용하는 호출자는 각 인스턴스를 서로 다른 오프셋에
+    // 배치하여 여러 게이지가 겹치지 않고 쌓이도록 한다.
     [SerializeField] private float barHeight = 30f;
     [SerializeField] private float bottomOffset = 160f;
-    // On: this component owns its RectTransform outright (a bottom-center HUD strip). Off: the
-    // caller has already sized and positioned this GameObject (e.g. a row inside a panel) and
-    // this must not fight that - it only ever touches its children.
+    // On: 이 컴포넌트가 자신의 RectTransform을 완전히 소유한다(하단 중앙 HUD 스트립). Off:
+    // 호출자가 이미 이 GameObject의 크기와 위치를 정해둔 상태이며(예: 패널 안의 한 행) 이
+    // 컴포넌트는 그것과 충돌해서는 안 된다 - 오직 자신의 자식들만 건드린다.
     [SerializeField] private bool anchorToBottomCenter = true;
-    // Off: show only the percent ("45%"), since an embedded gauge usually sits right under a
-    // label that already spells out the type/level/grade and would otherwise repeat it.
+    // Off: 퍼센트만 표시한다("45%") - 끼워 넣는 형태의 게이지는 보통 타입/레벨/등급을 이미
+    // 표시하는 라벨 바로 아래에 놓이므로, 그렇지 않으면 내용이 중복된다.
     [SerializeField] private bool includeTypeAndLevelInLabel = true;
     [SerializeField] private float fillTweenDuration = 0.35f;
 
@@ -43,10 +43,10 @@ public class EquipmentMasteryGaugeView : MonoBehaviour
         Build();
     }
 
-    // For callers building one of these at runtime (EquipmentPanelView): add the component
-    // while the GameObject is still inactive, call this, then activate it - Unity defers
-    // Awake on an inactive object, so this is guaranteed to run before Build() ever does and
-    // before Awake could apply the standalone-mode defaults.
+    // 런타임에 이 컴포넌트를 만드는 호출자(EquipmentPanelView)를 위한 것: GameObject가 아직
+    // 비활성 상태일 때 컴포넌트를 추가하고, 이 함수를 호출한 다음, 그제서야 활성화한다 -
+    // Unity는 비활성 오브젝트의 Awake를 미루므로, 이 함수는 Build()가 실행되기 전에, 그리고
+    // Awake가 독립 모드 기본값을 적용하기 전에 반드시 먼저 실행됨이 보장된다.
     public void Configure(EquipmentDropManager manager, EquipmentType type, Color color,
         bool anchorToBottomCenter, bool includeTypeAndLevelInLabel)
     {
@@ -84,9 +84,8 @@ public class EquipmentMasteryGaugeView : MonoBehaviour
             : equipmentDropManager.ShieldMasteryProgressPercent;
         int percent = Mathf.RoundToInt(progress);
 
-        // A level-up wraps the meter back down near 0 - that's a genuine reset (the level
-        // gained is the payoff), not progress draining away, so it snaps instantly rather than
-        // animating backward.
+        // 레벨업이 되면 미터가 다시 0 근처로 감긴다 - 이는 진행도가 사라지는 것이 아니라
+        // 진짜 리셋(얻은 레벨이 그 보상이다)이므로, 뒤로 애니메이션되지 않고 즉시 스냅된다.
         bool levelJustChanged = level != lastKnownLevel;
         lastKnownLevel = level;
 
@@ -146,8 +145,9 @@ public class EquipmentMasteryGaugeView : MonoBehaviour
 
     private static float EaseOutQuad(float x) => 1f - (1f - x) * (1f - x);
 
-    // Same bottom-center band the boss gauge sits in, so a standalone bar shares its width
-    // regardless of screen resolution. Skipped entirely when embedded (see anchorToBottomCenter).
+    // 보스 게이지가 위치한 것과 동일한 하단 중앙 영역이므로, 독립 바는 화면 해상도와
+    // 상관없이 같은 너비를 갖는다. 끼워 넣는 형태일 때는 완전히 건너뛴다(anchorToBottomCenter
+    // 참고).
     private void ConfigureStandaloneAnchors()
     {
         var rt = GetComponent<RectTransform>();

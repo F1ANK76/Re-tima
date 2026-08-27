@@ -1,32 +1,23 @@
 using UnityEngine;
 
-// Builds the game's title art in code: a bright pastel dawn sky shared by the stage-
-// announcement card and the main menu. The hues follow the scene's own sky (sampled at
-// #334A93 up top through #785F98 near the horizon) but lifted well above it, because the game
-// itself reads bright and cheerful and a literal match would land as gloomy. Drawn
-// procedurally rather than authored as art so it stays in sync with the rest of this UI,
-// which is likewise built from code.
+// 스테이지 안내 카드가 사용하는 밝은 파스텔톤 새벽 하늘을 코드로 만든다. 색조는 씬 자체의
+// 하늘(상단은 #334A93, 지평선 근처는 #785F98로 샘플링)을 따르되 훨씬 밝게 끌어올렸는데,
+// 게임 자체가 밝고 경쾌한 느낌이라 실제 색을 그대로 맞추면 오히려 우울해 보이기 때문이다.
+// 그림으로 직접 제작하지 않고 코드로 절차적으로 그리는 이유는, 마찬가지로 코드로 구성되는
+// 이 UI의 나머지 부분과 동기화된 상태를 유지하기 위해서다.
 public static class TitleCardBackdrop
 {
-    // Small enough to build in one pass; bilinear upscaling to full screen is what softens
-    // the stars into glows rather than leaving them as hard pixels.
+    // 한 번의 패스로 만들 수 있을 만큼 작은 크기다; 전체 화면으로 확대할 때 쓰는 바일리니어
+    // 업스케일링이 별을 딱딱한 픽셀이 아니라 부드러운 광채로 만들어준다.
     const int Width = 512;
     const int Height = 288;
 
-    // The scene's indigo/purple, pushed up into pastel: periwinkle overhead falling to a warm
-    // pink horizon.
+    // 씬의 남보라색을 파스텔톤으로 끌어올렸다: 하늘 위쪽은 페리윙클색이고 지평선으로 갈수록
+    // 따뜻한 핑크색으로 떨어진다.
     static readonly Color SkyTop = new Color(0.482f, 0.541f, 0.820f);
     static readonly Color SkyHorizon = new Color(0.957f, 0.780f, 0.827f);
 
-    // Scene greens, kept light so the illustration stays as bright as the sky above it.
-    static readonly Color GrassNear = new Color(0.541f, 0.729f, 0.435f);
-    static readonly Color GrassFar = new Color(0.639f, 0.804f, 0.529f);
-    static readonly Color TreeNear = new Color(0.180f, 0.396f, 0.286f);
-    static readonly Color TreeFar = new Color(0.400f, 0.588f, 0.478f);
-    // Characters read as flat cutouts so they stay legible against the busy treeline.
-    static readonly Color Figure = new Color(0.145f, 0.114f, 0.208f);
-
-    // The stage-announcement card: sky and stars only, nothing to compete with the title.
+    // 하늘과 별만 있으며, 타이틀과 경쟁할 만한 요소는 없다.
     public static Sprite Create()
     {
         var pixels = new Color[Width * Height];
@@ -38,28 +29,8 @@ public static class TitleCardBackdrop
         return Finish(pixels);
     }
 
-    // The main menu: the same sky, plus the forest, the hero and the monster he is walking
-    // toward - enough of the game on one screen to read what it is before pressing Play.
-    public static Sprite CreateTitleScene()
-    {
-        var pixels = new Color[Width * Height];
-        var rng = NewRng();
-
-        PaintSky(pixels, rng);
-        // Lifted off the horizon so none land inside the treeline.
-        PaintStars(pixels, rng, 90, 0.42f);
-
-        int groundTop = Mathf.RoundToInt(Height * 0.17f);
-        PaintForest(pixels, rng, groundTop);
-        PaintGround(pixels, groundTop);
-        PaintHero(pixels, Width * 0.24f, groundTop);
-        PaintMonster(pixels, Width * 0.74f, groundTop);
-
-        return Finish(pixels);
-    }
-
-    // Fixed seed: the art should look identical every time it appears, so a player seeing
-    // "Stage 1-2" doesn't register a different sky than "Stage 1-1" had.
+    // 고정된 시드: 이 아트는 나타날 때마다 항상 동일해야 하며, "Stage 1-2"를 보는 플레이어가
+    // "Stage 1-1"과 다른 하늘을 봤다고 느끼지 않도록 한다.
     static System.Random NewRng() => new System.Random(20260814);
 
     static Sprite Finish(Color[] pixels)
@@ -80,12 +51,13 @@ public static class TitleCardBackdrop
         for (int y = 0; y < Height; y++)
         {
             float t = (float)y / (Height - 1);
-            // Biased toward the periwinkle so the pink stays a horizon band rather than
-            // washing over the middle of the frame, where white text has to stay legible.
+            // 페리윙클색 쪽으로 치우치게 하여, 핑크색이 프레임 가운데까지 번지지 않고
+            // 지평선 띠로만 남게 한다 - 프레임 가운데는 흰색 텍스트가 잘 보여야 하는
+            // 영역이다.
             Color row = Color.Lerp(SkyHorizon, SkyTop, Mathf.Pow(t, 0.6f));
 
-            // A sub-LSB jitter; without it a gradient this shallow bands visibly across a
-            // 1080p stretch.
+            // 최하위 비트보다도 작은 지터를 준다; 이게 없으면 이렇게 완만한 그라데이션은
+            // 1080p 화면에서 눈에 띄는 밴딩 현상이 생긴다.
             for (int x = 0; x < Width; x++)
             {
                 float n = ((float)rng.NextDouble() - 0.5f) / 255f;
@@ -101,8 +73,8 @@ public static class TitleCardBackdrop
             float cx = (float)rng.NextDouble() * Width;
             float cy = Height * (lowestFrac + (float)rng.NextDouble() * (1f - lowestFrac));
 
-            // Stars wash out against the bright horizon, so thin them out on the way down
-            // instead of leaving invisible ones scattered across the pink.
+            // 별은 밝은 지평선 위에서는 잘 보이지 않으므로, 핑크색 영역 전체에 안 보이는
+            // 별을 그냥 흩뿌려두는 대신 아래로 갈수록 개수를 줄인다.
             float fade = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(lowestFrac + 0.02f, lowestFrac + 0.34f, cy / Height));
             if (fade <= 0.02f) continue;
 
@@ -127,170 +99,8 @@ public static class TitleCardBackdrop
                 float a = Mathf.Clamp01(1f - d / (radius + 0.5f));
                 if (a <= 0f) continue;
 
-                a *= a; // Tightens the core and lets the edge trail off.
+                a *= a; // 중심부를 더 또렷하게 만들고 가장자리는 서서히 흐려지게 한다.
                 Blend(pixels, x, y, color, a * strength);
-            }
-        }
-    }
-
-    // Two ridges: the far one is lifted toward the sky so it reads as distance, the near one
-    // stays saturated. Same depth cue the 3D scene gets for free.
-    static void PaintForest(Color[] pixels, System.Random rng, int groundTop)
-    {
-        int farBase = groundTop + Mathf.RoundToInt(Height * 0.04f);
-        DrawRidge(pixels, rng, farBase, 8f, 7f, 0.08f, 0.07f, Color.Lerp(TreeFar, SkyHorizon, 0.35f));
-        DrawRidge(pixels, rng, groundTop, 11f, 10f, 0.12f, 0.13f, TreeNear);
-    }
-
-    static void DrawRidge(Color[] pixels, System.Random rng, int baseY, float minHalfWidth,
-                          float halfWidthRange, float minHeightFrac, float heightRange, Color color)
-    {
-        // Starts off-canvas so neither edge of the screen opens on a half-tree.
-        float x = -halfWidthRange;
-        while (x < Width + halfWidthRange)
-        {
-            float halfWidth = minHalfWidth + (float)rng.NextDouble() * halfWidthRange;
-            float treeHeight = Height * (minHeightFrac + (float)rng.NextDouble() * heightRange);
-            DrawPine(pixels, x, baseY, halfWidth, treeHeight, color);
-            // Spacing under one full width, so neighbours overlap into a ridge instead of
-            // standing apart as a countable row.
-            x += halfWidth * (1.05f + (float)rng.NextDouble() * 0.55f);
-        }
-    }
-
-    static void DrawPine(Color[] pixels, float cx, int baseY, float halfWidth, float height, Color color)
-    {
-        int maxY = Mathf.Min(Height - 1, Mathf.CeilToInt(baseY + height));
-        for (int y = Mathf.Max(0, baseY); y <= maxY; y++)
-        {
-            float up = (y - baseY) / height;          // 0 at the base, 1 at the tip
-            // Curved rather than a straight cone: pines carry their bulk low and taper fast
-            // near the crown, which is what makes them read as pines and not as spikes.
-            float spread = halfWidth * (1f - up * up * 0.55f) * (1f - up);
-            if (spread <= 0f) continue;
-
-            int minX = Mathf.Max(0, Mathf.FloorToInt(cx - spread));
-            int maxX = Mathf.Min(Width - 1, Mathf.CeilToInt(cx + spread));
-            for (int x = minX; x <= maxX; x++)
-            {
-                float edge = Mathf.Clamp01(spread - Mathf.Abs(x - cx));
-                if (edge > 0f) Blend(pixels, x, y, color, edge);
-            }
-        }
-    }
-
-    static void PaintGround(Color[] pixels, int groundTop)
-    {
-        for (int y = 0; y < groundTop; y++)
-        {
-            // Slightly paler toward the horizon line, so the field recedes instead of reading
-            // as one flat slab.
-            Color row = Color.Lerp(GrassNear, GrassFar, (float)y / Mathf.Max(1, groundTop - 1));
-            for (int x = 0; x < Width; x++) pixels[y * Width + x] = row;
-        }
-    }
-
-    // Small flat cutouts rather than detailed figures - at this size the read comes from the
-    // pose and the weapons, and detail would only turn to mush once it is upscaled.
-    static void PaintHero(Color[] pixels, float cx, int groundY)
-    {
-        const float S = 1.7f;   // Sized so the standoff reads at a glance, not as background detail.
-        DrawContactShadow(pixels, cx, groundY, 13f * S);
-
-        FillCapsule(pixels, cx - 3.5f * S, groundY + 1f, cx - 3.5f * S, groundY + 11f * S, 2.2f * S, Figure);
-        FillCapsule(pixels, cx + 3.5f * S, groundY + 1f, cx + 3.5f * S, groundY + 11f * S, 2.2f * S, Figure);
-        FillCapsule(pixels, cx, groundY + 10f * S, cx, groundY + 22f * S, 6.0f * S, Figure);
-        FillCapsule(pixels, cx, groundY + 29f * S, cx, groundY + 29f * S, 6.2f * S, Figure);
-
-        // Sword raised toward the monster: the clearest single cue that this is a fighter.
-        // The guard is kept thinner and shorter than the blade so the two don't read as two
-        // crossed sticks of equal weight.
-        FillCapsule(pixels, cx + 6f * S, groundY + 19f * S, cx + 23f * S, groundY + 43f * S, 1.3f * S, Figure);
-        FillCapsule(pixels, cx + 3.1f * S, groundY + 21f * S, cx + 8.9f * S, groundY + 17f * S, 0.9f * S, Figure);
-    }
-
-    static void PaintMonster(Color[] pixels, float cx, int groundY)
-    {
-        const float S = 1.6f;
-        DrawContactShadow(pixels, cx, groundY, 16f * S);
-
-        FillCapsule(pixels, cx - 4.5f * S, groundY + 1f, cx - 4.5f * S, groundY + 13f * S, 2.8f * S, Figure);
-        FillCapsule(pixels, cx + 4.5f * S, groundY + 1f, cx + 4.5f * S, groundY + 13f * S, 2.8f * S, Figure);
-        FillCapsule(pixels, cx, groundY + 12f * S, cx, groundY + 30f * S, 8.5f * S, Figure);
-        FillCapsule(pixels, cx, groundY + 38f * S, cx, groundY + 38f * S, 7.5f * S, Figure);
-
-        // Spear planted on the side facing the hero, plus a shield - the silhouette the
-        // player actually meets first in Stage 1. The head is a taper rather than a capsule,
-        // which at this size is the difference between a spear and a lollipop.
-        FillCapsule(pixels, cx - 13f * S, groundY + 2f, cx - 13f * S, groundY + 50f * S, 1.3f * S, Figure);
-        FillCone(pixels, cx - 13f * S, groundY + 49f * S, 3.2f * S, 10f * S, Figure);
-        FillCapsule(pixels, cx + 11f * S, groundY + 22f * S, cx + 11f * S, groundY + 30f * S, 5.0f * S, Figure);
-    }
-
-    // Without this the figures look pasted on rather than standing on the field.
-    static void DrawContactShadow(Color[] pixels, float cx, int groundY, float halfWidth)
-    {
-        const float halfHeight = 3.0f;
-        int minX = Mathf.Max(0, Mathf.FloorToInt(cx - halfWidth));
-        int maxX = Mathf.Min(Width - 1, Mathf.CeilToInt(cx + halfWidth));
-        int minY = Mathf.Max(0, Mathf.FloorToInt(groundY - halfHeight));
-        int maxY = Mathf.Min(Height - 1, Mathf.CeilToInt(groundY + halfHeight));
-
-        for (int y = minY; y <= maxY; y++)
-        {
-            for (int x = minX; x <= maxX; x++)
-            {
-                float nx = (x - cx) / halfWidth;
-                float ny = (y - groundY) / halfHeight;
-                float d = nx * nx + ny * ny;
-                if (d >= 1f) continue;
-
-                Blend(pixels, x, y, TreeNear, (1f - d) * 0.28f);
-            }
-        }
-    }
-
-    // A straight taper to a point, for shapes a constant-radius capsule can't express.
-    static void FillCone(Color[] pixels, float cx, float baseY, float halfWidth, float height, Color color)
-    {
-        int maxY = Mathf.Min(Height - 1, Mathf.CeilToInt(baseY + height));
-        for (int y = Mathf.Max(0, Mathf.FloorToInt(baseY)); y <= maxY; y++)
-        {
-            float spread = halfWidth * (1f - (y - baseY) / height);
-            if (spread <= 0f) continue;
-
-            int minX = Mathf.Max(0, Mathf.FloorToInt(cx - spread));
-            int maxX = Mathf.Min(Width - 1, Mathf.CeilToInt(cx + spread));
-            for (int x = minX; x <= maxX; x++)
-            {
-                float edge = Mathf.Clamp01(spread - Mathf.Abs(x - cx));
-                if (edge > 0f) Blend(pixels, x, y, color, edge);
-            }
-        }
-    }
-
-    // One primitive covers every body part here: a line segment with a radius, which is a
-    // circle when the endpoints coincide and a rounded bar otherwise.
-    static void FillCapsule(Color[] pixels, float x0, float y0, float x1, float y1, float radius, Color color)
-    {
-        int minX = Mathf.Max(0, Mathf.FloorToInt(Mathf.Min(x0, x1) - radius - 1f));
-        int maxX = Mathf.Min(Width - 1, Mathf.CeilToInt(Mathf.Max(x0, x1) + radius + 1f));
-        int minY = Mathf.Max(0, Mathf.FloorToInt(Mathf.Min(y0, y1) - radius - 1f));
-        int maxY = Mathf.Min(Height - 1, Mathf.CeilToInt(Mathf.Max(y0, y1) + radius + 1f));
-
-        float dx = x1 - x0, dy = y1 - y0;
-        float lenSq = dx * dx + dy * dy;
-
-        for (int y = minY; y <= maxY; y++)
-        {
-            for (int x = minX; x <= maxX; x++)
-            {
-                float t = lenSq > 0f ? Mathf.Clamp01(((x - x0) * dx + (y - y0) * dy) / lenSq) : 0f;
-                float px = x0 + dx * t, py = y0 + dy * t;
-                float d = Mathf.Sqrt((x - px) * (x - px) + (y - py) * (y - py));
-
-                float coverage = Mathf.Clamp01(radius + 0.5f - d);
-                if (coverage > 0f) Blend(pixels, x, y, color, coverage);
             }
         }
     }

@@ -21,11 +21,11 @@ public class ParryManager : MonoBehaviour
     private const string DefendStateName = "Defend_SwordAndShield";
     private const string IdleStateName = "Idle_Battle_SwordAndShield";
     private const string RiposteStateName = "Attack04_SwordAndShiled";
-    // Matches Attack04_SwordAndShiled's own clip length (frames 0-16 at 30fps, per its
-    // FBX import data) - same convention WeaponSwing uses for Attack01's impact timing.
+    // Attack04_SwordAndShiled 자체의 클립 길이(FBX 임포트 데이터 기준 30fps에서 0-16 프레임)와
+    // 일치한다 - WeaponSwing이 Attack01의 임팩트 타이밍에 쓰는 것과 같은 규칙이다.
     private const float RiposteAnimDuration = 16f / 30f;
-    // Matches the Teleport prefab's own longest sub-system lifetime, so it plays out
-    // one full cycle instead of being cut off mid-flourish.
+    // Teleport 프리팹의 가장 긴 서브 시스템 수명과 일치시켜서, 화려한 연출 도중에
+    // 끊기지 않고 한 사이클을 온전히 다 재생하도록 한다.
     private const float TeleportVfxDuration = 0.7f;
 
     private bool parryWindowOpen;
@@ -34,8 +34,8 @@ public class ParryManager : MonoBehaviour
     private Monster currentDuelist;
     private Coroutine cooldownRoutine;
 
-    // Only monsters that telegraph before striking can be parried - normal monsters
-    // attack on a fixed timer with no tell, so there'd be nothing to react to.
+    // 타격 전에 예비 동작(텔레그래프)을 보이는 몬스터만 패링 가능하다 - 일반 몬스터는
+    // 아무 조짐 없이 고정된 타이머로 공격하므로 반응할 대상이 애초에 없다.
     private static bool IsParryTarget(MonsterType type) =>
         type == MonsterType.Boss || type == MonsterType.Elite;
 
@@ -65,15 +65,15 @@ public class ParryManager : MonoBehaviour
         if (parryButton != null) parryButton.onClick.RemoveListener(OnParryButtonPressed);
     }
 
-    // StageManager destroys the current duelist without a normal death, so the duel has
-    // to be torn down explicitly here too.
+    // StageManager는 정상적인 죽음 처리 없이 현재 결투 상대를 파괴하므로, 여기서도
+    // 결투 상태를 명시적으로 정리해줘야 한다.
     private void HandlePlayerDied()
     {
         currentDuelist = null;
         duelActive = false;
 
-        // Dying mid-riposte would otherwise leave the attack tick held off into the
-        // respawned stage, where nothing is left to release it.
+        // 리포스트 도중 죽으면 안 그래도 공격 틱이 억제된 채로 리스폰된 스테이지까지
+        // 넘어가버리는데, 그걸 풀어줄 대상이 아무것도 남아있지 않게 된다.
         if (combatLoop != null) combatLoop.RiposteInProgress = false;
 
         UpdateButtonInteractable();
@@ -109,29 +109,29 @@ private IEnumerator ParryWindowRoutine()
     {
         parryWindowOpen = true;
 
-        // A normal swing already in flight shouldn't land its hit or keep showing its
-        // slash once the pose below cuts over to Defend.
+        // 이미 진행 중이던 일반 스윙은, 아래에서 포즈가 Defend로 전환되고 나면
+        // 타격을 적중시키거나 슬래시를 계속 보여줘서는 안 된다.
         if (combatLoop != null) combatLoop.CancelPendingAttack();
 
-        // Animator.Play jumps straight into the state with no blend, so this cuts an
-        // in-progress attack swing short instead of waiting for it to finish.
+        // Animator.Play는 블렌딩 없이 해당 스테이트로 바로 점프하므로, 진행 중인
+        // 공격 스윙을 끝까지 기다리지 않고 즉시 끊어버린다.
         Animator animator = weaponSwing != null ? weaponSwing.CharacterAnimator : null;
         if (animator != null) animator.Play(DefendStateName, 0, 0f);
 
-        // The shield's own duration matches the parry window exactly, so it's up for
-        // the whole attempt regardless of whether it lands.
+        // 방패 이펙트 자체의 지속 시간이 패링 윈도우와 정확히 일치하므로, 성공 여부와
+        // 상관없이 시도 전체 동안 계속 떠 있는다.
         if (parrySuccessVfx != null) parrySuccessVfx.Show();
 
         yield return new WaitForSeconds(ParryWindowDuration);
 
-        // Only reclaim the animator back to idle if nothing else (a successful parry's
-        // riposte, a fresh attack, death, victory) has already taken it over during the window.
+        // 윈도우가 진행되는 동안 다른 무언가(성공한 패링의 리포스트, 새로운 공격, 죽음,
+        // 승리)가 이미 애니메이터를 가져가지 않았을 때만 idle로 되돌려 받는다.
         if (animator != null && animator.GetCurrentAnimatorStateInfo(0).IsName(DefendStateName))
         {
             animator.Play(IdleStateName, 0, 0f);
         }
 
-        // Still open means nothing consumed it during the window - a mistimed attempt.
+        // 여전히 열려 있다는 건 윈도우 동안 아무도 이걸 소비하지 않았다는 뜻 - 타이밍을 놓친 시도다.
         if (parryWindowOpen)
         {
             parryWindowOpen = false;
@@ -139,7 +139,7 @@ private IEnumerator ParryWindowRoutine()
         }
     }
 
-    // Called by an elite/boss attack the instant its telegraph finishes charging.
+    // 엘리트/보스의 공격이 텔레그래프 충전을 마치는 순간 호출된다.
 public bool TryConsumeParry()
     {
         if (!parryWindowOpen) return false;
@@ -158,10 +158,10 @@ public bool TryConsumeParry()
 
     private IEnumerator PlayRiposteAnimation(Animator animator)
     {
-        // The attack tick is otherwise free to fire mid-riposte, and its Attack trigger
-        // would blend a normal swing over the counter still playing - the two poses running
-        // at once. Held until the counter finishes, so the next normal hit follows it
-        // rather than sharing it.
+        // 그렇지 않으면 공격 틱이 리포스트 도중에도 자유롭게 발동할 수 있고, 그 Attack
+        // 트리거가 아직 재생 중인 카운터 위에 일반 스윙을 블렌딩해버려서 두 포즈가 동시에
+        // 재생되는 상황이 생긴다. 카운터가 끝날 때까지 붙잡아 두어, 다음 일반 타격이
+        // 카운터와 겹치지 않고 그 뒤를 잇도록 한다.
         if (combatLoop != null) combatLoop.RiposteInProgress = true;
 
         animator.Play(RiposteStateName, 0, 0f);

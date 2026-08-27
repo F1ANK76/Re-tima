@@ -1,17 +1,17 @@
 using UnityEngine;
 
-// Spawns a "+Normal Sword" popup above the player's own health bar every time
-// GameEvents.OnEquipmentPickedUp fires - every collected sword/shield, whether or not it beats
-// what's equipped, since even a duplicate now feeds the mastery meter (see
-// EquipmentDropManager.CompleteDrop). The equipment counterpart to StatDropPopup, riding the
-// same world-space TextMesh + Billboard convention.
+// GameEvents.OnEquipmentPickedUp가 발생할 때마다 플레이어 자신의 체력바 위에 "+Normal Sword"
+// 팝업을 띄운다 - 장착 중인 것보다 더 나은지 여부와 무관하게, 수집된 모든 검/방패에 대해
+// 표시한다. 중복 아이템조차 이제는 숙련도(mastery) 게이지를 채우기 때문이다
+// (EquipmentDropManager.CompleteDrop 참고). StatDropPopup의 장비 버전으로, 동일한
+// 월드 스페이스 TextMesh + Billboard 방식을 그대로 사용한다.
 public class EquipmentDropPopup : MonoBehaviour
 {
     [SerializeField] private Transform anchor;
     [SerializeField] private Vector3 localOffset = new Vector3(0f, 1.65f, 0f);
     [SerializeField] private int fontSize = 72;
-    // Flat rather than grade-ramped like StatDropPopup's: this label already spells the grade
-    // out in words, so it doesn't need size carrying the same information.
+    // StatDropPopup처럼 등급에 따라 크기가 변하지 않고 고정이다: 이 라벨은 이미 등급을
+    // 단어로 명시하고 있으므로, 크기로 같은 정보를 또 전달할 필요가 없다.
     [SerializeField] private float characterSize = 0.062f;
 
     private Font font;

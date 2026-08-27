@@ -1,8 +1,8 @@
 using UnityEngine;
 
-// Moves a fixed set of decoration segments together along -X and recycles any segment that
-// scrolls fully past the left edge back to the right, so the backdrop appears to repeat forever
-// without needing unique geometry for the whole path.
+// 고정된 장식 세그먼트 집합을 -X 방향으로 함께 이동시키고, 왼쪽 가장자리를 완전히 지나간
+// 세그먼트는 오른쪽으로 재활용하여, 전체 경로에 걸친 고유한 지오메트리 없이도 배경이
+// 영원히 반복되는 것처럼 보이게 한다.
 public class BackdropScroller : MonoBehaviour
 {
     [SerializeField] private Transform[] segments;
@@ -11,18 +11,18 @@ public class BackdropScroller : MonoBehaviour
     [SerializeField] private float recycleDistance = 21f;
     [SerializeField] private float speedEaseTime = 0.4f;
     [SerializeField] private float paceVariation = 0.08f;
-    // See GroundScroller: SmoothDamp's asymptotic tail keeps the backdrop creeping long
-    // after the character has stopped. Snapping the last sliver to zero ends the stop
-    // cleanly, and both scrollers use the same threshold so the two layers halt together.
+    // GroundScroller 참고: SmoothDamp의 점근적 꼬리 때문에 캐릭터가 멈춘 후에도 배경이
+    // 한참 동안 계속 기어간다. 마지막 남은 값을 0으로 스냅하면 정지가 깔끔하게 끝나며,
+    // 두 스크롤러가 같은 임계값을 사용하므로 두 레이어가 함께 멈춘다.
     [SerializeField] private float stopSnapThreshold = 0.04f;
 
     public bool IsScrolling { get; set; } = true;
 
-    // IsScrolling flips on/off constantly as the character starts/stops running (see
-    // CombatLoop), and snapping straight to full speed each time read as a mechanical
-    // conveyor belt. Easing the factor instead makes each start/stop feel like an actual
-    // acceleration, and the Perlin wobble on top keeps a steady walk from feeling perfectly
-    // metronomic even while it's fully running.
+    // IsScrolling은 캐릭터가 달리기를 시작/정지할 때마다 계속 켜졌다 꺼졌다 한다
+    // (CombatLoop 참고). 매번 곧바로 최고 속도로 스냅되면 마치 기계식 컨베이어 벨트처럼
+    // 보인다. 대신 이 값을 이징 처리하면 시작/정지가 실제 가속처럼 느껴지고, 여기에
+    // 더해진 펄린 노이즈 흔들림은 완전히 달리는 중에도 일정한 걸음걸이가 지나치게
+    // 기계적으로 느껴지지 않도록 해준다.
     private float speedFactor;
     private float speedFactorVelocity;
     private float paceSeed;
@@ -39,7 +39,7 @@ public class BackdropScroller : MonoBehaviour
         float targetFactor = IsScrolling ? 1f : 0f;
         speedFactor = Mathf.SmoothDamp(speedFactor, targetFactor, ref speedFactorVelocity, speedEaseTime);
 
-        // Only snap while coming to a stop - snapping on the way up would kill the ease-in.
+        // 정지하는 동안에만 스냅한다 - 속도가 올라가는 도중에 스냅하면 이즈인 효과가 죽어버린다.
         if (!IsScrolling && speedFactor < stopSnapThreshold)
         {
             speedFactor = 0f;
