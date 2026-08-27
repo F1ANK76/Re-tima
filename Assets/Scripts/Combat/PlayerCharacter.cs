@@ -6,10 +6,9 @@ public class PlayerCharacter : MonoBehaviour
     [SerializeField] private float startingMaxHp = 50f;
     [SerializeField] private float startingAttackPower = 1f;
     [SerializeField] private ParticleSystem hitVfx;
-    // Hovl의 오라 프리팹(Play On Awake, 자체 루프 길이 1초) - 기본적으로 비활성 상태로
-    // 두고 스탯 드롭 시점을 기준으로 켜고 끄기만 한다. hitVfx처럼 Play()/Stop()으로
-    // 제어하지 않는 이유는, 단순히 활성화하는 것만으로 이미 한 사이클이 온전히
-    // 재생되기 때문이다.
+    // Hovl의 오라 프리팹(Play On Awake, 자체 루프 길이 1초) - 기본은 비활성이고 스탯 드롭 시점에
+    // 켜고 끄기만 한다. hitVfx처럼 Play()/Stop()으로 제어하지 않는 이유는, 활성화만으로 이미 한
+    // 사이클이 온전히 재생되기 때문이다.
     [SerializeField] private GameObject buffVfx;
 
     // 피격 플래시 자체의 (훨씬 긴) 파티클 수명과 무관하게 얼마나 떠 있을지 - 모든

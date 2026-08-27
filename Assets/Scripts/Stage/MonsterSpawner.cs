@@ -8,9 +8,8 @@ public class MonsterSpawner : MonoBehaviour
     [SerializeField] private MonsterDefinitionSO bossDefinition;
 
     [Header("Stage 2+ roster")]
-    // 각 메인 스테이지마다 고유한 몬스터 구성을 가진다: 위쪽의 보병들은 스테이지 1의 것이고,
-    // 이것들은 스테이지 2부터 그 역할을 넘겨받는다. 슬롯을 비워두면 조용히 스테이지 1 항목으로
-    // 대체되므로, 절반만 채워진 구성이어도 실행 중 오류를 내는 대신 무언가는 스폰된다.
+    // 메인 스테이지마다 몬스터 구성이 다르다: 위 필드는 스테이지 1, 여기는 스테이지 2부터.
+    // 빈 슬롯은 스테이지 1 항목으로 조용히 폴백하므로, 절반만 채워도 런타임 오류 없이 스폰된다.
     [SerializeField] private MonsterDefinitionSO stage2MonsterDefinition;
     [SerializeField] private MonsterDefinitionSO stage2EliteDefinition;
     [SerializeField] private MonsterDefinitionSO stage2BossDefinition;
@@ -19,11 +18,10 @@ public class MonsterSpawner : MonoBehaviour
     [SerializeField] private Transform spawnPoint;
     [SerializeField] private Transform playerTransform;
 
-    // 새 구성은 정확히 스테이지 2 전용이지, "스테이지 2 이후 전부"가 아니다 - 스테이지 3은
-    // 세 번째 몬스터 구성을 새로 도입하는 대신 의도적으로 스테이지 1의 보병들을 다시
-    // 불러오며, 단지 스테이지 3의 수치로 싸우게 할 뿐이다. 아래의 GetNormalHp/GetNormalAttack이
-    // 이미 mainStage를 기준으로 값을 정하므로, 스테이지별 구성 작업 없이도 동일한 프리팹이
-    // 스테이지 3의 HP와 공격력을 그대로 갖고 등장한다.
+    // "스테이지 2 이후 전부"가 아니라 정확히 스테이지 2 전용이다 - 스테이지 3은 세 번째 구성을
+    // 새로 만들지 않고 의도적으로 스테이지 1의 보병을 다시 쓰며, 스테이지 3의 수치로만 싸우게 한다.
+    // 아래 GetNormalHp/GetNormalAttack이 mainStage로 값을 정하므로, 스테이지별 구성 작업 없이도
+    // 같은 프리팹이 스테이지 3의 HP/공격력을 갖고 등장한다.
     private const int BirdRosterStage = 2;
 
     private static bool UsesBirdRoster(int mainStage) => mainStage == BirdRosterStage;
@@ -51,9 +49,8 @@ public class MonsterSpawner : MonoBehaviour
     [SerializeField] private float bossHpMultiplier = 3f;
 
     [Header("Attack curve")]
-    // 공격력은 메인 스테이지에만 의존하므로, 한 스테이지 안의 모든 서브스테이지는
-    // 동일한 세기로 공격한다: 엘리트와 보스는 그 스테이지의 일반 몬스터 공격력에
-    // 배수를 곱한 값일 뿐이다.
+    // 공격력은 메인 스테이지만 따르므로 한 스테이지의 모든 서브스테이지가 같은 세기로 공격한다.
+    // 엘리트/보스는 그 스테이지 일반 몬스터 공격력의 배수일 뿐이다.
     [SerializeField] private float eliteAttackMultiplier = 2f;
     [SerializeField] private float bossAttackMultiplier = 5f;
 
@@ -140,9 +137,8 @@ public class MonsterSpawner : MonoBehaviour
         return monster;
     }
 
-    // spawnPoint.position.y는 스케일 1인 캡슐이 바닥에 놓였을 때를 기준으로 보정되어
-    // 있다; 더 큰 프리팹(보스, 최종 보스)은 캡슐의 바닥이 바닥 속으로 파묻히지 않고
-    // 정확히 지면에 닿도록 자기 스케일에 비례해서 피벗을 올려줘야 한다.
+    // spawnPoint.position.y는 스케일 1 캡슐이 바닥에 놓인 기준값이다; 더 큰 프리팹(보스, 최종 보스)은
+    // 캡슐 밑면이 바닥에 파묻히지 않고 지면에 닿도록 자기 스케일에 비례해 피벗을 올려야 한다.
     private void SnapToGround(GameObject instance)
     {
         Vector3 pos = instance.transform.position;

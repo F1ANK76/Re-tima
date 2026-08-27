@@ -3,11 +3,10 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 화면 상단 중앙에서 한 번 재생되는 팝인/유지/페이드아웃 연출. 원래는 엘리트/보스 처치 시
-// "CLEAR !"만 표시하는 용도였는데, 지금은 Show(text)가 엘리트/보스 *등장* 알림
-// ("Elite Boss !", "Final Boss !")에도 동일한 애니메이션을 재사용한다 - 동일한 연출을
-// 다른 순간, 다른 문구로 쓰는 것이다. 순수하게 연출용이다 - 아무것도 이걸 기다리지 않으므로
-// unscaled time으로 동작하며, 그 밖에 무슨 일이 벌어지고 있든(승리 포즈, 다음 스테이지
-// 배너) 상관없이 그저 스스로 재생을 끝낸다.
+// "CLEAR !"만 띄웠는데, 지금은 Show(text)가 엘리트/보스 *등장* 알림("Elite Boss !", "Final Boss !")
+// 에도 같은 애니메이션을 재사용한다 - 같은 연출을 다른 순간, 다른 문구로 쓴다. 순수 연출용이라
+// 아무것도 이걸 기다리지 않으므로 unscaled time으로 돌며, 그 밖에 무슨 일이 벌어지고 있든
+// (승리 포즈, 다음 스테이지 배너) 스스로 재생을 끝낸다.
 [RequireComponent(typeof(CanvasGroup))]
 public class ClearBannerView : MonoBehaviour
 {
@@ -29,9 +28,8 @@ public class ClearBannerView : MonoBehaviour
     private Vector2 restPosition;
     private Coroutine routine;
 
-    // 팝인부터 완전히 페이드아웃될 때까지의 시간 - 배너가 그냥 표시되는 게 아니라 완전히
-    // 사라질 때까지 기다려야 하는 호출자는, 위 세 값이 재조정되는 순간 어긋나 버릴
-    // 지속시간을 하드코딩하는 대신 이 값을 읽는다.
+    // 팝인부터 완전히 페이드아웃될 때까지의 시간 - 표시되는 게 아니라 완전히 사라질 때까지 기다려야
+    // 하는 호출자는, 위 세 값이 재조정되면 어긋날 지속시간을 하드코딩하는 대신 이 값을 읽는다.
     public float TotalPlayDuration => popInDuration + holdDuration + fadeOutDuration;
 
     private void Awake()

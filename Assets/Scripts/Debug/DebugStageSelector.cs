@@ -7,9 +7,8 @@ using UnityEngine.InputSystem;
 public class DebugStageSelector : MonoBehaviour
 {
     [SerializeField] private StageManager stageManager;
-    // 선택 사항: 메인 메뉴에서 곧장 점프할 경우, Play 버튼을 눌렀을 때와 정확히 똑같이
-    // 전환되어야 한다(메뉴 UI, Play 버튼, HUD 숨김이 모두 함께 사라진다) - 방금 점프한
-    // 스테이지 위에 그 오버레이가 그대로 남아있게 두면 안 된다.
+    // 선택 사항: 메인 메뉴에서 곧장 점프할 경우 Play 버튼을 눌렀을 때와 정확히 똑같이 전환되어야
+    // 한다(메뉴 UI, Play 버튼, HUD 숨김이 함께 사라진다) - 점프한 스테이지 위에 오버레이가 남으면 안 된다.
     [SerializeField] private TitleScreenView titleScreen;
     // 프로젝트의 Player Settings에서 Active Input Handling이 새 Input System 전용으로
     // 설정되어 있어서, 레거시 Input 클래스가 아니라 Keyboard를 통해 읽어야 한다.
@@ -28,14 +27,12 @@ public class DebugStageSelector : MonoBehaviour
     {
         if (!visible || stageManager == null) return;
 
-        // 하드코딩이 아니라 서브스테이지 개수에서 크기를 산출한다: 스테이지당 서브스테이지가
-        // 10개일 때 기존의 고정 260px 영역은 행 대부분을 잘라버렸다. 라벨은 그냥 서브스테이지
-        // 번호(보스는 "B")뿐이라 10개가 한 줄에 그대로 들어간다.
+        // 하드코딩 대신 서브스테이지 개수에서 크기를 산출한다: 스테이지당 10개일 때 기존 고정 260px
+        // 영역은 행 대부분을 잘라버렸다. 라벨은 서브스테이지 번호(보스는 "B")뿐이라 10개가 한 줄에 들어간다.
         const float cellWidth = 30f;
         const float rowLabelWidth = 56f;
-        // GUILayout은 모든 요소 사이에 ~2px의 간격을 넣고 GUI.skin.box도 자체 패딩을 추가하므로,
-        // 영역은 이 둘을 모두 감안해야 한다 - 버튼의 순수 너비만으로 크기를 잡으면 마지막("B")
-        // 버튼이 오른쪽 가장자리에서 잘려나갔다.
+        // GUILayout은 요소마다 ~2px 간격을 넣고 GUI.skin.box도 자체 패딩을 더하므로 둘 다 감안해야
+        // 한다 - 버튼 순수 너비만으로 잡았을 때 마지막("B") 버튼이 오른쪽 가장자리에서 잘려나갔다.
         const float cellSpacing = 2f;
         const float boxPadding = 40f;
         float width = rowLabelWidth + StageManager.BossSubStage * (cellWidth + cellSpacing) + boxPadding;

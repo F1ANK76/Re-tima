@@ -1,20 +1,18 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// "Stage X-Y" HUD 라벨(HudController 참고) 바로 아래에 있는 5개짜리 점 트랙 - 일반
-// 서브스테이지 4개에 보스를 더한 것으로, 이 줄을 한 번 보면 현재 메인 스테이지 안에서
-// 진행 상황이 어디쯤인지 알 수 있고, 보스가 플레이어가 기억해야 할 숫자가 아니라 고정된
-// 마지막 정거장처럼 읽히게 만든다. Awake에서 딱 한 번만 빌드된다; 스테이지가 바뀌어도
-// 현재 마커를 옮기고 다섯 개 점의 스타일을 바꿀 뿐, 개수나 레이아웃은 절대 변하지 않는다.
+// "Stage X-Y" HUD 라벨(HudController) 바로 아래의 5점 트랙 - 일반 서브스테이지 4개 + 보스.
+// 한 번 보면 메인 스테이지 안에서 진행 위치가 어디쯤인지 알 수 있고, 보스가 기억해야 할 숫자가
+// 아니라 고정된 마지막 정거장처럼 읽히게 한다. Awake에서 딱 한 번만 빌드되며, 스테이지가 바뀌어도
+// 현재 마커를 옮기고 점 스타일만 바꿀 뿐 개수나 레이아웃은 절대 변하지 않는다.
 public class StageProgressView : MonoBehaviour
 {
     // 일반 서브스테이지 4개에 보스를 더한 값 - StageManager 자신이 보스 서브스테이지를
     // 판별할 때 쓰는 것과 동일한 상수이므로, 이 둘이 서로 어긋날 일이 없다.
     private const int DotCount = StageManager.BossSubStage;
 
-    // 이게 떠 있는 동안엔 숨겨진다 - 그 순간 화면 상단 중앙은 이미 배너가 차지하고 있고
-    // (StageBannerView 참고), 팝인/페이드아웃이 진행 중인 카드 밑에서 트랙까지 같이
-    // 팝인되면 같은 정보를 다시 보여주는 게 아니라 그냥 시각적 잡음으로 읽혔다.
+    // 이게 떠 있는 동안엔 숨는다(StageBannerView) - 화면 상단 중앙은 이미 배너가 차지하고 있고,
+    // 팝인/페이드아웃 중인 카드 밑에서 트랙까지 같이 팝인되면 정보 재확인이 아니라 잡음으로 읽혔다.
     [SerializeField] private StageBannerView banner;
 
     [SerializeField] private float trackWidth = 220f;
@@ -28,9 +26,8 @@ public class StageProgressView : MonoBehaviour
     private static readonly Color FutureDotColor = new Color(0.32f, 0.32f, 0.38f);
     private static readonly Color CompletedDotColor = new Color(0.85f, 0.85f, 0.9f);
     private static readonly Color CurrentDotColor = new Color(0.68f, 0.58f, 1f);
-    // 보스 점은 완료/현재/미래 상태와 무관하게 항상 빨강/주황 쪽으로 물들어 있다 -
-    // 요점은 다른 네 점이 쓰는 일반적인 상태 색과 상관없이 "이 자리가 보스"라는 걸
-    // 한눈에 알아볼 수 있게 하는 것이다.
+    // 보스 점은 완료/현재/미래와 무관하게 항상 빨강/주황 쪽 - 다른 네 점이 쓰는 상태 색과
+    // 상관없이 "이 자리가 보스"라는 걸 한눈에 알아보게 하는 게 요점이다.
     private static readonly Color BossFutureColor = new Color(0.55f, 0.26f, 0.18f);
     private static readonly Color BossReadyColor = new Color(1f, 0.45f, 0.15f);
 
@@ -48,10 +45,9 @@ public class StageProgressView : MonoBehaviour
     private void Awake()
     {
         font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        // 아래의 숨김 처리는 SetActive(false)가 아니라 CanvasGroup으로 한다 - activeSelf를
-        // 토글하면 OnDisable이 실행되어 OnStageChanged 구독이 끊기므로, 배너가 떠 있는
-        // 동안 서브스테이지가 바뀌면 다시 활성화된 뒤에 우연히 다음 이벤트가 발생하기
-        // 전까지는 이걸 절대 받을 수 없게 된다.
+        // 숨김은 SetActive(false)가 아니라 CanvasGroup으로 - activeSelf를 토글하면 OnDisable이
+        // OnStageChanged 구독을 끊어서, 배너가 떠 있는 동안 바뀐 서브스테이지는 재활성화 후
+        // 우연히 다음 이벤트가 오기 전까지 절대 받을 수 없다.
         canvasGroup = gameObject.AddComponent<CanvasGroup>();
         canvasGroup.blocksRaycasts = false;
         Build();
@@ -72,9 +68,8 @@ public class StageProgressView : MonoBehaviour
 
     private void HandleStageChanged(int mainStage, int subStage)
     {
-        // 그대로 신뢰하지 않고 클램프한다 - 디버그 점프의 중간 상태 동안에는 StageManager
-        // 자체의 SubStage가 잠깐 1..DotCount 범위 밖에 있을 수 있고, 벗어난 점 인덱스는
-        // 아래에서 마커 위치를 계산할 때 예외를 던지게 된다.
+        // 그대로 믿지 않고 클램프 - 디버그 점프의 중간 상태에선 StageManager의 SubStage가 잠깐
+        // 1..DotCount 밖으로 나갈 수 있고, 벗어난 점 인덱스는 아래 마커 위치 계산에서 예외를 던진다.
         currentSubStage = Mathf.Clamp(subStage, 1, DotCount);
         Refresh();
     }
@@ -161,9 +156,8 @@ public class StageProgressView : MonoBehaviour
         }
     }
 
-    // 채워진 원 하나를 모든 점이 공유한다 - 가장자리가 또렷한 원반은 은은한 빛보다 고정된
-    // 경유지처럼 보이므로, 이 게임의 다른 픽업들이 쓰는 부드러운 감쇠 텍스처와 달리
-    // 이건 바깥 테두리만 안티앨리어싱하고 원 전체는 그러지 않는다.
+    // 모든 점이 공유하는 채워진 원 하나 - 또렷한 원반이 은은한 빛보다 고정된 경유지처럼 보이므로,
+    // 다른 픽업들의 부드러운 감쇠 텍스처와 달리 원 전체가 아니라 바깥 테두리만 안티앨리어싱한다.
     private static Sprite circleSprite;
     private static Sprite CircleSprite
     {

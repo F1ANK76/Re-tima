@@ -1,9 +1,8 @@
 using UnityEngine;
 
-// Normal/Rare/Epic/Unique/Legendary 등급으로 드롭되는 모든 것이 공유하는 가중치 등급 롤.
-// 스탯 드롭과 장비 조각 모두 스테이지 1부터 이 확률을 그대로 사용하며 - 여기에는 스테이지
-// 제한이 없다(이전 버전에서는 스테이지 2/3 미만에서 Unique/Legendary를 Normal로 합쳤었는데,
-// 그 제한은 의도적으로 제거되었다).
+// Normal/Rare/Epic/Unique/Legendary 등급으로 드롭되는 모든 것이 공유하는 가중치 등급 롤. 스탯 드롭과
+// 장비 조각 모두 스테이지 1부터 이 확률을 그대로 쓰며 스테이지 제한이 없다(이전 버전은 스테이지 2/3
+// 미만에서 Unique/Legendary를 Normal로 합쳤으나, 그 제한은 의도적으로 제거했다).
 public static class GradeRoller
 {
     public static StatGrade Roll()
@@ -30,10 +29,9 @@ public static class GradeRoller
         return StatGrade.Legendary;
     }
 
-    // 스톤 리롤 전용의 더 엄격한 두 번째 테이블(ManagementWindowView의 Stone 탭 참고) - 위의
-    // Roll()을 재사용하지 않고 일부러 별도의 확률을 둔 이유는, 리롤이 뽑을 수 있는 범위를 조이는
-    // 것이 우연히 같은 다섯 등급 구조를 공유하는 스탯 포션이나 장비 드롭까지 몰래 함께 조여버리지
-    // 않도록 하기 위함이다.
+    // 스톤 리롤 전용의 더 엄격한 두 번째 테이블(ManagementWindowView의 Stone 탭 참고). 위 Roll()을
+    // 재사용하지 않고 별도 확률을 둔 이유는, 리롤 범위를 조이는 것이 우연히 같은 다섯 등급 구조를
+    // 공유하는 스탯 포션이나 장비 드롭까지 함께 조여버리지 않게 하기 위함이다.
     public static StatGrade RollStoneOption()
     {
         const float normal = 70f;

@@ -1,8 +1,7 @@
 using UnityEngine;
 
-// 방금 피격당한 몬스터의 HealthBar 위에 떠오르는 데미지 숫자 - 플레이어가 입힌 모든 데미지는
-// Monster.TakeDamage를 거쳐 들어오므로(일반 공격과 궁극기 모두 여기로 도달한다), 어느 쪽이
-// 때렸는지 신경 쓸 필요 없이 이 리스너 하나로 둘 다 처리할 수 있다.
+// 방금 피격당한 몬스터의 HealthBar 위로 떠오르는 데미지 숫자. 플레이어의 모든 데미지는 일반 공격이든
+// 궁극기든 Monster.TakeDamage를 거치므로, 어느 쪽이 때렸는지 신경 쓸 필요 없이 리스너 하나로 처리한다.
 public class DamagePopup : MonoBehaviour
 {
     [SerializeField] private Vector3 localOffset = new Vector3(0f, 0.3f, 0f);
@@ -31,10 +30,9 @@ public class DamagePopup : MonoBehaviour
     {
         if (monster == null || amount <= 0f) return;
 
-        // 몬스터의 루트 transform이 아니라 자신의 HealthBar 아래에 부모로 붙인다 - HealthBar는
-        // 이미 각 몬스터 타입의 머리 위에 오도록 조정되어 있고(Elite/Boss의 커진
-        // transform.localScale에 맞춰 자동으로 스케일도 조정된다), 몬스터 타입별로 높이
-        // 오프셋을 따로 만드는 대신 같은 앵커를 그대로 사용한다.
+        // 몬스터 루트 transform이 아니라 자신의 HealthBar 아래에 붙인다 - HealthBar는 이미 각 몬스터
+        // 타입의 머리 위로 조정돼 있고 Elite/Boss의 커진 transform.localScale에 맞춰 스케일도 따라가므로,
+        // 타입별 높이 오프셋을 따로 만들지 않고 같은 앵커를 그대로 쓴다.
         HealthBarView healthBar = monster.GetComponentInChildren<HealthBarView>();
         Transform anchor = healthBar != null ? healthBar.transform : monster.transform;
 
@@ -60,9 +58,8 @@ public class DamagePopup : MonoBehaviour
     }
 }
 
-// 플레이어 자신의 스탯 팝업보다 훨씬 짧은 시간 동안 상승/페이드/팝 애니메이션을 재생한다 -
-// 데미지 숫자는 곧이어 몇 번 더 얻어맞을 가능성이 큰 적 위에서 오래 머무르지 않고 빠르게
-// 눈에 들어왔다가 사라져야 한다.
+// 플레이어 스탯 팝업보다 훨씬 짧게 상승/페이드/팝을 재생한다 - 데미지 숫자는 곧 몇 번 더 얻어맞을
+// 가능성이 큰 적 위에 오래 머무르지 않고 빠르게 눈에 들어왔다 사라져야 한다.
 public class DamagePopupMotion : MonoBehaviour
 {
     [SerializeField] private float duration = 0.5f;

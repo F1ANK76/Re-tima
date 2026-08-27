@@ -102,7 +102,7 @@ public class ParryManager : MonoBehaviour
         StartCoroutine(ParryWindowRoutine());
     }
 
-private IEnumerator ParryWindowRoutine()
+    private IEnumerator ParryWindowRoutine()
     {
         parryWindowOpen = true;
 
@@ -137,7 +137,7 @@ private IEnumerator ParryWindowRoutine()
     }
 
     // 엘리트/보스의 공격이 텔레그래프 충전을 마치는 순간 호출된다.
-public bool TryConsumeParry()
+    public bool TryConsumeParry()
     {
         if (!parryWindowOpen) return false;
 
@@ -155,10 +155,9 @@ public bool TryConsumeParry()
 
     private IEnumerator PlayRiposteAnimation(Animator animator)
     {
-        // 그렇지 않으면 공격 틱이 리포스트 도중에도 자유롭게 발동할 수 있고, 그 Attack
-        // 트리거가 아직 재생 중인 카운터 위에 일반 스윙을 블렌딩해버려서 두 포즈가 동시에
-        // 재생되는 상황이 생긴다. 카운터가 끝날 때까지 붙잡아 두어, 다음 일반 타격이
-        // 카운터와 겹치지 않고 그 뒤를 잇도록 한다.
+        // 없으면 공격 틱이 리포스트 도중에도 자유롭게 발동하고, 그 Attack 트리거가 아직 재생 중인
+        // 카운터 위에 일반 스윙을 블렌딩해 두 포즈가 동시에 재생된다. 카운터가 끝날 때까지 붙잡아
+        // 다음 일반 타격이 겹치지 않고 그 뒤를 잇게 한다.
         if (combatLoop != null) combatLoop.RiposteInProgress = true;
 
         animator.Play(PlayerAnimStates.Riposte, 0, 0f);

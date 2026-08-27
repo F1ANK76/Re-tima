@@ -1,18 +1,14 @@
 using UnityEngine;
 
-// 장비 패널을 위한 작은 "진열장" 하나: 플레이 가능한 영역에서 멀리 떨어진 작은 무대를 바라보는
-// 고정된 소형 카메라가 있고, 그 렌더링 결과를 RawImage가 텍스처로 읽어 사용한다.
-//
-// 표시할 아이템을 위해 약 250줄 분량을 중복 작성하는 대신 EquipmentDropPickup 자체의
-// mesh/material/aura 생성 로직(Initialize)을 재사용한다 - 원래라면 시작되었을 던지기/굴러가는
-// 코루틴은 첫 (동기적인) 단계 이상 진행되기 전에 정지되므로, 아이템은 이미 "착지한" 상태로
-// 그 자리에 놓이지만, (코루틴이 아니라 Update로 구동되는) 오라 발광과 반짝임 효과는 실제
-// 드롭 때와 똑같이 계속 애니메이션된다.
+// 장비 패널용 소형 진열장: 플레이 영역에서 멀리 떨어진 무대를 고정 카메라가 찍고, RawImage가
+// 그 렌더 텍스처를 읽는다. 표시용 mesh/material/aura를 250줄쯤 중복 작성하는 대신
+// EquipmentDropPickup.Initialize를 재사용한다 - 던지기/굴러가기 코루틴은 첫 동기 단계 이상
+// 진행되기 전에 정지되므로 아이템은 이미 "착지한" 상태로 놓이고, Update로 구동되는 오라 발광과
+// 반짝임은 실제 드롭 때와 똑같이 계속 애니메이션된다.
 public class EquipmentPreviewRig : MonoBehaviour
 {
-    // 실제 아이콘이 표시되는 크기보다 크게 잡는다(EquipmentPanelView.IconSize 참고) - 이렇게
-    // 여유 있는 해상도에 MSAA까지 더해야 아이템 자체의 1024px 텍스처가 약 96px UI 아이콘으로
-    // 축소될 때 흐릿하게 뭉개지지 않는다.
+    // 실제 아이콘 표시 크기(EquipmentPanelView.IconSize)보다 크게 - 이 여유 해상도에 MSAA까지
+    // 더해야 아이템의 1024px 텍스처가 약 96px UI 아이콘으로 축소될 때 흐릿하게 뭉개지지 않는다.
     private const int TextureResolution = 256;
     private const int TextureAntiAliasing = 4;
 
@@ -65,23 +61,19 @@ public class EquipmentPreviewRig : MonoBehaviour
         current.Initialize(equipType, grade, transform, null, 0f, null);
         current.StopAllCoroutines();
 
-        // Initialize는 `StartCoroutine(TossThenRunOver())`로 해당 코루틴을 시작하는데, 그
-        // 첫 줄 자체가 던지기 서브 코루틴에 대한 `yield return`이다 - Unity는 enumerator를
-        // 첫 중단 지점까지는 동기적으로 실행하므로, 위의 StopAllCoroutines 호출이 닿기 전에
-        // 이미 PlayToss의 시작 부분인 "0으로 축소했다가 플레이어에게서 먼 지점을 향해
-        // 커지는" 동작이 한 단계 부분적으로 실행되어 버린다. 여기서 정지 상태의 포즈를 다시
-        // 설정해줘야 그 부분 실행이 남겨둔 위치가 아니라 실제로 중앙에, 원래 크기로 놓이게
-        // 된다.
+        // Initialize의 `StartCoroutine(TossThenRunOver())`는 첫 줄부터 던지기 서브 코루틴에 대한
+        // `yield return`이고, Unity는 enumerator를 첫 중단 지점까지 동기 실행한다 - 위
+        // StopAllCoroutines가 닿기 전에 PlayToss 앞부분("0으로 축소 후 플레이어 반대편을 향해
+        // 커짐")이 이미 한 단계 실행된다. 그 잔여 위치 대신 중앙/원래 크기로 포즈를 재설정한다.
         current.transform.localPosition = Vector3.zero;
         current.transform.localScale = Vector3.one * GradeVisuals.GetPotionScale(grade);
 
         FrameOnVisual();
     }
 
-    // 카메라를 아이템의 실제 렌더링 바운드에 맞춰 겨냥하고, 프레임에서 항상 일정한 비율을
-    // 차지하도록 딱 필요한 만큼만 뒤로 물린다 - 이렇게 하지 않으면 길고 얇은 검과 넓고 납작한
-    // 방패(또는 Normal과 2배 스케일된 Legendary)가 아이콘 안에서 서로 다른 크기를 차지하게
-    // 되어 "일관성이 없다"는 인상을 준다.
+    // 아이템의 실제 렌더링 바운드를 겨냥하고, 프레임에서 항상 일정 비율을 차지할 만큼만 뒤로
+    // 물린다 - 없으면 길고 얇은 검과 넓적한 방패(또는 Normal과 2배 스케일된 Legendary)가
+    // 아이콘 안에서 서로 다른 크기를 차지해 "일관성 없다"는 인상을 준다.
     private void FrameOnVisual()
     {
         Renderer[] visualRenderers = current.VisualRenderers;
@@ -95,9 +87,8 @@ public class EquipmentPreviewRig : MonoBehaviour
         float distance = (radius / Mathf.Sin(halfFovRad)) / FrameFill;
 
         previewCamera.transform.position = bounds.center - previewCamera.transform.forward * distance;
-        // 카메라는 identity 회전 상태(로컬 +Z를 바라봄)로 시작한다; 그 중심이 정확히 무대
-        // 원점에 있다고 가정하지 않고 아이템의 실제 중심을 다시 겨냥하는데, 메시의 피벗이
-        // 기하학적 중심과 일치하는 경우는 거의 없기 때문이다.
+        // 카메라는 identity 회전(로컬 +Z를 바라봄)으로 시작한다. 메시 피벗이 기하학적 중심과
+        // 일치하는 일은 거의 없으므로, 중심이 무대 원점이라 가정하지 않고 실제 중심을 다시 겨냥한다.
         previewCamera.transform.rotation = Quaternion.LookRotation(bounds.center - previewCamera.transform.position);
     }
 

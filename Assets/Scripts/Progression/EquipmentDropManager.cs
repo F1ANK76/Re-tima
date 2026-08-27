@@ -1,12 +1,10 @@
 using UnityEngine;
 
-// StatDropManager와 나란히, 같은 처치 이벤트에서 발생하는 두 번째의 독립적인 드롭 롤이다:
-// StatDropManager가 순수 ATK/HP 증가치를 주는 반면, 이쪽은 실제 Sword/Shield 아이템을 준다.
-// 한 타입의 픽업이 발생할 때마다 서로 독립적으로 두 가지 일이 일어난다:
-//   1. 자동 장착 - 픽업의 등급이 현재 장착된 것보다 높을 때만.
-//   2. 숙련도 진행 - (1)과 무관하게 항상 적용된다. 같거나 낮은 등급의 픽업이라도 상한 없는
-//      게이지의 일부를 채우며, 이 게이지는 100%를 넘길 때마다 +1 ATK / +10 HP로 전환된다.
-//      바로 이 부분이 "쓸모없는" 중복 픽업에도 존재 이유를 부여한다.
+// 같은 처치 이벤트에서 StatDropManager와 독립적으로 도는 두 번째 드롭 롤 - 순수 ATK/HP
+// 증가치 대신 실제 Sword/Shield 아이템을 준다. 픽업 하나당 두 가지가 독립적으로 일어난다:
+//   1. 자동 장착 - 픽업 등급이 현재 장착분보다 높을 때만.
+//   2. 숙련도 진행 - (1)과 무관하게 항상. 같거나 낮은 등급도 상한 없는 게이지를 채우고,
+//      100%를 넘길 때마다 +1 ATK / +10 HP로 전환된다. "쓸모없는" 중복 픽업의 존재 이유다.
 public class EquipmentDropManager : MonoBehaviour
 {
     [SerializeField] private PlayerCharacter player;
@@ -28,9 +26,8 @@ public class EquipmentDropManager : MonoBehaviour
     private int swordLevel;
     private int shieldLevel;
 
-    // 스톤 리롤로 각 슬롯에 박아 넣은 추가 옵션 값과, 그 값을 만들어낸 등급(UI가 이 등급으로
-    // 값의 색을 표시할 수 있도록 보관할 뿐이다). 누적이 아니라 대체 방식이다: 슬롯은 항상
-    // 지금까지 나온 것 중 가장 좋은 롤 하나만 유지한다.
+    // 스톤 리롤로 슬롯에 박은 추가 옵션 값 + 그 값을 만든 등급(UI 색 표시용으로만 보관).
+    // 누적이 아니라 대체다: 슬롯은 지금까지 나온 것 중 가장 좋은 롤 하나만 유지한다.
     private float swordAtkOption;
     private float shieldHpOption;
     private StatGrade? swordAtkOptionGrade;
@@ -52,15 +49,13 @@ public class EquipmentDropManager : MonoBehaviour
     public float GetOption(StatType statType) => statType == StatType.Attack ? swordAtkOption : shieldHpOption;
     public StatGrade? GetOptionGrade(StatType statType) => statType == StatType.Attack ? swordAtkOptionGrade : shieldHpOptionGrade;
 
-    // 스톤 옵션이 섞이지 않은 등급 + 숙련도 값만이다 - Equip 탭에 표시되는 값이 바로 이것이므로,
-    // 여기서 "장비"는 정확히 sword/shield 자체만을 의미하게 된다. 옵션이 표시되는 곳은 오직
-    // Stone 탭뿐이다(ManagementWindowView.OptionLine 참고).
+    // 스톤 옵션을 뺀 등급 + 숙련도만 - Equip 탭에 표시되는 값이라 여기서 "장비"는 sword/shield
+    // 자체만을 뜻한다. 옵션은 Stone 탭에만 표시된다(ManagementWindowView.OptionLine 참고).
     public float SwordEquipmentBonus => GradeBonus(equippedSwordGrade, EquipmentGradeBonus.GetSwordAtk) + swordLevel * EquipmentGradeBonus.SwordLevelAtkBonus;
     public float ShieldEquipmentBonus => GradeBonus(equippedShieldGrade, EquipmentGradeBonus.GetShieldHp) + shieldLevel * EquipmentGradeBonus.ShieldLevelHpBonus;
 
-    // 플레이어 스탯에 실제로 적용되는 진짜 총합 - 장비 보너스에 스톤 옵션을 더한 값이다.
-    // 아래의 old-vs-new 델타 계산과 TryApplyOption에서 사용되며, 표시용으로는 절대 쓰이지
-    // 않는다: 옵션은 이 탭의 표시에서는 숨겨지지만 실제 게임플레이에는 여전히 반영되어야 한다.
+    // 플레이어 스탯에 실제 적용되는 총합(장비 보너스 + 스톤 옵션). 아래 old-vs-new 델타 계산과
+    // TryApplyOption 전용이고 표시에는 안 쓴다 - 옵션은 이 탭에서 숨겨도 게임플레이엔 반영된다.
     public float SwordAtkBonus => SwordEquipmentBonus + swordAtkOption;
     public float ShieldHpBonus => ShieldEquipmentBonus + shieldHpOption;
 
@@ -84,10 +79,9 @@ public class EquipmentDropManager : MonoBehaviour
     }
 
     private const int UnlockStage = 2;
-    // 장비는 stage 2에서만, 그것도 stage 2에만 드롭된다 - stage 1이 이 클래스에게 그랬듯,
-    // stage 3부터는 StoneDropManager에게 그라인드를 넘긴다(한 스테이지 앞서 동일한 역할을
-    // 하는 StatDropManager의 StatDropMaxStage 참고). 이게 없으면 "스테이지당 드롭 타입 하나"
-    // 라는 진행 규칙이 stage 3에서 조용히 깨져서, 크리스탈과 함께 장비까지 계속 드롭됐다.
+    // 장비는 stage 2에서만 드롭되고, stage 3부터는 StoneDropManager에게 그라인드를 넘긴다
+    // (한 스테이지 앞서 같은 역할을 하는 StatDropManager의 StatDropMaxStage 참고). 없으면
+    // "스테이지당 드롭 타입 하나" 규칙이 stage 3에서 깨져 크리스탈과 장비가 같이 드롭됐다.
     private const int EquipDropMaxStage = 2;
 
     private void HandleMonsterDied(Monster monster)
@@ -96,9 +90,8 @@ public class EquipmentDropManager : MonoBehaviour
         // 일반 몬스터 그라인드에서만 뭔가가 드롭된다.
         if (monster.Type != MonsterType.Normal) return;
 
-        // stage 2 전까지는 드롭이 전혀 없다 - stage 1은 스탯 파밍 스테이지다. stage 2부터는
-        // 기본 확률이 해당 스테이지에 적용되고 그 이후로 계속 오른다(stage 2 = 30%, stage 3
-        // = 35%, ...).
+        // stage 1은 스탯 파밍 스테이지라 드롭이 전혀 없다. stage 2에 기본 확률이 적용되고
+        // 그 이후로 계속 오른다(stage 2 = 30%, stage 3 = 35%, ...).
         if (currentMainStage < UnlockStage) return;
         if (currentMainStage > EquipDropMaxStage) return;
 
@@ -108,9 +101,8 @@ public class EquipmentDropManager : MonoBehaviour
         EquipmentType equipType = Random.value < 0.5f ? EquipmentType.Sword : EquipmentType.Shield;
         StatGrade grade = GradeRoller.Roll();
 
-        // 드롭시킬 prefab/player가 없어도 롤 자체는 처리한다(실제 업그레이드라면 장착과 보상
-        // 지급이 그대로 이루어진다) - 비주얼이 아직 연결되지 않았다는 이유로 조용히 유실되게
-        // 두지 않는다.
+        // prefab/player가 없어도 롤은 그대로 처리한다(업그레이드면 장착·보상 지급까지) -
+        // 비주얼이 아직 연결되지 않았다는 이유로 조용히 유실되게 두지 않는다.
         if (pickupPrefab == null || player == null)
         {
             CompleteDrop(equipType, grade);
@@ -123,11 +115,9 @@ public class EquipmentDropManager : MonoBehaviour
         pickup.Initialize(equipType, grade, player.transform, combatLoop, stageConfig.monsterMoveSpeed, this);
     }
 
-    // 플레이어가 실제로 도달했을 때 EquipmentDropPickup이 호출한다. 등급과 무관하게 모든
-    // 픽업은 해당 타입의 숙련도 게이지를 채우며, 장착된 것보다 높은 등급일 때만 추가로 장착
-    // 아이템을 교체한다. 두 기여분 모두 플레이어 스탯에 단일 델타로 적용되므로, 둘 다 해당하지
-    // 않는 픽업(레벨업 임계값 아래의 중복)은 비용이 전혀 없고, 둘 다 해당하는 픽업도 중복
-    // 집계되지 않는다.
+    // 플레이어가 픽업에 도달하면 EquipmentDropPickup이 호출한다. 등급과 무관하게 해당 타입의
+    // 숙련도 게이지는 항상 차고, 장착분보다 높은 등급일 때만 장착 아이템도 교체된다. 두 기여분을
+    // 단일 델타로 적용하므로 레벨업 임계값 아래의 중복은 무비용이고, 둘 다 걸려도 중복 집계 없다.
     public void CompleteDrop(EquipmentType equipType, StatGrade grade)
     {
         if (equipType == EquipmentType.Sword)
@@ -159,18 +149,16 @@ public class EquipmentDropManager : MonoBehaviour
     }
 
 
-    // 롤된 옵션을 확정하되, 슬롯이 이미 가진 값보다 높을 때만 적용한다. 엄격한 초과(>) 비교이며,
-    // UI에 맡기지 않고 여기서 강제한다 - "슬롯은 최선의 옵션을 유지한다"는 규칙은 데이터에 관한
-    // 것이므로 데이터와 함께 있어야 한다.
+    // 롤된 옵션을 슬롯의 기존 값보다 높을 때만(엄격한 초과 >) 확정한다. UI가 아니라 여기서
+    // 강제한다 - "슬롯은 최선의 옵션을 유지한다"는 데이터 규칙이라 데이터와 함께 있어야 한다.
     public bool TryApplyOption(StatType statType, StatGrade grade, float value)
     {
         if (statType == StatType.Attack)
         {
             if (value <= swordAtkOption) return false;
 
-            // 값을 쓰기 전에 미리 캡처해서 델타로 적용한다 - CompleteDrop과 동일한 방식으로,
-            // 이렇게 하면 나머지 보너스가 무엇으로 구성되는지 몰라도 플레이어 스탯이 옵션을
-            // 그대로 추적할 수 있다.
+            // 쓰기 전에 캡처해서 델타로 적용 - CompleteDrop과 같은 방식이며, 나머지 보너스의
+            // 구성을 몰라도 플레이어 스탯이 옵션을 그대로 추적할 수 있다.
             float oldBonus = SwordAtkBonus;
             swordAtkOption = value;
             swordAtkOptionGrade = grade;

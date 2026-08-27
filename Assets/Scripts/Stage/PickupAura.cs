@@ -1,19 +1,16 @@
 using UnityEngine;
 
-// 드롭된 픽업이 놓여있는 광채 효과: 가산 블렌딩된 빌보드 헤일로 쿼드와, 주변 바닥에
-// 같은 색 빛을 던지는 포인트 라이트로 구성되어, 오브젝트 뒤에 데칼을 붙여놓은 것이
-// 아니라 실제로 빛을 *내뿜는* 것처럼 보이게 한다.
+// 드롭된 픽업의 광채: 가산 블렌딩된 빌보드 헤일로 쿼드 + 주변 바닥에 같은 색 빛을 던지는 포인트
+// 라이트. 뒤에 데칼을 붙여놓은 게 아니라 실제로 빛을 *내뿜는* 것처럼 보이게 한다.
 //
-// StoneDropPickup이 이 코드의 세 번째 사본을 필요로 하게 되면서 여기로 추출했다.
-// StatPotionPickup과 EquipmentDropPickup은 여전히 각자의 private 버전을 갖고 있다 -
-// 이 둘은 정상 동작하고 있고 등급에 따라 구동되므로, 호출부 하나 추가하자고
-// 다시 작성하는 위험을 감수할 가치가 없었다; 이곳은 앞으로 새로 추가될 것들을
-// 위한 공용 저장소다.
+// StoneDropPickup이 이 코드의 세 번째 사본을 요구하면서 여기로 추출했다. StatPotionPickup과
+// EquipmentDropPickup은 여전히 각자의 private 버전을 갖고 있다 - 정상 동작하고 등급에 따라
+// 구동되므로 호출부 하나 추가하자고 재작성 리스크를 감수할 가치가 없었다. 여기는 앞으로
+// 새로 추가될 것들을 위한 공용 저장소다.
 public static class PickupAura
 {
-    // 헤일로(와 그 라이트)를 픽업에 부착한다. 생성한 머티리얼을 반환하며, 호출자가
-    // 소유권을 가지고 반드시 Destroy해야 한다 - 코드로 생성된 것이라 다른 누구도
-    // 대신 수거해주지 않는다.
+    // 헤일로(와 그 라이트)를 픽업에 부착한다. 생성한 머티리얼을 반환하며, 코드로 생성된 것이라
+    // 아무도 대신 수거해주지 않으므로 호출자가 소유권을 갖고 반드시 Destroy해야 한다.
     public static Material Attach(Transform parent, Color color, float size,
         float brightness, float lightIntensity, float lightRange)
     {
@@ -49,17 +46,15 @@ public static class PickupAura
     {
         var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
 
-        // 가산 투명: 이 머티리얼은 평소 그 값들을 자동으로 맞춰주는 셰이더 GUI가 아니라
-        // 코드로 생성되므로, URP에서는 surface/blend 속성과 이에 맞는 키워드/큐 설정을
-        // 직접 손으로 맞춰줘야 한다.
+        // 가산 투명: 평소 이 값들을 자동으로 맞춰주는 셰이더 GUI 없이 코드로 생성된 머티리얼이라,
+        // URP에서는 surface/blend 속성과 이에 맞는 키워드/렌더 큐를 직접 손으로 맞춰줘야 한다.
         mat.SetFloat("_Surface", 1f);
         mat.SetFloat("_Blend", 2f);
         mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
         mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
         mat.SetFloat("_ZWrite", 0f);
-        // 양면 렌더링: Billboard는 로컬 +Z가 카메라 반대쪽을 향하도록 정렬하므로, 쿼드의
-        // 어느 면이 뷰어를 향하는지는 그 규약에 달려있다 - 양면을 모두 그리면 어느
-        // 쪽이든 헤일로가 확실히 보인다.
+        // 양면 렌더링: Billboard가 로컬 +Z를 카메라 반대쪽으로 정렬하므로 쿼드의 어느 면이 뷰어를
+        // 향하는지는 그 규약에 달려있다 - 양면을 다 그리면 어느 쪽이든 헤일로가 확실히 보인다.
         mat.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
         mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
         mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;

@@ -1,10 +1,8 @@
 using UnityEngine;
 
-// StatDropPopup/EquipmentDropPopup의 스테이지 3 버전으로, 플레이어의 체력바 위에 동일한
-// 월드 스페이스 외곽선 TextMesh(PopupText 참고)를 사용한다.
-//
-// 스톤은 아직 아무 데도 소비되지 않고 그저 개수만 세는 것이므로, 스탯 변화가 아니라
-// 누적 개수를 알려준다 - 수집된 크리스탈이 받는 화면상 피드백은 이게 전부다.
+// StatDropPopup/EquipmentDropPopup의 스테이지 3 버전으로, 플레이어 체력바 위에 동일한 월드 스페이스
+// 외곽선 TextMesh(PopupText 참고)를 쓴다. 스톤은 아직 아무 데도 소비되지 않고 개수만 세므로 스탯
+// 변화가 아니라 누적 개수를 알려준다 - 수집된 크리스탈이 받는 화면상 피드백은 이게 전부다.
 public class StoneDropPopup : MonoBehaviour
 {
     [SerializeField] private Transform anchor;
@@ -45,9 +43,8 @@ public class StoneDropPopup : MonoBehaviour
             ? new Color(1f, 0.28f, 0.2f)
             : new Color(0.25f, 0.9f, 0.3f);
 
-        // 숫자를 아예 표시하지 않는다: 스톤은 항상 정확히 1개씩이므로, 개수를 찍어봐야
-        // 매번 "1"만 나오고 아무 정보도 더해주지 않는다. 누적 총합은 잠깐 반짝이고
-        // 사라지는 팝업이 아니라 상시 표시되는 카운터가 담당할 몫이다.
+        // 숫자를 아예 표시하지 않는다: 스톤은 항상 정확히 1개씩이라 개수를 찍어도 매번 "1"뿐이다.
+        // 누적 총합은 잠깐 반짝이고 사라지는 팝업이 아니라 상시 표시되는 카운터가 담당할 몫이다.
         PopupText.Build(go, font, $"+{label} STONE", fontSize, characterSize, color);
 
         go.AddComponent<Billboard>();

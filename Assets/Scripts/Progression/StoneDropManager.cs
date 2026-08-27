@@ -1,14 +1,12 @@
 using System.Collections;
 using UnityEngine;
 
-// stage 3의 드롭 롤로, 각 메인 스테이지가 순서대로 그라인드를 넘겨주는 세 번째 단계다:
-// stage 1은 스탯 포션(StatDropManager)을, stage 2는 장비(EquipmentDropManager)를,
-// stage 3는 크리스탈을 드롭한다. 셋 중 오직 하나만 항상 활성 상태이며, 이 덕분에 나중
-// 스테이지에서 플레이어가 세 가지 드롭 타입에 한꺼번에 파묻히지 않는다.
+// stage 3의 드롭 롤. 메인 스테이지가 순서대로 그라인드를 넘긴다: stage 1은 스탯 포션
+// (StatDropManager), stage 2는 장비(EquipmentDropManager), stage 3는 크리스탈. 항상 셋 중
+// 하나만 활성이라, 후반 스테이지에서 세 드롭 타입에 한꺼번에 파묻히지 않는다.
 //
-// 스톤은 현재 누적만 될 뿐이다 - 하나를 주우면 누적 카운트만 늘어날 뿐 그 이상은 없다.
-// 나중에 이걸 소비하는 무언가가 이 클래스에서 카운트를 읽어가면 된다; 드롭, 픽업 모션,
-// 집계는 그것 없이도 의도적으로 완결되고 독립적으로 동작하도록 만들어졌다.
+// 스톤은 아직 누적만 된다 - 소비하는 쪽이 생기면 여기서 카운트를 읽어가면 되고, 드롭·픽업
+// 모션·집계는 그것 없이도 의도적으로 완결되고 독립적으로 동작한다.
 public class StoneDropManager : MonoBehaviour
 {
     [SerializeField] private PlayerCharacter player;
@@ -16,9 +14,8 @@ public class StoneDropManager : MonoBehaviour
     [SerializeField] private StoneDropPickup stonePrefab;
     [SerializeField] private CombatLoop combatLoop;
 
-    // 고정값이며, 다른 두 매니저의 곡선과 달리 의도적으로 스테이지에 따라 스케일하지 않는다:
-    // 현재 stage 3가 마지막으로 제작된 스테이지라서 확률이 계속 올라갈 "이후 스테이지"
-    // 자체가 없기 때문이다.
+    // 고정값. 다른 두 매니저의 곡선과 달리 스테이지 스케일링을 의도적으로 안 한다 - stage 3가
+    // 마지막으로 제작된 스테이지라서 확률이 올라갈 "이후 스테이지" 자체가 없다.
     [Range(0f, 1f)][SerializeField] private float stoneDropChance = 0.5f;
     // 두 크리스탈 사이의 균등 분배다. Red/green은 stage 1이 RedVial/GreenVial 포션으로
     // 이미 정해놓은 색상 언어를 그대로 따른다 - red는 ATK 쪽 스톤, green은 HP 쪽 스톤이다.
@@ -28,11 +25,9 @@ public class StoneDropManager : MonoBehaviour
 
     private int currentMainStage = 1;
 
-    // 크리스탈 색상별로 하나씩의 누적 카운트다. 장비 매니저가 아니라 여기에 두는 이유는
-    // 스톤이 아직 장비와 아무 관련이 없기 때문이다 - 이건 스톤 시스템 자체의 상태이며,
-    // 모은 스톤에게 현재 일어나는 유일한 일이기도 하다.
-    // 0이 아니라 미리 채워진 상태로 시작해서, Stone 탭이 stage 3의 드롭률을 기다리지 않고도
-    // 바로 리롤할 거리가 있게 한다.
+    // 크리스탈 색상별 누적 카운트. 스톤이 아직 장비와 무관하므로 장비 매니저가 아니라 여기,
+    // 스톤 시스템 자체의 상태로 둔다 - 모은 스톤에 일어나는 일은 현재 이게 전부다. 0이 아니라
+    // 미리 채워 시작해서 Stone 탭이 stage 3 드롭률을 기다리지 않고 바로 리롤할 수 있게 한다.
     private int attackStones = 100;
     private int hpStones = 100;
 
@@ -71,9 +66,8 @@ public class StoneDropManager : MonoBehaviour
         // 모든 red 스톤은 다른 red 스톤과 완전히 동일하다.
         StatType statType = Random.value < attackStoneChance ? StatType.Attack : StatType.Hp;
 
-        // 드롭시킬 prefab/player가 없어도 스톤은 그대로 적립한다 - 비주얼이 아직 연결되지
-        // 않았다는 이유로 드롭이 조용히 유실되지 않도록, 형제 매니저들이 각자의 prefab 누락
-        // 상황에서 쓰는 것과 동일한 대체 처리다.
+        // prefab/player가 없어도 스톤은 그대로 적립한다 - 비주얼 미연결로 드롭이 조용히
+        // 유실되지 않게, 형제 매니저들의 prefab 누락 대체 처리와 동일하게 맞췄다.
         int count = RollStoneCount();
         if (stonePrefab == null || player == null)
         {
@@ -94,10 +88,9 @@ public class StoneDropManager : MonoBehaviour
         return 3;
     }
 
-    // 한 번에 쏟아지는 스톤들은 모두 이 처치에서 롤된 동일한 statType을 공유한다. 한꺼번에
-    // 스폰되지 않고 시간차를 두며, 하나씩 조금씩 더 뒤에 떨어지도록 해서, 다중 스톤 처치가
-    // 크리스탈이 겹쳐 쌓인 하나의 덩어리가 아니라 몬스터 뒤로 짧게 흘러나오는 흔적처럼
-    // 보이게 한다.
+    // 한 번에 쏟아지는 스톤은 모두 이 처치에서 롤된 같은 statType이다. 한꺼번에 스폰하지 않고
+    // 시간차를 두며 하나씩 더 뒤에 떨어뜨려, 겹쳐 쌓인 덩어리가 아니라 몬스터 뒤로 짧게
+    // 흘러나오는 흔적처럼 보이게 한다.
     private IEnumerator SpawnStoneStream(Vector3 position, StatType statType, int count)
     {
         const float SpawnStagger = 0.12f;
@@ -105,9 +98,8 @@ public class StoneDropManager : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            // 스트림 도중에 죽으면(이게 끝나기 전에 StageManager 자체의 리스폰이 플레이어를
-            // 리셋한다) 플레이어가 아직 도달하지도 않은 체크포인트에 계속 스톤을 뿌려서는
-            // 안 된다.
+            // 스트림 도중 죽으면(끝나기 전에 StageManager의 리스폰이 플레이어를 리셋한다)
+            // 아직 도달하지도 않은 체크포인트에 스톤을 계속 뿌려선 안 된다.
             if (player == null || player.Stats.IsDead) yield break;
 
             StoneDropPickup stone = Instantiate(stonePrefab, position, Quaternion.identity);

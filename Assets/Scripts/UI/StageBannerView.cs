@@ -21,9 +21,8 @@ public class StageBannerView : MonoBehaviour
     private Coroutine routine;
     private Sprite generatedBackdrop;
 
-    // 세션에서 처음 나오는 안내는 완전히 불투명한 커튼 뒤에서 시작해, 타이틀이 나타나기 전에
-    // 게임이 보이는 일이 없도록 한다. 이후에 나오는 안내(새 서브스테이지, 사망 후 재시작)는
-    // 플레이어가 이미 보고 있던 게임플레이 위로 서서히 페이드인된다.
+    // 세션 첫 안내는 완전히 불투명한 커튼 뒤에서 시작해 타이틀 전에 게임이 보이지 않게 한다.
+    // 이후 안내(새 서브스테이지, 사망 후 재시작)는 이미 보고 있던 게임플레이 위로 페이드인된다.
     private bool hasShownOnce;
 
     private void Awake()
@@ -38,7 +37,6 @@ public class StageBannerView : MonoBehaviour
             textGroup.alpha = 0f;
         }
 
-        // true시 런타임에 배경을 생성하고, false면 에디터에서 지정한 단색을 그대로 사용한다.
         if (useGeneratedBackdrop) ApplyGeneratedBackdrop();
 
         // 배너는 기본적으로 비활성화 상태로 시작한다 - 안내가 필요할 때 Show()를 호출한다.
@@ -53,8 +51,7 @@ public class StageBannerView : MonoBehaviour
 
         generatedBackdrop = TitleCardBackdrop.Create();
         image.sprite = generatedBackdrop;
-        // 원래 지정된 fill 색은 순검정이었는데, 그대로 두면 곱셈 블렌딩으로 그림이 지워져
-        // 버린다.
+        // 원래 지정된 fill 색은 순검정이라, 그대로 두면 곱셈 블렌딩으로 그림이 지워져 버린다.
         image.color = Color.white;
 
         // 밝은 카드를 쓰는 대가로 흰 텍스트가 파스텔 배경 위에 놓이게 되는데, 부드러운 자두색
@@ -78,9 +75,8 @@ public class StageBannerView : MonoBehaviour
 
     public void Show(string text, Action onComplete)
     {
-        // 새 안내는 대기 중이던 이전 안내를 대체한다. 이렇게 하지 않으면 이전 루틴의
-        // SetActive(false)가 진행 도중에 걸려 콜백이 실행되기 전에 새 루틴을 죽여버리고,
-        // 그 루틴이 붙잡고 있던 스폰이 영영 일어나지 않는다.
+        // 새 안내는 대기 중이던 이전 안내를 대체한다. 안 그러면 이전 루틴의 SetActive(false)가
+        // 도중에 걸려 콜백 전에 새 루틴을 죽이고, 그 루틴이 쥔 스폰이 영영 일어나지 않는다.
         Cancel();
 
         if (bannerText != null) bannerText.text = text;
@@ -97,9 +93,8 @@ public class StageBannerView : MonoBehaviour
         routine = StartCoroutine(PlayThenHide(openOnBlack, onComplete));
     }
 
-    // 콜백을 실행하지 않고 대기 중인 안내를 폐기한다 - 사망으로 인해 배너 뒤에 대기 중이던
-    // 스폰이 무효화될 때 사용한다. 애니메이션 없이 즉시 처리한다: 사망 후에는 재시작
-    // 시퀀스의 나머지가 진행되기 전에 페이드가 끝날 때까지 기다릴 필요가 없다.
+    // 콜백 없이 대기 중인 안내를 폐기한다 - 사망으로 배너 뒤의 스폰이 무효화될 때 쓴다.
+    // 애니메이션 없이 즉시: 사망 후엔 재시작 시퀀스가 페이드 완료를 기다릴 이유가 없다.
     public void Cancel()
     {
         if (routine != null)
@@ -114,10 +109,9 @@ public class StageBannerView : MonoBehaviour
 
     private IEnumerator PlayThenHide(bool openOnBlack, Action onComplete)
     {
-        // 먼저 한 프레임을 건너뛴다: Play 모드에 진입하는(또는 씬 로드가 끝나는) 프레임은
-        // deltaTime이 매우 크며, 이를 배너 시간에 포함시키면 화면 노출 시간(그리고 아래의
-        // 페이드들)이 짧아진다. 실시간(realtime) 대기를 사용해 지속 시간이 실제 시계 기준으로
-        // 정확하게 유지되도록 한다.
+        // 한 프레임 건너뛴다: Play 모드 진입(또는 씬 로드 완료) 프레임의 deltaTime이 매우 커서,
+        // 배너 시간에 포함시키면 노출 시간과 아래 페이드가 짧아진다. 대기는 realtime으로 해서
+        // 지속 시간이 실제 시계 기준으로 정확히 유지되게 한다.
         yield return null;
 
         if (openOnBlack)

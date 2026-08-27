@@ -2,18 +2,16 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// 스테이지 1은 낮에, 스테이지 2는 밤에 진행된다. 후처리(포스트 프로세싱)만으로는
-// 이를 제대로 표현할 수 없다 - 그레이딩은 이미 있는 빛을 다시 색조만 입힐 뿐이다 -
-// 그래서 이 스크립트가 다음 네 가지를 함께 제어하며 하나로 크로스페이드시킨다:
-//   * 전역 Volume 두 개(낮/밤 그레이딩)를 교체가 아니라 weight로 블렌딩하여, 스테이지가
-//     바뀌는 프레임에 색이 뚝 끊기지 않고 연속적으로 변하도록 한다
+// 스테이지 1은 낮, 스테이지 2는 밤. 후처리만으로는 표현이 안 된다 - 그레이딩은 이미 있는
+// 빛에 색조만 다시 입힐 뿐이다. 그래서 이 스크립트가 네 가지를 함께 크로스페이드시킨다:
+//   * 전역 Volume 두 개(낮/밤 그레이딩)를 교체가 아니라 weight로 블렌딩 - 스테이지가
+//     바뀌는 프레임에 색이 뚝 끊기지 않고 연속적으로 변한다
 //   * 태양: 색상 + 강도 (따뜻하고 밝은 빛 -> 창백하고 차가운 달빛)
 //   * 하늘: 스카이박스 자체의 낮/밤 큐브맵 블렌드 슬라이더
 //   * 안개: 색상 + 밀도, 이것이 실제로 나무 레이어들에 깊이감을 준다
 //
-// 항상 활성화되어 있는 오브젝트에 붙어 GameEvents.OnStageChanged를 구독한다. 전환은
-// 언스케일드 타임으로 진행되므로 스테이지 배너가 게임플레이를 정지시킨 동안에도
-// 계속 재생된다.
+// 항상 활성인 오브젝트에 붙어 GameEvents.OnStageChanged를 구독한다. 전환은 언스케일드
+// 타임이라 스테이지 배너가 게임플레이를 정지시킨 동안에도 계속 재생된다.
 public class StageMoodController : MonoBehaviour
 {
     [Header("Volumes (both global, same priority)")]
@@ -32,9 +30,8 @@ public class StageMoodController : MonoBehaviour
     [SerializeField] private float nightAmbientIntensity = 0.65f;
 
     [Header("Sky")]
-    // 이 프로젝트의 스카이박스는 Skybox/Cubemap Blend 셰이더로, _Tex에 낮 큐브맵을,
-    // _Tex_Blend에 밤 큐브맵을 담고 있다. 따라서 낮->밤 하늘 전체가 이 0~1 슬라이더
-    // 하나로 표현된다.
+    // 이 프로젝트 스카이박스는 Skybox/Cubemap Blend 셰이더로 _Tex에 낮, _Tex_Blend에 밤
+    // 큐브맵을 담는다. 따라서 낮->밤 하늘 전체가 이 0~1 슬라이더 하나로 표현된다.
     [SerializeField] private string skyBlendProperty = "_CubemapTransition";
     [SerializeField] private float daySkyBlend = 0f;
     [SerializeField] private float nightSkyBlend = 0.85f;
@@ -48,12 +45,10 @@ public class StageMoodController : MonoBehaviour
 
     [Header("Transition")]
     [SerializeField] private float transitionDuration = 1.2f;
-    // 밤에 진행되는 것은 정확히 이 메인 스테이지 하나뿐이며, "이 스테이지 이상"이라는
-    // 하한선이 아니다 - 스테이지 3은 스테이지 1의 낮 숲과 그 몬스터 구성을 그대로
-    // 다시 불러오므로(MonsterSpawner가 새 구성을 정확히 이 스테이지에만 적용하는 것을
-    // 참고), 밤은 오직 스테이지 2만의 것이다. 하한선이 아니라 단일 스테이지로 유지하는
-    // 것이야말로 스테이지 2 이후로 영원히 어두워지는 대신 낮 -> 밤 -> 낮으로 진행이
-    // 읽히게 만드는 핵심이다.
+    // 밤은 정확히 이 메인 스테이지 하나뿐, "이 스테이지 이상"이라는 하한선이 아니다 -
+    // 스테이지 3은 스테이지 1의 낮 숲과 그 몬스터 구성을 그대로 다시 쓰므로(MonsterSpawner가
+    // 새 구성을 딱 그 스테이지에만 적용하는 것 참고) 밤은 스테이지 2만의 것이다. 하한선으로
+    // 두면 스테이지 2 이후 영원히 어두워져서 낮 -> 밤 -> 낮으로 읽히는 진행이 깨진다.
     [SerializeField] private int nightStage = 2;
 
     // 0 = 완전한 낮, 1 = 완전한 밤. 전환 도중 스테이지가 바뀌어도 처음으로 되돌아가지
@@ -129,9 +124,8 @@ public class StageMoodController : MonoBehaviour
     {
         nightAmount = Mathf.Clamp01(night);
 
-        // 프로필을 교체하는 게 아니라 weight로 블렌딩한다: URP가 두 프로필의 오버라이드
-        // 값을 블렌딩해주므로, 한 세트가 다른 세트로 뚝 끊기지 않고 모든 그레이딩 값이
-        // 함께 움직인다.
+        // 프로필 교체가 아니라 weight 블렌딩: URP가 두 프로필의 오버라이드 값을 블렌딩해주므로
+        // 한 세트가 다른 세트로 뚝 끊기지 않고 모든 그레이딩 값이 함께 움직인다.
         if (dayVolume != null) dayVolume.weight = 1f - nightAmount;
         if (nightVolume != null) nightVolume.weight = nightAmount;
 

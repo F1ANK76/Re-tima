@@ -2,29 +2,25 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 장비 슬롯 하나의 숙련도 게이지를 위한 얇은 바 - BossGaugeView와 같은 "차오르는" 채움 바
-// 방식을 쓰지만, 이번에는 중복이거나 낮은 등급의 픽업이 버려지는 대신 채워주는 진행도를
-// 표시한다(EquipmentDropManager.CompleteDrop 참고). 보스 게이지와 달리 이 게이지는 100%를
-// 반복해서 넘도록 설계되어 있다: 한 번 넘을 때마다 레벨이 오르며, 바는 상한에 멈춰있지 않고
-// 다시 0쪽으로 감긴다.
+// 장비 슬롯 하나의 숙련도 게이지용 얇은 바 - BossGaugeView와 같은 "차오르는" 채움 방식이지만,
+// 중복/저등급 픽업이 버려지는 대신 채워주는 진행도를 표시한다(EquipmentDropManager.CompleteDrop).
+// 보스 게이지와 달리 100%를 반복해서 넘도록 설계됐다: 넘을 때마다 레벨이 오르고, 바는 상한에
+// 멈춰있지 않고 다시 0쪽으로 감긴다.
 //
-// (이 UI의 다른 곳에 있는 TitleScreenView와 마찬가지로) 배경/채움/라벨을 코드로 자식으로
-// 생성하지만 - 완전히 독립적인 HUD 요소와 달리, anchorToBottomCenter가 꺼져 있을 때는 자기
-// 자신의 RectTransform(부모 안에서의 위치/크기)을 전적으로 호출자에게 맡긴다. 이 방식으로
-// EquipmentPanelView가 각 행 아래에 하나씩 끼워 넣는다.
+// (TitleScreenView처럼) 배경/채움/라벨을 코드로 자식 생성하지만, 독립 HUD 요소와 달리
+// anchorToBottomCenter가 꺼지면 자기 RectTransform(부모 안에서의 위치/크기)은 전적으로 호출자에게
+// 맡긴다 - EquipmentPanelView가 이 방식으로 각 행 아래에 하나씩 끼워 넣는다.
 public class EquipmentMasteryGaugeView : MonoBehaviour
 {
     [SerializeField] private EquipmentDropManager equipmentDropManager;
     [SerializeField] private EquipmentType equipType;
     [SerializeField] private Color fillColor = new Color(0.4f, 0.75f, 1f);
-    // 독립 모드에서만 사용(anchorToBottomCenter 참고): 이 바 자체의 높이와 화면 하단
-    // 가장자리로부터의 거리 - 독립 바를 사용하는 호출자는 각 인스턴스를 서로 다른 오프셋에
-    // 배치하여 여러 게이지가 겹치지 않고 쌓이도록 한다.
+    // 독립 모드(anchorToBottomCenter)에서만 사용: 바 높이와 화면 하단 가장자리로부터의 거리 -
+    // 호출자가 인스턴스마다 오프셋을 달리 줘서 여러 게이지를 겹치지 않게 쌓는다.
     [SerializeField] private float barHeight = 30f;
     [SerializeField] private float bottomOffset = 160f;
-    // On: 이 컴포넌트가 자신의 RectTransform을 완전히 소유한다(하단 중앙 HUD 스트립). Off:
-    // 호출자가 이미 이 GameObject의 크기와 위치를 정해둔 상태이며(예: 패널 안의 한 행) 이
-    // 컴포넌트는 그것과 충돌해서는 안 된다 - 오직 자신의 자식들만 건드린다.
+    // On: 이 컴포넌트가 자신의 RectTransform을 완전히 소유(하단 중앙 HUD 스트립). Off: 호출자가
+    // 이미 크기/위치를 정해둔 상태(예: 패널 안의 한 행)라 충돌하지 않도록 자식들만 건드린다.
     [SerializeField] private bool anchorToBottomCenter = true;
     // Off: 퍼센트만 표시한다("45%") - 끼워 넣는 형태의 게이지는 보통 타입/레벨/등급을 이미
     // 표시하는 라벨 바로 아래에 놓이므로, 그렇지 않으면 내용이 중복된다.
@@ -43,10 +39,9 @@ public class EquipmentMasteryGaugeView : MonoBehaviour
         Build();
     }
 
-    // 런타임에 이 컴포넌트를 만드는 호출자(EquipmentPanelView)를 위한 것: GameObject가 아직
-    // 비활성 상태일 때 컴포넌트를 추가하고, 이 함수를 호출한 다음, 그제서야 활성화한다 -
-    // Unity는 비활성 오브젝트의 Awake를 미루므로, 이 함수는 Build()가 실행되기 전에, 그리고
-    // Awake가 독립 모드 기본값을 적용하기 전에 반드시 먼저 실행됨이 보장된다.
+    // 런타임 생성 호출자(EquipmentPanelView)용: GameObject가 비활성인 동안 컴포넌트를 추가하고
+    // 이 함수를 호출한 뒤에야 활성화한다 - Unity가 비활성 오브젝트의 Awake를 미루므로, Build()
+    // 실행보다도, Awake가 독립 모드 기본값을 적용하기보다도 먼저 실행됨이 보장된다.
     public void Configure(EquipmentDropManager manager, EquipmentType type, Color color,
         bool anchorToBottomCenter, bool includeTypeAndLevelInLabel)
     {
@@ -145,9 +140,8 @@ public class EquipmentMasteryGaugeView : MonoBehaviour
 
     private static float EaseOutQuad(float x) => 1f - (1f - x) * (1f - x);
 
-    // 보스 게이지가 위치한 것과 동일한 하단 중앙 영역이므로, 독립 바는 화면 해상도와
-    // 상관없이 같은 너비를 갖는다. 끼워 넣는 형태일 때는 완전히 건너뛴다(anchorToBottomCenter
-    // 참고).
+    // 보스 게이지와 동일한 하단 중앙 영역이므로 독립 바는 화면 해상도와 상관없이 같은 너비를
+    // 갖는다. 끼워 넣는 형태(anchorToBottomCenter off)에서는 완전히 건너뛴다.
     private void ConfigureStandaloneAnchors()
     {
         var rt = GetComponent<RectTransform>();

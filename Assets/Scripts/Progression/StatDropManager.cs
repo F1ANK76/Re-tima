@@ -1,9 +1,8 @@
 using UnityEngine;
 
-// 예전 AP 시스템을 대체한다: 이제 스탯은 플레이어가 수동으로 업그레이드하는 소모성 재화에서
-// 나오지 않는다. 대신 몬스터를 처치할 때마다 랜덤 스탯 상승치가 직접 드롭될 확률이 있으며,
-// 그 확률(드롭 자체가 발생할 확률과 어떤 희귀도로 뽑힐지 모두)은 런이 상위 메인 스테이지에
-// 도달할수록 올라간다.
+// 예전 AP 시스템을 대체한다: 스탯은 더 이상 플레이어가 수동으로 업그레이드하는 소모성 재화에서
+// 나오지 않고, 처치마다 랜덤 스탯 상승치가 직접 드롭될 확률로 나온다. 드롭 발생 확률과 뽑히는
+// 희귀도 모두 런이 상위 메인 스테이지에 도달할수록 올라간다.
 public class StatDropManager : MonoBehaviour
 {
     [SerializeField] private PlayerCharacter player;
@@ -54,9 +53,9 @@ public class StatDropManager : MonoBehaviour
         StatGrade grade = GradeRoller.Roll();
         float amount = GetAmount(statType, grade);
 
-        // 스탯은 더 이상 즉시 적용되지 않는다 - 몬스터가 죽은 위치에 드롭되는 포션에 넘겨지고,
-        // 그 포션이 플레이어에게 도달했을 때만 지급된다(StatPotionPickup 참고). prefab이나
-        // player가 없으면 드롭도 없다: 넘겨줄 대상 자체가 없기 때문이다.
+        // 스탯은 즉시 적용되지 않는다 - 몬스터가 죽은 위치에 드롭되는 포션에 넘겨지고, 그 포션이
+        // 플레이어에게 도달했을 때만 지급된다(StatPotionPickup 참고). prefab이나 player가 없으면
+        // 넘겨줄 대상 자체가 없어 드롭도 없다.
         if (potionPrefab == null || player == null) return;
 
         StatPotionPickup potion = Instantiate(potionPrefab, monster.transform.position, Quaternion.identity);
