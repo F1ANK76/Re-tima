@@ -17,13 +17,18 @@ public class WeaponSwing : MonoBehaviour
     // clip.length를 그대로 쓰므로, 클립이 바뀌어도 이 값이 따로 어긋나지 않는다.
     public float AttackImpactDelay => ResolveClipLength(attackClipName, attackImpactDelayFallback);
 
-    // Attack01이 끝나고 Idle로 블렌딩되어 돌아오기까지의 총 시간: SwordAndShieldStance.controller의
-    // Attack01 -> Idle 전환이 클립의 90% 지점에서 시작해 이만큼 블렌딩된다. 이 전에 재트리거하면
-    // 스윙이 애니메이션 도중에 잘린다(더 빠른 재트리거는 시각적으로만 무시되고 공격 틱/데미지
-    // 타이밍에는 영향 없음). 90% 비율과 블렌드 시간은 컨트롤러의 전환 설정 자체라 런타임에 읽을
-    // 방법이 없어 값으로 들고 있지만, 곱해지는 클립 길이는 위의 AttackImpactDelay를 그대로 쓴다.
+    // SwordAndShieldStance.controller의 Attack01 -> Idle 전환 설정 그대로다: 클립의 이 지점에서
+    // 전환이 시작되어, 이만큼의 시간에 걸쳐 블렌딩된다. 둘 다 컨트롤러의 전환(Transition) 자체에
+    // 박힌 값이라 런타임 API로는 읽을 수 없어 상수로 들고 있다 - 컨트롤러에서 전환 설정을 바꾸면
+    // 여기도 같이 맞춰야 한다.
+    private const float AttackToIdleExitTime = 0.9f;
     private const float IdleBlendDuration = 0.15f;
-    private float AttackAnimSettleDuration => 0.9f * AttackImpactDelay + IdleBlendDuration;
+
+    // Attack01이 끝나고 Idle로 블렌딩되어 돌아오기까지의 총 시간 - 이 전에 재트리거하면 스윙이
+    // 애니메이션 도중에 잘린다(더 빠른 재트리거는 시각적으로만 무시되고 공격 틱/데미지 타이밍에는
+    // 영향 없음). 곱해지는 클립 길이는 위의 AttackImpactDelay를 그대로 써서, 클립이 바뀌면 그
+    // 부분만큼은 자동으로 따라간다.
+    private float AttackAnimSettleDuration => AttackToIdleExitTime * AttackImpactDelay + IdleBlendDuration;
 
     private float nextAnimTriggerAllowedTime;
 
