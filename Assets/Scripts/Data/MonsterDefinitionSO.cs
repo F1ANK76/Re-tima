@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "MonsterDefinition", menuName = "UltimaSquad/Monster Definition")]
+[CreateAssetMenu(fileName = "MonsterDefinition", menuName = "Retima/Monster Definition")]
 public class MonsterDefinitionSO : ScriptableObject
 {
     public string monsterName = "Monster";

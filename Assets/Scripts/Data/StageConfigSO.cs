@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "StageConfig", menuName = "UltimaSquad/Stage Config")]
+[CreateAssetMenu(fileName = "StageConfig", menuName = "Retima/Stage Config")]
 public class StageConfigSO : ScriptableObject
 {
     [Header("Combat Timing")]
