@@ -20,8 +20,9 @@ public class Monster : MonoBehaviour
     private WeaponSwing WeaponSwing => weaponSwingCache ??= GetComponentInChildren<WeaponSwing>();
 
     [Header("Attack telegraph (Elite/Boss)")]
-    // 공격이 시작되어 타격이 적중하기까지의 시간으로, 매 스윙마다 새로 뽑는다 - 플레이어가
-    // 실제로 반응해야 하는 숫자다. 충전(윈드업) 클립은 정확히 이 시간만큼 채우도록 늘어난다.
+    // 차징(대기) 구간 자체의 길이로, 매 스윙마다 새로 뽑는다 - 플레이어가 실제로 반응해야
+    // 하는 숫자다. 그 뒤 실제 스윙(내려찍기) 구간은 이 값과 무관하게 항상 원래 속도/길이
+    // 그대로 이어지므로, 공격 시작부터 타격까지의 총 시간은 "이 값 + 스윙 고정 시간"이다.
     [SerializeField] private float minTimeToImpact = 0.5f;
     [SerializeField] private float maxTimeToImpact = 2f;
     [SerializeField] private string windUpStateName = "AttackWindUp";
@@ -40,6 +41,12 @@ public class Monster : MonoBehaviour
     // 그 전환들의 오프셋과 반드시 일치해야 한다: 실제 재생 구간은 (임팩트 - 진입)뿐이라
     // 아래의 충전 속도도 전체 클립이 아닌 이 구간 기준으로 계산된다.
     [SerializeField] private float windUpEntryOffset = 0.15f;
+    // 차징(대기) 구간이 끝나고 실제로 휘두르기 시작하는 지점 - 클립 길이에 대한 비율. 이 지점
+    // 전까지만 timeToImpact에 맞춰 재생 속도가 늘어나거나 줄고, 이 지점부터 임팩트까지는 항상
+    // 원래 속도(1배)로 재생된다 - 그래야 차징이 얼마나 길든 짧든 실제로 내려찍는 스윙 자체의
+    // 체감은 항상 똑같다. PowerUpNoWeapon 커브를 직접 뽑아본 값(약 64%, t=1.87초까지는 거의
+    // 안 움직이는 대기 동작, 그 뒤로 빠르게 꺾이는 실제 스윙).
+    [SerializeField] private float windUpChargeEndFraction = 0.64f;
     // 타격 후 다음 충전까지의 여유. 없으면 한 공격의 착지 스윙이 다음 공격의 진입 동작으로
     // 바로 이어져서, 방망이를 연달아 두 번 휘두르는 것처럼 보였다.
     [SerializeField] private float postAttackPause = 0.45f;
@@ -81,20 +88,13 @@ public class Monster : MonoBehaviour
     // 탄막이 발사를 계속하는 시간. Laser AOE 자체의 5초 방출 구간과 맞춰서, 유지되는
     // 애니메이션과 데미지 틱, 이펙트가 모두 함께 끝나도록 한다.
     [SerializeField] private float ultimateBarrageDuration = 5f;
-    // 플레이어 뒤쪽을 중심으로 한 타격의 고리로, 순서대로 이동하며 발동시켜서 전부
-    // 한꺼번에 적중하는 게 아니라 점점 조여드는 휩쓸기처럼 보이게 한다.
+    // VFX는 플레이어 발밑에 딱 한 번만 스폰한다 - 그 안에서 빛줄기가 여러 번 떨어지는 건
+    // 이펙트 자체의 연출이고, 코드는 그 위에 정확히 이 횟수만큼만 데미지 틱을 맞춰 넣는다.
     [SerializeField] private int ultimateLaserCount = 8;
-    [SerializeField] private float ultimateLaserRingRadius = 2.2f;
-    [SerializeField] private float ultimateLaserBehindDistance = 2.6f;
     [SerializeField] private float ultimateLaserScale = 1f;
     // Laser AOE에서 가장 오래 사는 파티클의 수명(4초) - 방출이 끝난 뒤에도 이만큼은 더
     // 살려둬야 꼬리 부분이 페이드 도중에 잘리지 않는다.
     [SerializeField] private float ultimateLaserLingerSeconds = 4f;
-    // ultimateLaserCount가 1이면 탄막은 플레이어 발밑 지면에 전체 지속시간 유지되는 단일
-    // 서클이 되고, 데미지 한 덩어리를 고리 위치들에 나누는 대신 고정 주기로 (AttackPower에
-    // 비례하지 않는) 고정값 데미지를 틱마다 준다.
-    [SerializeField] private float ultimateTickDamage = 5f;
-    [SerializeField] private float ultimateTickInterval = 0.5f;
 
     [Header("Hit impact (on the player, every landed attack)")]
     // 이펙트를 보여주지 않을 프리팹에서는 null(기본값) - 스테이지 2 로스터만 "Stones hit"에
@@ -135,6 +135,21 @@ public class Monster : MonoBehaviour
     private PlayerCharacter playerCache;
     private PlayerCharacter Player => playerCache ??= moveTarget != null ? moveTarget.GetComponent<PlayerCharacter>() : null;
 
+    private WeaponSwing playerWeaponSwingCache;
+    private bool playerWeaponSwingSearched;
+    private WeaponSwing PlayerWeaponSwing
+    {
+        get
+        {
+            if (!playerWeaponSwingSearched)
+            {
+                playerWeaponSwingSearched = true;
+                playerWeaponSwingCache = Player != null ? Player.GetComponentInChildren<WeaponSwing>() : null;
+            }
+            return playerWeaponSwingCache;
+        }
+    }
+
     private bool bossLoopStarted;
     private bool normalLoopStarted;
     private float attackInterval;
@@ -143,6 +158,14 @@ public class Monster : MonoBehaviour
     // WeaponSwing 보고 지연값도 없는 몬스터의 임팩트 지연 대체값으로도 쓰인다.
     [SerializeField] private float fallbackAttackImpactDelay = 0.3f;
     [SerializeField] private float deathAnimDuration = 1f;
+
+    // 공격력이 아무리 높아도(즉사여도) 플레이어가 최소 한 대는 맞아야 한다는 디자인 규칙 -
+    // 그래서 일반 몬스터의 타격 판정은 플레이어의 타격 판정(AttackImpactDelay)보다 이 여유만큼
+    // 항상 앞서도록 강제한다. 값 자체가 하드코딩된 두 번째 상수라 서로 어긋날 위험이 있으니,
+    // 매 판정마다 플레이어의 실제 값을 직접 읽어와서 거기서 빼는 식으로 계산한다 - 그래야 나중에
+    // 플레이어 쪽 타이밍이 바뀌어도 "아주 살짝 더 빠름"이 자동으로 유지된다. 겉보기엔 거의 동시에
+    // 슬래시가 뜨지만(margin이 작아서 눈에 안 띔), 데미지 적용 순서는 항상 몬스터가 먼저다.
+    private const float GuaranteedFirstStrikeMargin = 0.02f;
 
     public bool IsDead => CurrentHp <= 0f;
 
@@ -313,21 +336,25 @@ public class Monster : MonoBehaviour
             }
             else
             {
-                // 별도의 타격 클립 없이, 윈드업 클립의 착지 비트(windUpImpactFraction)가 정확히
-                // timeToImpact 시점에 오도록 늘려지고 그 지점에서 타격이 발동한다.
+                // 차징 구간(진입~windUpChargeEndFraction)만 minTimeToImpact~maxTimeToImpact
+                // 사이 무작위 길이로 늘어나거나 줄어든다. 그 뒤 실제 스윙 구간(~임팩트)은 이
+                // 차징 시간과 무관하게 항상 원래 속도로, 원래 길이 그대로 재생된다 - 아래
+                // RestoreWindUpSpeedAfterCharge가 그 지점에서 속도를 다시 1배로 되돌려준다.
+                // 그래서 공격이 시작되어 타격이 적중하기까지의 총 시간은 "차징(가변) + 스윙(고정)"이다.
                 activeState = windUpStateName;
                 activeLength = windUpLength;
                 impactTime = windUpLength * windUpImpactFraction;
 
-                float timeToImpact = Random.Range(minTimeToImpact, maxTimeToImpact);
-                // 실제 재생 구간은 진입 오프셋~임팩트 비트뿐이라 충전도 그 구간 기준으로
-                // 늘린다 - 전체 클립 길이 기준이면 건너뛴 만큼 타격이 일찍 적중한다.
-                float playedFraction = Mathf.Max(0.05f, windUpImpactFraction - windUpEntryOffset);
-                float chargeDuration = Mathf.Max(0.05f, timeToImpact / playedFraction);
+                float chargeDuration = Mathf.Max(0.05f, Random.Range(minTimeToImpact, maxTimeToImpact));
+                // 차징 구간(진입 오프셋~chargeEndFraction)의 실제 재생 길이 - 이 구간만 충전
+                // 속도의 대상이다.
+                float chargeSpanFraction = Mathf.Max(0.05f, windUpChargeEndFraction - windUpEntryOffset);
 
-                animator?.SetFloat(WindUpSpeedParam, windUpLength / chargeDuration);
+                animator?.SetFloat(WindUpSpeedParam, chargeSpanFraction * windUpLength / chargeDuration);
                 animator?.SetFloat(AttackSpeedParam, 1f);
                 PlayAttackAnimation();
+
+                if (animator != null) StartCoroutine(RestoreWindUpSpeedAfterCharge(animator));
             }
 
             if (animator != null)
@@ -365,6 +392,36 @@ public class Monster : MonoBehaviour
             // 충전하는 게 하나의 이중 스윙처럼 뭉개져 보이지 않게 한다.
             if (postAttackPause > 0f) yield return new WaitForSeconds(postAttackPause);
         }
+    }
+
+    // 차징 구간이 끝나는 지점(windUpChargeEndFraction)까지 기다렸다가 윈드업 재생 속도를 원래
+    // 속도(1배)로 되돌린다 - 그 뒤에 이어지는 실제 스윙 동작은 차징 시간과 무관하게 항상
+    // 자연스러운 속도로 보이게 하기 위함.
+    private IEnumerator RestoreWindUpSpeedAfterCharge(Animator animator)
+    {
+        const float SafetyTimeout = 5f;
+        float elapsed = 0f;
+
+        // SetTrigger 직후엔 애니메이터가 아직 실제로 AttackWindUp으로 전환되기 전이다(최소 한
+        // 프레임 필요) - 그 전에 아래 루프를 바로 돌리면 "아직 Idle이니 이미 벗어났다"고
+        // 착각해서 차징 속도를 세팅하자마자 곧바로 1배로 되돌려버린다. 실제로 그 상태에
+        // 진입할 때까지 먼저 기다린다.
+        while (elapsed < SafetyTimeout && !animator.GetCurrentAnimatorStateInfo(0).IsName(windUpStateName))
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        while (elapsed < SafetyTimeout)
+        {
+            AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
+            if (!state.IsName(windUpStateName) || state.normalizedTime >= windUpChargeEndFraction) break;
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        animator.SetFloat(WindUpSpeedParam, 1f);
     }
 
     // 창이 플레이어에게 닿을 만큼 타격 스테이트가 충분히 재생될 때까지 실행된다.
@@ -443,12 +500,14 @@ public class Monster : MonoBehaviour
         {
             yield return FireUltimateLaserRing();
 
-            // idle 대기 전에 해제한다. Attack03을 벗어나는 전환을 결정하는 게 바로 이
-            // bool이기 때문이다 - 세팅된 채로 두면 보스가 발사 포즈에 갇혀버린다.
+            // 자연스러운 전환(WaitUntilIdle)을 기다리지 않고 바로 Idle로 끊는다 - Attack03은
+            // 반복 재생이라 bool만 끄고 기다리면 다음 루프 사이클이 끝날 때까지 총 쏘는 포즈가
+            // 빛줄기보다 더 오래 남아있었다. VFX/데미지가 끝나는 바로 그 프레임에 애니메이션도
+            // 같이 끊어야 둘이 어긋나지 않는다.
             if (animator != null)
             {
                 animator.SetBool(UltimateActiveParam, false);
-                yield return WaitUntilIdle(animator);
+                animator.Play(idleStateName, 0, 0f);
             }
             yield break;
         }
@@ -465,60 +524,30 @@ public class Monster : MonoBehaviour
         }
     }
 
-    // 고리를 하나씩 순서대로 발동시켜서 전부 한꺼번에 적중하는 대신 플레이어 주위를 휩쓴다.
-    // 궁극기 총 데미지는 그대로고 타격들에 나눠질 뿐이라, 각각이 탄환 하나가 관통하는 느낌.
+    // VFX는 플레이어 발밑에 딱 한 번만 스폰한다 - 이펙트 자체가 알아서 빛줄기를 여러 번
+    // 떨어뜨리는 것처럼 보이고, 코드는 그 위에 ultimateLaserCount번만 데미지 틱을 맞춰
+    // 넣는다. 궁극기 총 데미지는 그대로고 틱들에 나눠질 뿐이라, 각각이 한 발씩 박히는 느낌.
     private IEnumerator FireUltimateLaserRing()
     {
-        int count = Mathf.Max(1, ultimateLaserCount);
+        if (Player == null) yield break;
 
-        if (count == 1)
-        {
-            yield return FireUltimateLaserSingle();
-            yield break;
-        }
+        int count = Mathf.Max(1, ultimateLaserCount);
+        SpawnUltimateLaserUnderPlayer();
 
         float interval = Mathf.Max(0f, ultimateBarrageDuration) / count;
         float damagePerHit = AttackPower * ultimateDamageMultiplier / count;
 
         for (int i = 0; i < count; i++)
         {
+            yield return new WaitForSeconds(interval);
+
             if (IsDead) yield break;
             if (Player == null) yield break;
 
-            SpawnUltimateLaser(i, count);
-            // 다른 적중 타격들과 같은 플레이어 위 버스트 이펙트를 재사용해서, 각 관통이
-            // 지면의 서클로만 보이지 않고 플레이어 자신에게도 나타나게 한다.
             SpawnHitImpactVfx();
             // 의도적으로 ParryManager를 거치지 않는다 - 궁극기는 원래부터 패링 불가였고,
             // 패링 한 번에 취소되는 탄막이라면 그것이 대체한 단일 타격보다 약해진다.
             Player.TakeDamage(damagePerHit);
-
-            yield return new WaitForSeconds(interval);
-        }
-    }
-
-    // 탄막 전체 동안 플레이어 발밑에 유지되는 단일 지면 서클로, 원샷 타격의 고리를
-    // 순회하는 대신 고정된 주기로 고정값 데미지를 틱으로 준다.
-    private IEnumerator FireUltimateLaserSingle()
-    {
-        if (Player == null) yield break;
-
-        SpawnUltimateLaserUnderPlayer();
-
-        float interval = Mathf.Max(0.05f, ultimateTickInterval);
-        float elapsed = 0f;
-
-        while (elapsed < ultimateBarrageDuration)
-        {
-            yield return new WaitForSeconds(interval);
-            elapsed += interval;
-
-            if (IsDead) yield break;
-            if (Player == null) yield break;
-
-            SpawnHitImpactVfx();
-            // 의도적으로 ParryManager를 거치지 않는다 - FireUltimateLaserRing 참고.
-            Player.TakeDamage(ultimateTickDamage);
         }
     }
 
@@ -529,31 +558,6 @@ public class Monster : MonoBehaviour
         Vector3 spawn = Player.transform.position;
         Collider playerCollider = Player.GetComponent<Collider>();
         spawn.y = playerCollider != null ? playerCollider.bounds.min.y : spawn.y;
-
-        SpawnUltimateLaserAt(spawn);
-    }
-
-    private void SpawnUltimateLaser(int index, int count)
-    {
-        if (ultimateLaserPrefab == null || Player == null) return;
-
-        Transform target = Player.transform;
-
-        // "뒤쪽"은 이 몬스터가 공격해 들어가는 선을 기준으로 측정되므로, 고리는 둘
-        // 사이가 아니라 플레이어의 등 쪽에서 감싸는 형태가 된다.
-        Vector3 away = target.position - transform.position;
-        away.y = 0f;
-        away = away.sqrMagnitude > 0.0001f ? away.normalized : Vector3.forward;
-
-        Vector3 center = target.position + away * ultimateLaserBehindDistance;
-
-        float angle = index / (float)count * Mathf.PI * 2f;
-        Vector3 spawn = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * ultimateLaserRingRadius;
-
-        // 이펙트의 테크서클은 자신의 원점에 위치하므로, 그 원점이 지면에 닿아야 한다 -
-        // 플레이어의 transform은 발이 아니라 캡슐의 중심이다.
-        Collider playerCollider = Player.GetComponent<Collider>();
-        spawn.y = playerCollider != null ? playerCollider.bounds.min.y : target.position.y;
 
         SpawnUltimateLaserAt(spawn);
     }
@@ -666,7 +670,9 @@ public class Monster : MonoBehaviour
     }
 
     // 일반 몬스터 전용: 플레이어의 공격 틱과 무관하게 자기 고정 타이머로 때리므로,
-    // 플레이어의 치명타가 이 몬스터의 스윙을 선점하는 일은 절대 없다.
+    // 플레이어의 치명타가 이 몬스터의 스윙을 선점하는 일은 절대 없다 - 공격력이 무한이어도
+    // 최소 한 대는 맞아야 한다는 규칙이라, 임팩트 타이밍 자체를 GuaranteedFirstStrikeMargin만큼
+    // 앞당겨서 강제한다.
     private IEnumerator NormalAttackLoop()
     {
         // 일반 몬스터는 손대지 않은 원본 클립을 그대로 재생한다 - 충전도, 분리도 없다.
@@ -685,6 +691,10 @@ public class Monster : MonoBehaviour
             PlayAttackAnimation();
 
             float impactDelay = WeaponSwing != null ? WeaponSwing.AttackImpactDelay : fallbackAttackImpactDelay;
+            if (PlayerWeaponSwing != null)
+            {
+                impactDelay = Mathf.Min(impactDelay, Mathf.Max(0f, PlayerWeaponSwing.AttackImpactDelay - GuaranteedFirstStrikeMargin));
+            }
             yield return new WaitForSeconds(impactDelay);
 
             if (IsDead) yield break;
