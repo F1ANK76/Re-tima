@@ -20,12 +20,13 @@ public class WeaponSwing : MonoBehaviour
     // 임포트 데이터 기준 30fps에서 0-16 프레임)와 일치.
     [SerializeField] private float attackClipLengthFallback = 16f / 30f;
 
-    // 검 프롭이 실제로 최대로 뻗는 시점(스윙 절반 지점)을 타격 순간으로 삼는다. 플레이어가
-    // 실제로 보는 건 스켈레톤 애니메이션(Attack01 클립, 0.53초)이 아니라 이 코드 스윙
-    // (SwingRoutine, swingDuration=0.15초)이므로, 데미지/슬래시 타이밍은 클립 길이가 아니라
-    // 이 스윙 자체에 맞춰야 한다 - 예전엔 클립 길이를 그대로 썼는데, 실제 스윙은 그보다
-    // 훨씬 먼저 끝나버려서 눈에 보이는 동작이 끝난 뒤 한참 지나서야 데미지가 들어갔다.
-    public float AttackImpactDelay => swingDuration * 0.5f;
+    // Attack01 클립의 실제 팔 회전 커브(Right Arm Front-Back)를 뽑아 확인한 값 - 0~0.17초는
+    // 검을 뒤로 빼는 예비동작(값이 계속 음수)이고, 0.19초 근방에서 음수->양수로 넘어가며 실제로
+    // 앞을 향해 휘두르기 시작한다. 데미지/슬래시는 이 "진짜로 휘두르기 시작하는 순간"에 맞춰야
+    // 한다 - 코드 스윙 자체의 절반 지점(swingDuration*0.5)은 이 스켈레톤 애니메이션과 아무
+    // 상관 없는 별개의 타이밍이라, 그 값을 쓰면 예비동작이 채 끝나기도 전에 슬래시가 떴다.
+    private const float AttackWindupDuration = 0.19f;
+    public float AttackImpactDelay => AttackWindupDuration;
 
     // SwordAndShieldStance.controller의 Attack01 -> Idle 전환 설정 그대로다: 클립의 이 지점에서
     // 전환이 시작되어, 이만큼의 시간에 걸쳐 블렌딩된다. 둘 다 컨트롤러의 전환(Transition) 자체에
