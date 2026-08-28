@@ -65,10 +65,10 @@ public class PlayerCharacter : MonoBehaviour
         buffVfxRoutine = null;
     }
 
-    public void Attack(Monster target)
+    public void Attack(Monster target, float damageMultiplier = 1f)
     {
         if (target == null) return;
-        target.TakeDamage(Stats.AttackPower);
+        target.TakeDamage(Stats.AttackPower * damageMultiplier);
     }
 
     public void TakeDamage(float amount)

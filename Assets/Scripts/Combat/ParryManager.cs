@@ -16,7 +16,10 @@ public class ParryManager : MonoBehaviour
     [SerializeField] private CombatLoop combatLoop;
 
     private const float ParryWindowDuration = 0.5f;
-    private const int CooldownSeconds = 3;
+    // 실패(타이밍을 놓친 시도)는 성공보다 더 오래 물린다 - 연속 패링 남발 방지용 최소 텀인
+    // 성공 쿨타임과 달리, 실패는 페널티라 더 길다.
+    private const int CooldownSeconds = 2;
+    private const int SuccessCooldownSeconds = 1;
 
     // PlayerAnimStates.Riposte 자체의 클립 길이(FBX 임포트 데이터 기준 30fps에서 0-16 프레임)와
     // 일치한다 - WeaponSwing이 Attack01의 임팩트 타이밍에 쓰는 것과 같은 규칙이다.
@@ -24,6 +27,8 @@ public class ParryManager : MonoBehaviour
     // Teleport 프리팹의 가장 긴 서브 시스템 수명과 일치시켜서, 화려한 연출 도중에
     // 끊기지 않고 한 사이클을 온전히 다 재생하도록 한다.
     private const float TeleportVfxDuration = 0.7f;
+    // 패링 성공의 보상 - 리포스트 타격은 플레이어 공격력의 2배로 들어간다.
+    private const float RiposteDamageMultiplier = 2f;
 
     private bool parryWindowOpen;
     private bool onCooldown;
@@ -133,7 +138,7 @@ public class ParryManager : MonoBehaviour
         if (parryWindowOpen)
         {
             parryWindowOpen = false;
-            StartCooldown();
+            StartCooldown(CooldownSeconds);
         }
     }
 
@@ -149,7 +154,10 @@ public class ParryManager : MonoBehaviour
 
         if (teleportVfx != null) StartCoroutine(PlayTeleportVfx());
 
-        if (player != null && currentDuelist != null) player.Attack(currentDuelist);
+        // 리포스트는 일반 타격의 2배 데미지 - 성공적인 패링에 대한 보상.
+        if (player != null && currentDuelist != null) player.Attack(currentDuelist, RiposteDamageMultiplier);
+
+        StartCooldown(SuccessCooldownSeconds);
 
         return true;
     }
@@ -179,20 +187,20 @@ public class ParryManager : MonoBehaviour
         teleportVfx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
     }
 
-    private void StartCooldown()
+    private void StartCooldown(int seconds)
     {
         onCooldown = true;
         UpdateButtonInteractable();
 
         if (cooldownRoutine != null) StopCoroutine(cooldownRoutine);
-        cooldownRoutine = StartCoroutine(CooldownRoutine());
+        cooldownRoutine = StartCoroutine(CooldownRoutine(seconds));
     }
 
-    private IEnumerator CooldownRoutine()
+    private IEnumerator CooldownRoutine(int seconds)
     {
         if (cooldownOverlay != null) cooldownOverlay.SetActive(true);
 
-        for (int remaining = CooldownSeconds; remaining >= 1; remaining--)
+        for (int remaining = seconds; remaining >= 1; remaining--)
         {
             if (cooldownText != null) cooldownText.text = remaining.ToString();
             yield return new WaitForSeconds(1f);
