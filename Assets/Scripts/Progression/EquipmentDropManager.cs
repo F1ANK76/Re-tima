@@ -1,7 +1,8 @@
 using UnityEngine;
 
-// 같은 처치 이벤트에서 StatDropManager와 독립적으로 도는 두 번째 드롭 롤 - 순수 ATK/HP
-// 증가치 대신 실제 Sword/Shield 아이템을 준다. 픽업 하나당 두 가지가 독립적으로 일어난다:
+// StatDropManager와 별개의 드롭 타입 - 순수 ATK/HP 증가치 대신 실제 Sword/Shield 아이템을 준다.
+// DropCoordinator가 이 타입을 드롭하기로 정했을 때만 RollAndSpawn이 호출된다. 픽업 하나당
+// 두 가지가 독립적으로 일어난다:
 //   1. 자동 장착 - 픽업 등급이 현재 장착분보다 높을 때만.
 //   2. 숙련도 진행 - (1)과 무관하게 항상. 같거나 낮은 등급도 상한 없는 게이지를 채우고,
 //      100%를 넘길 때마다 +1 ATK / +10 HP로 전환된다. "쓸모없는" 중복 픽업의 존재 이유다.
@@ -12,7 +13,8 @@ public class EquipmentDropManager : MonoBehaviour
     [SerializeField] private EquipmentDropPickup pickupPrefab;
     [SerializeField] private CombatLoop combatLoop;
 
-    private int currentMainStage = 1;
+    // DropCoordinator가 장비를 활성 드롭 타입 목록에 넣기 시작하는 메인 스테이지.
+    public const int UnlockStage = 2;
 
     // null은 해당 타입이 아직 아무것도 장착되지 않았음을 뜻한다 - 이미 실질적인(작지만) 보너스가
     // 있는 "Normal 등급 장착" 상태와는 구분된다.
@@ -61,43 +63,9 @@ public class EquipmentDropManager : MonoBehaviour
 
     private static float GradeBonus(StatGrade? grade, System.Func<StatGrade, float> lookup) => grade.HasValue ? lookup(grade.Value) : 0f;
 
-    private void OnEnable()
+    // DropCoordinator가 이 타입을 드롭하기로 정했을 때 호출한다.
+    public void RollAndSpawn(Monster monster)
     {
-        GameEvents.OnMonsterDied += HandleMonsterDied;
-        GameEvents.OnStageChanged += HandleStageChanged;
-    }
-
-    private void OnDisable()
-    {
-        GameEvents.OnMonsterDied -= HandleMonsterDied;
-        GameEvents.OnStageChanged -= HandleStageChanged;
-    }
-
-    private void HandleStageChanged(int mainStage, int subStage)
-    {
-        currentMainStage = mainStage;
-    }
-
-    private const int UnlockStage = 2;
-    // 장비는 stage 2에서만 드롭되고, stage 3부터는 StoneDropManager에게 그라인드를 넘긴다
-    // (한 스테이지 앞서 같은 역할을 하는 StatDropManager의 StatDropMaxStage 참고). 없으면
-    // "스테이지당 드롭 타입 하나" 규칙이 stage 3에서 깨져 크리스탈과 장비가 같이 드롭됐다.
-    private const int EquipDropMaxStage = 2;
-
-    private void HandleMonsterDied(Monster monster)
-    {
-        // Elite/Boss는 (서브)스테이지를 마무리 짓는 관문일 뿐 전리품의 출처가 아니다 - 그 사이의
-        // 일반 몬스터 그라인드에서만 뭔가가 드롭된다.
-        if (monster.Type != MonsterType.Normal) return;
-
-        // stage 1은 스탯 파밍 스테이지라 드롭이 전혀 없다. stage 2에 기본 확률이 적용되고
-        // 그 이후로 계속 오른다(stage 2 = 30%, stage 3 = 35%, ...).
-        if (currentMainStage < UnlockStage) return;
-        if (currentMainStage > EquipDropMaxStage) return;
-
-        float dropChance = Mathf.Clamp01(stageConfig.equipDropBaseChance + stageConfig.equipDropChancePerStage * (currentMainStage - UnlockStage));
-        if (Random.value > dropChance) return;
-
         EquipmentType equipType = Random.value < 0.5f ? EquipmentType.Sword : EquipmentType.Shield;
         StatGrade grade = GradeRoller.Roll();
 

@@ -1,9 +1,8 @@
 using System.Collections;
 using UnityEngine;
 
-// stage 3의 드롭 롤. 메인 스테이지가 순서대로 그라인드를 넘긴다: stage 1은 스탯 포션
-// (StatDropManager), stage 2는 장비(EquipmentDropManager), stage 3는 크리스탈. 항상 셋 중
-// 하나만 활성이라, 후반 스테이지에서 세 드롭 타입에 한꺼번에 파묻히지 않는다.
+// stage 3에서 새로 열리는 드롭 타입(크리스탈). DropCoordinator가 이 타입을 드롭하기로 정했을
+// 때만 RollAndSpawn이 호출된다.
 //
 // 스톤은 아직 누적만 된다 - 소비하는 쪽이 생기면 여기서 카운트를 읽어가면 되고, 드롭·픽업
 // 모션·집계는 그것 없이도 의도적으로 완결되고 독립적으로 동작한다.
@@ -14,16 +13,11 @@ public class StoneDropManager : MonoBehaviour
     [SerializeField] private StoneDropPickup stonePrefab;
     [SerializeField] private CombatLoop combatLoop;
 
-    // 고정값. 다른 두 매니저의 곡선과 달리 스테이지 스케일링을 의도적으로 안 한다 - stage 3가
-    // 마지막으로 제작된 스테이지라서 확률이 올라갈 "이후 스테이지" 자체가 없다.
-    [Range(0f, 1f)][SerializeField] private float stoneDropChance = 0.5f;
     // 두 크리스탈 사이의 균등 분배다. Red/green은 stage 1이 RedVial/GreenVial 포션으로
     // 이미 정해놓은 색상 언어를 그대로 따른다 - red는 ATK 쪽 스톤, green은 HP 쪽 스톤이다.
     [Range(0f, 1f)][SerializeField] private float attackStoneChance = 0.5f;
 
     public const int UnlockStage = 3;
-
-    private int currentMainStage = 1;
 
     // 크리스탈 색상별 누적 카운트. 스톤이 아직 장비와 무관하므로 장비 매니저가 아니라 여기,
     // 스톤 시스템 자체의 상태로 둔다 - 모은 스톤에 일어나는 일은 현재 이게 전부다. 0이 아니라
@@ -35,33 +29,9 @@ public class StoneDropManager : MonoBehaviour
     public int HpStones => hpStones;
     public int GetStones(StatType statType) => statType == StatType.Attack ? attackStones : hpStones;
 
-    private void OnEnable()
+    // DropCoordinator가 이 타입을 드롭하기로 정했을 때 호출한다.
+    public void RollAndSpawn(Monster monster)
     {
-        GameEvents.OnMonsterDied += HandleMonsterDied;
-        GameEvents.OnStageChanged += HandleStageChanged;
-    }
-
-    private void OnDisable()
-    {
-        GameEvents.OnMonsterDied -= HandleMonsterDied;
-        GameEvents.OnStageChanged -= HandleStageChanged;
-    }
-
-    private void HandleStageChanged(int mainStage, int subStage)
-    {
-        currentMainStage = mainStage;
-    }
-
-    private void HandleMonsterDied(Monster monster)
-    {
-        // Elite/Boss는 그라인드에 기여하는 게 아니라 서브스테이지를 마무리 짓는다 - 다른 두
-        // 드롭 매니저도 따르는 동일한 규칙이라, 일반 몬스터 처치에서만 뭔가가 드롭된다.
-        if (monster.Type != MonsterType.Normal) return;
-
-        if (currentMainStage < UnlockStage) return;
-
-        if (Random.value > stoneDropChance) return;
-
         // 드롭에서 롤하는 건 오직 두 스톤 중 어느 쪽이냐 뿐이다 - 스톤에는 등급이 없어서
         // 모든 red 스톤은 다른 red 스톤과 완전히 동일하다.
         StatType statType = Random.value < attackStoneChance ? StatType.Attack : StatType.Hp;

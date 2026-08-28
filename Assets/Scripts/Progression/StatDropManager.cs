@@ -1,8 +1,8 @@
 using UnityEngine;
 
 // 예전 AP 시스템을 대체한다: 스탯은 더 이상 플레이어가 수동으로 업그레이드하는 소모성 재화에서
-// 나오지 않고, 처치마다 랜덤 스탯 상승치가 직접 드롭될 확률로 나온다. 드롭 발생 확률과 뽑히는
-// 희귀도 모두 런이 상위 메인 스테이지에 도달할수록 올라간다.
+// 나오지 않고, 처치마다 랜덤 스탯 상승치가 직접 드롭된다. 드롭 여부/타이밍은 DropCoordinator가
+// 결정하고, 여기서는 그렇게 선택됐을 때 실제로 무엇이 드롭될지(스탯 종류, 등급, 수치)만 굴린다.
 public class StatDropManager : MonoBehaviour
 {
     [SerializeField] private PlayerCharacter player;
@@ -10,41 +10,9 @@ public class StatDropManager : MonoBehaviour
     [SerializeField] private StatPotionPickup potionPrefab;
     [SerializeField] private CombatLoop combatLoop;
 
-    private int currentMainStage = 1;
-
-    private void OnEnable()
+    // DropCoordinator가 이 타입을 드롭하기로 정했을 때 호출한다.
+    public void RollAndSpawn(Monster monster)
     {
-        GameEvents.OnMonsterDied += HandleMonsterDied;
-        GameEvents.OnStageChanged += HandleStageChanged;
-    }
-
-    private void OnDisable()
-    {
-        GameEvents.OnMonsterDied -= HandleMonsterDied;
-        GameEvents.OnStageChanged -= HandleStageChanged;
-    }
-
-    // 스탯 드롭은 stage 1만의 개념이다 - stage 2부터는 대신 EquipmentDropManager(그쪽의
-    // UnlockStage 참고)에게 그라인드를 넘기므로 둘은 절대 겹치지 않는다.
-    private const int StatDropMaxStage = 1;
-
-    private void HandleStageChanged(int mainStage, int subStage)
-    {
-        currentMainStage = mainStage;
-    }
-
-    private void HandleMonsterDied(Monster monster)
-    {
-        // Elite/Boss는 (서브)스테이지를 마무리 짓는 관문일 뿐 전리품의 출처가 아니다 - 그 사이의
-        // 일반 몬스터 그라인드에서만 뭔가가 드롭된다.
-        if (monster.Type != MonsterType.Normal) return;
-
-        if (currentMainStage > StatDropMaxStage) return;
-
-        // 기본 확률 50%, 첫 메인 스테이지 이후로는 스테이지당 +10%p (1-1=50%, stage2=60%, ...).
-        float dropChance = Mathf.Clamp01(stageConfig.statDropBaseChance + stageConfig.statDropChancePerStage * (currentMainStage - 1));
-        if (Random.value > dropChance) return;
-
         // 현재는 ATK/HP만 존재하므로 단순 50/50이다 - 하드코딩된 동전 던지기 대신 1-in-N
         // 형태로 작성해서, 나중에 세 번째 스탯이 추가되더라도 이 롤의 범위만 넓히면 되게 했다.
         const int statTypeCount = 2;

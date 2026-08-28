@@ -11,12 +11,6 @@ public class StageConfigSO : ScriptableObject
     public float hpGrowthPerStage = 0.15f;
     public float atkGrowthPerStage = 0.10f;
 
-    [Header("Stat Drop Progression")]
-    // 처치 시 랜덤 스탯 상승 아이템이 드롭될 확률. 서브 스테이지가 아니라 메인 스테이지에 따라
-    // 상승한다: 스테이지 1 = 50%, 스테이지 2 = 60%, 스테이지 3 = 70%, ...
-    [Range(0f, 1f)] public float statDropBaseChance = 0.5f;
-    [Range(0f, 1f)] public float statDropChancePerStage = 0.1f;
-
     [Header("Stat Drop Amounts - ATK")]
     public float atkAmountNormal = 0.1f;
     public float atkAmountRare = 0.3f;
@@ -25,18 +19,12 @@ public class StageConfigSO : ScriptableObject
     public float atkAmountLegendary = 2f;
 
     [Header("Stat Drop Amounts - HP")]
-    public float hpAmountNormal = 1f;
-    public float hpAmountRare = 3f;
-    public float hpAmountEpic = 5f;
-    public float hpAmountUnique = 10f;
-    public float hpAmountLegendary = 20f;
+    public float hpAmountNormal = 5f;
+    public float hpAmountRare = 10f;
+    public float hpAmountEpic = 30f;
+    public float hpAmountUnique = 50f;
+    public float hpAmountLegendary = 100f;
 
-
-    [Header("Equipment Drop Progression")]
-    // 처치 시 검/방패 드롭 확률 - 위 스탯 드롭과는 별개의 독립 판정. 메인 스테이지에 따라 상승:
-    // 1 = 30%, 2 = 35%, ... 등급별 스탯 보너스는 고정 테이블(EquipmentGradeBonus)이라 스테이지 무관.
-    [Range(0f, 1f)] public float equipDropBaseChance = 0.3f;
-    [Range(0f, 1f)] public float equipDropChancePerStage = 0.05f;
 
     [Header("Monster Movement")]
     // 월드의 이동 속도이며 의도적으로 공유된다: 스탯 포션/장비 픽업의 유인 속도, GroundScroller/
