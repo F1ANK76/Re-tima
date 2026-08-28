@@ -7,11 +7,11 @@ public static class GradeRoller
 {
     public static StatGrade Roll()
     {
-        const float normal = 55f;
+        const float normal = 60f;
         const float rare = 30f;
-        const float epic = 10f;
-        const float unique = 4f;
-        // legendary = 1f, 아래에서 암묵적으로 폴백 처리된다.
+        const float epic = 7f;
+        const float unique = 2.5f;
+        // legendary = 0.5f, 아래에서 암묵적으로 폴백 처리된다.
 
         float roll = Random.value * 100f;
 
