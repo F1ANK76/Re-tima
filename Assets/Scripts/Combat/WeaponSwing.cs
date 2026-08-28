@@ -8,6 +8,12 @@ public class WeaponSwing : MonoBehaviour
 
     // 선택 사항 - 플레이어의 검에만 연결되어 있고, 몬스터는 이것 없이 스윙한다.
     [SerializeField] private ParticleSystem slashVfx;
+    // slashVfx 프리팹(Hovl "Snow Slash")은 Slash/Sparks/Snowflakes/Flash 4개 서브 파티클로
+    // 구성되고, 그중 가장 긴 startLifetime이 0.5초다(실측 확인) - 이보다 짧게 유지하면
+    // 눈송이/스파크가 자기 수명을 다 채우기도 전에 강제로 잘려서 제대로 안 쌓인 채 사라진다.
+    // swingDuration(0.15초)에 맞춰 유지하던 이전 값(0.075초)은 이 이펙트가 자라나기엔
+    // 턱없이 부족했다.
+    [SerializeField] private float slashVfxHoldDuration = 0.5f;
 
     [SerializeField] private string attackClipName = "Attack01_SwordAndShiled";
     // 클립을 이름으로 못 찾았을 때만 쓰는 대체값 - Attack01_SwordAndShiled의 클립 길이(FBX
@@ -119,20 +125,19 @@ public class WeaponSwing : MonoBehaviour
         if (slashVfx != null) slashVfx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
     }
 
-    // 블레이드 프롭 자체의 회전(SwingRoutine)에 타이밍을 맞춘다 - 슬래시는 블레이드가 최대로
-    // 뻗는 타격 순간에 나타나고, 블레이드가 원위치로 완전히 돌아오면 사라진다.
+    // 시작 타이밍은 블레이드 프롭 회전(SwingRoutine)에 맞춘다 - 슬래시는 블레이드가 최대로
+    // 뻗는 타격 순간에 나타난다. 근데 얼마나 오래 떠 있을지는 스윙 타이밍이 아니라 이
+    // 파티클 이펙트 자체의 수명(slashVfxHoldDuration)에 맞춰야 한다 - 스윙은 0.15초 만에
+    // 끝나지만 이 이펙트는 그보다 훨씬 오래(최대 0.5초) 재생돼야 제대로 보인다.
     private IEnumerator PlaySlashVfxAtImpact()
     {
-        // 한 번만 계산해서 지역 변수에 담아둔다 - AttackImpactDelay는 프로퍼티라 두 번
-        // 읽으면 같은 값을 두 번 계산하게 된다.
-        float impactDelay = AttackImpactDelay;
-
-        yield return new WaitForSeconds(impactDelay);
+        yield return new WaitForSeconds(AttackImpactDelay);
         slashVfx.Play(true);
 
-        // 스윙 전체 길이에서 타격까지 걸린 시간을 뺀 나머지 = 블레이드가 되돌아오는 시간.
-        yield return new WaitForSeconds(swingDuration - impactDelay);
-        slashVfx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        yield return new WaitForSeconds(slashVfxHoldDuration);
+        // Clear가 아니라 Emitting만 멈춘다 - 이미 튀어나온 파티클(수명 최대 0.5초)이
+        // 강제로 삭제되지 않고 자연스럽게 페이드되며 남은 수명을 마치게 한다.
+        slashVfx.Stop(true, ParticleSystemStopBehavior.StopEmitting);
         slashVfxRoutine = null;
     }
 
