@@ -20,8 +20,8 @@ public class MonsterSpawner : MonoBehaviour
 
     // "스테이지 2 이후 전부"가 아니라 정확히 스테이지 2 전용이다 - 스테이지 3은 세 번째 구성을
     // 새로 만들지 않고 의도적으로 스테이지 1의 보병을 다시 쓰며, 스테이지 3의 수치로만 싸우게 한다.
-    // 아래 GetNormalHp/GetNormalAttack이 mainStage로 값을 정하므로, 스테이지별 구성 작업 없이도
-    // 같은 프리팹이 스테이지 3의 HP/공격력을 갖고 등장한다.
+    // 아래 GetNormalHp/GetNormalAttack이 mainStage/subStage로 값을 정하므로, 스테이지별 구성
+    // 작업 없이도 같은 프리팹이 스테이지 3의 HP/공격력을 갖고 등장한다.
     private const int BirdRosterStage = 2;
 
     private static bool UsesBirdRoster(int mainStage) => mainStage == BirdRosterStage;
@@ -49,17 +49,22 @@ public class MonsterSpawner : MonoBehaviour
     [SerializeField] private float bossHpMultiplier = 3f;
 
     [Header("Attack curve")]
-    // 공격력은 메인 스테이지만 따르므로 한 스테이지의 모든 서브스테이지가 같은 세기로 공격한다.
-    // 엘리트/보스는 그 스테이지 일반 몬스터 공격력의 배수일 뿐이다.
-    [SerializeField] private float eliteAttackMultiplier = 2f;
-    [SerializeField] private float bossAttackMultiplier = 5f;
+    // 공격력도 HP와 같은 서브스테이지 곡선을 따른다 - 한 메인 스테이지 안에서도 서브스테이지가
+    // 오를수록 세진다. 엘리트는 그 값의 배수, 보스는 HP처럼 직전 엘리트 공격력의 배수다.
+    [SerializeField] private float eliteAttackMultiplier = 5f;
+    [SerializeField] private float bossAttackMultiplier = 1.5f;
 
-    // 서브스테이지별 HP 곡선에 대한 단일 진실 공급원(single source of truth)으로,
+    // 서브스테이지별 HP/공격력 곡선에 대한 단일 진실 공급원(single source of truth)으로,
     // 엘리트/보스 배수는 항상 해당 스테이지의 일반 몬스터가 실제로 갖는 값을 기준으로 한다.
-    public static float GetNormalHp(int mainStage, int subStage) => (mainStage - 1) * 10 + subStage;
+    // 메인 스테이지당 실제 일반 서브스테이지 개수(StageManager.BossSubStage - 1)만큼만 칸을
+    // 예약해서, 클리어 순서 그대로 1씩 오른다 - 1-1=1, 1-2=2, 2-1=3, 2-2=4, 3-1=5, ...
+    // (BossSubStage가 바뀌면 이 칸 수도 자동으로 같이 바뀐다.)
+    private static float GetNormalValue(int mainStage, int subStage) => (mainStage - 1) * (StageManager.BossSubStage - 1) + subStage;
 
-    // 공격력도 마찬가지다: 스테이지 1의 일반 몬스터는 1의 피해를, 스테이지 2는 2를 주는 식이다.
-    public static float GetNormalAttack(int mainStage) => mainStage;
+    public static float GetNormalHp(int mainStage, int subStage) => GetNormalValue(mainStage, subStage);
+
+    // HP와 동일한 곡선.
+    public static float GetNormalAttack(int mainStage, int subStage) => GetNormalValue(mainStage, subStage);
 
     public Monster SpawnNormal(int mainStage, int subStage)
     {
@@ -72,7 +77,7 @@ public class MonsterSpawner : MonoBehaviour
 
         Monster monster = SpawnOffscreen(def.prefab, 1f);
 
-        monster.Initialize(def.monsterType, GetNormalHp(mainStage, subStage), GetNormalAttack(mainStage), stageConfig.normalMonsterAttackInterval);
+        monster.Initialize(def.monsterType, GetNormalHp(mainStage, subStage), GetNormalAttack(mainStage, subStage), stageConfig.normalMonsterAttackInterval);
         monster.SetMovement(playerTransform, stageConfig.MonsterApproachSpeed, stageConfig.meleeRange);
 
         GameEvents.RaiseMonsterSpawned(monster);
@@ -91,7 +96,8 @@ public class MonsterSpawner : MonoBehaviour
         Monster monster = SpawnOffscreen(def.prefab, bossScale);
 
         float hp = GetEliteHp(mainStage, lastEliteSubStage) * bossHpMultiplier;
-        monster.Initialize(def.monsterType, hp, GetNormalAttack(mainStage) * bossAttackMultiplier);
+        float attack = GetEliteAttack(mainStage, lastEliteSubStage) * bossAttackMultiplier;
+        monster.Initialize(def.monsterType, hp, attack);
         monster.SetMovement(playerTransform, stageConfig.MonsterApproachSpeed, stageConfig.meleeRange);
 
         GameEvents.RaiseMonsterSpawned(monster);
@@ -110,7 +116,7 @@ public class MonsterSpawner : MonoBehaviour
         Monster monster = SpawnOffscreen(def.prefab, eliteScale);
 
         float hp = GetEliteHp(mainStage, subStage);
-        monster.Initialize(def.monsterType, hp, GetNormalAttack(mainStage) * eliteAttackMultiplier, stageConfig.normalMonsterAttackInterval);
+        monster.Initialize(def.monsterType, hp, GetEliteAttack(mainStage, subStage), stageConfig.normalMonsterAttackInterval);
         monster.SetMovement(playerTransform, stageConfig.MonsterApproachSpeed, stageConfig.meleeRange);
 
         GameEvents.RaiseMonsterSpawned(monster);
@@ -118,6 +124,7 @@ public class MonsterSpawner : MonoBehaviour
     }
 
     private float GetEliteHp(int mainStage, int subStage) => GetNormalHp(mainStage, subStage) * eliteHpMultiplier;
+    private float GetEliteAttack(int mainStage, int subStage) => GetNormalAttack(mainStage, subStage) * eliteAttackMultiplier;
 
     private Monster SpawnOffscreen(GameObject prefab, float scaleMultiplier)
     {

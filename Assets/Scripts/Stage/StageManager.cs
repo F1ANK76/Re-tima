@@ -17,11 +17,10 @@ public class StageManager : MonoBehaviour
     [SerializeField] private PlayerCharacter player;
     [SerializeField] private BossGaugeView bossGauge;
 
-    // 메인 스테이지 = 일반 서브스테이지 4개 + 보스(1-1..1-4, 1-5가 보스 조우). 원래 10이었으나
-    // 스테이지 하나에 약 100처치(일반 서브스테이지 9개 x 게이지를 채우는 10처치 + 엘리트/보스)가
-    // 필요해 진행이 아닌 노가다로 느껴져 줄였다. MonsterSpawner의 HP 곡선은 여전히 스테이지마다
-    // 10칸을 예약하지만((mainStage - 1) * 10 + subStage), subStage 5-9는 재배치 없이 안 쓸 뿐이다.
-    public const int BossSubStage = 5;
+    // 메인 스테이지 = 일반 서브스테이지 2개 + 보스(1-1..1-2, 1-3이 보스 조우). MonsterSpawner의
+    // HP/공격력 곡선(GetNormalHp/GetNormalAttack)이 이 값을 직접 참조해서 스테이지당 칸 수를
+    // 정하므로, 여길 바꾸면 그쪽도 자동으로 맞춰진다.
+    public const int BossSubStage = 3;
     private const int BossGaugePerKill = 10;
     private const int BossGaugeMax = 100;
 
@@ -44,11 +43,6 @@ public class StageManager : MonoBehaviour
     // 배너, 몬스터 사이의 딜레이) 뒤에 큐잉되므로, 이 값을 캡처해두고 더 이상 일치하지 않으면
     // 실행을 취소한다 - 없으면 대기 중 사망 시 이전 런의 몬스터가 새 스테이지에 떨어진다.
     private int stageGeneration;
-
-    // 플레이어가 실제로 클리어한 마지막 서브스테이지 - 사망하면 죽은 위치가 아니라 여기로
-    // 되돌아가므로, 잃는 것은 진행 중이던 시도뿐이다.
-    private int checkpointMainStage = 1;
-    private int checkpointSubStage = 1;
 
     private void OnEnable()
     {
@@ -80,7 +74,7 @@ public class StageManager : MonoBehaviour
     }
 
     // 사망 애니메이션이 끝날 때까지 씬의 모든 몬스터는 공격만 멈추고 제자리에 남는다(사망 보상도
-    // 진행도 없음) - 정리는 그 후 체크포인트 리스폰을 위해서만. 이 기간 플레이어는 무적이다:
+    // 진행도 없음) - 정리는 그 후 같은 서브스테이지를 다시 시작하기 위해서만. 이 기간 플레이어는 무적이다:
     // HP 2에서 스치는 한 방만 맞아도 재사망해, 아래 정리에 도달하기 전에 코루틴이 재시작된다.
     private void HandlePlayerDied()
     {
@@ -109,7 +103,7 @@ public class StageManager : MonoBehaviour
     {
         if (combatLoop != null) yield return combatLoop.PlayDeathSequence();
 
-        // 화면을 어둡게 하고 아래 체크포인트 되감기 전에 잠깐 "FAIL !"을 띄운다 - clearBanner처럼
+        // 화면을 어둡게 하고 아래에서 서브스테이지를 재시작하기 전에 잠깐 "FAIL !"을 띄운다 - clearBanner처럼
         // 발사 후 무시가 아니라 yield로 기다리므로, 페이드가 떠 있는 동안 재시작이 일어나지 않는다.
         if (failBanner != null) yield return failBanner.Play();
 
@@ -141,8 +135,10 @@ public class StageManager : MonoBehaviour
         // 여기서 정리해도 항상 안전하다.
         if (combatLoop != null) combatLoop.ClearIdleHold();
 
-        MainStage = checkpointMainStage;
-        SubStage = checkpointSubStage;
+        // 실패한 서브스테이지를 그대로 반복한다 - 다만 보스 조우(항상 마지막 서브스테이지) 도중의
+        // 사망만은 그 보스로 이어지는 직전 서브스테이지로 되돌린다, 클리어된 보스를 다시 붙잡고
+        // 있지 않도록.
+        if (SubStage == BossSubStage) SubStage = BossSubStage - 1;
         bossGaugePercent = 0;
         GameEvents.RaiseBossGaugeChanged(bossGaugePercent);
 
@@ -173,12 +169,6 @@ public class StageManager : MonoBehaviour
         {
             int clearedStage = MainStage;
 
-            // 체크포인트는 절대 보스 서브스테이지를 가리켜선 안 된다 - 보스는 일회성 조우이므로,
-            // 이후 어떤 사망이든(몇 메인 스테이지를 더 진행한 뒤라도) 클리어된 보스 재대결이 아니라
-            // 그 보스로 이어지는 마지막 일반 서브스테이지로 되돌아간다.
-            checkpointMainStage = MainStage;
-            checkpointSubStage = BossSubStage - 1;
-
             // 보스를 물리치면 항상 다음으로 진행한다. 마지막 제작 스테이지를 지나면 갈 곳이 없으므로,
             // 보스는 자신으로 이어지는 서브스테이지로 되돌아가 계속 파밍 가능한 상태로 남는다.
             if (MainStage >= MaxMainStage)
@@ -201,12 +191,9 @@ public class StageManager : MonoBehaviour
 
         if (monster.Type == MonsterType.Elite)
         {
-            // 엘리트는 일반 서브스테이지 노가다의 마무리 - 클리어가 곧 체크포인트이며 항상 다음
-            // 서브스테이지로 진행한다. 반면 사망은 같은 체크포인트로 되돌아가(HandlePlayerDied 참고)
-            // 전진이 아니라 현재 스테이지를 다시 플레이하게 만든다 - 넘어서는 방법은 클리어뿐이다.
-            checkpointMainStage = MainStage;
-            checkpointSubStage = SubStage;
-
+            // 엘리트는 일반 서브스테이지 노가다의 마무리 - 클리어하면 항상 다음 서브스테이지로
+            // 진행한다. 반면 사망은 같은 서브스테이지를 다시 반복하게 만든다(HandlePlayerDied
+            // 참고) - 넘어서는 방법은 클리어뿐이다.
             bossGaugePercent = 0;
             GameEvents.RaiseBossGaugeChanged(BossGaugeMax);
 
@@ -381,10 +368,6 @@ public class StageManager : MonoBehaviour
 
         MainStage = Mathf.Clamp(mainStage, 1, MaxMainStage);
         SubStage = Mathf.Clamp(subStage, 1, BossSubStage);
-        // 점프 시 체크포인트도 함께 설정되므로, 테스트 중 사망해도 실제 런의 마지막 체크포인트가
-        // 아니라 점프해 들어온 스테이지로 되돌아간다.
-        checkpointMainStage = MainStage;
-        checkpointSubStage = SubStage == BossSubStage ? BossSubStage - 1 : SubStage;
 
         bossGaugePercent = 0;
         GameEvents.RaiseBossGaugeChanged(bossGaugePercent);
