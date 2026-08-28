@@ -11,7 +11,7 @@ public class ParryManager : MonoBehaviour
     [SerializeField] private Text cooldownText;
     [SerializeField] private WeaponSwing weaponSwing;
     [SerializeField] private PlayerCharacter player;
-    [SerializeField] private ParrySuccessEffect parrySuccessVfx;
+    [SerializeField] private ParryShieldEffect parrySuccessVfx;
     [SerializeField] private ParticleSystem teleportVfx;
     [SerializeField] private CombatLoop combatLoop;
 
@@ -115,8 +115,9 @@ public class ParryManager : MonoBehaviour
         Animator animator = weaponSwing != null ? weaponSwing.CharacterAnimator : null;
         if (animator != null) animator.Play(PlayerAnimStates.Defend, 0, 0f);
 
-        // 방패 이펙트 자체의 지속 시간이 패링 윈도우와 정확히 일치하므로, 성공 여부와
-        // 상관없이 시도 전체 동안 계속 떠 있는다.
+        // 방패 이펙트는 성공 여부와 무관하게 시도하는 순간 바로 뜬다. 자체 지속 시간
+        // (0.8초)이 패링 윈도우(0.5초)보다 살짝 길어서, 판정이 끝난 뒤에도 잠깐 남아있다가
+        // 사라진다 - 의도적인 여유이며, 실제 성공/실패 판정과는 무관하다.
         if (parrySuccessVfx != null) parrySuccessVfx.Show();
 
         yield return new WaitForSeconds(ParryWindowDuration);

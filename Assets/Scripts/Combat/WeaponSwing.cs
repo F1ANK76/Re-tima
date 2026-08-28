@@ -12,10 +12,14 @@ public class WeaponSwing : MonoBehaviour
     [SerializeField] private string attackClipName = "Attack01_SwordAndShiled";
     // 클립을 이름으로 못 찾았을 때만 쓰는 대체값 - Attack01_SwordAndShiled의 클립 길이(FBX
     // 임포트 데이터 기준 30fps에서 0-16 프레임)와 일치.
-    [SerializeField] private float attackImpactDelayFallback = 16f / 30f;
-    // 공격 애니메이션이 타격을 적중시키기까지의 시간. attackClipName 클립을 찾으면 매번 실제
-    // clip.length를 그대로 쓰므로, 클립이 바뀌어도 이 값이 따로 어긋나지 않는다.
-    public float AttackImpactDelay => ResolveClipLength(attackClipName, attackImpactDelayFallback);
+    [SerializeField] private float attackClipLengthFallback = 16f / 30f;
+
+    // 검 프롭이 실제로 최대로 뻗는 시점(스윙 절반 지점)을 타격 순간으로 삼는다. 플레이어가
+    // 실제로 보는 건 스켈레톤 애니메이션(Attack01 클립, 0.53초)이 아니라 이 코드 스윙
+    // (SwingRoutine, swingDuration=0.15초)이므로, 데미지/슬래시 타이밍은 클립 길이가 아니라
+    // 이 스윙 자체에 맞춰야 한다 - 예전엔 클립 길이를 그대로 썼는데, 실제 스윙은 그보다
+    // 훨씬 먼저 끝나버려서 눈에 보이는 동작이 끝난 뒤 한참 지나서야 데미지가 들어갔다.
+    public float AttackImpactDelay => swingDuration * 0.5f;
 
     // SwordAndShieldStance.controller의 Attack01 -> Idle 전환 설정 그대로다: 클립의 이 지점에서
     // 전환이 시작되어, 이만큼의 시간에 걸쳐 블렌딩된다. 둘 다 컨트롤러의 전환(Transition) 자체에
@@ -24,11 +28,11 @@ public class WeaponSwing : MonoBehaviour
     private const float AttackToIdleExitTime = 0.9f;
     private const float IdleBlendDuration = 0.15f;
 
-    // Attack01이 끝나고 Idle로 블렌딩되어 돌아오기까지의 총 시간 - 이 전에 재트리거하면 스윙이
-    // 애니메이션 도중에 잘린다(더 빠른 재트리거는 시각적으로만 무시되고 공격 틱/데미지 타이밍에는
-    // 영향 없음). 곱해지는 클립 길이는 위의 AttackImpactDelay를 그대로 써서, 클립이 바뀌면 그
-    // 부분만큼은 자동으로 따라간다.
-    private float AttackAnimSettleDuration => AttackToIdleExitTime * AttackImpactDelay + IdleBlendDuration;
+    // Attack01 스켈레톤 클립이 Idle로 블렌딩되어 돌아오기까지의 총 시간 - 이 전에 재트리거하면
+    // 스켈레톤 애니메이션이 도중에 끊긴다(더 빠른 재트리거는 시각적으로만 무시되고 공격 틱/데미지
+    // 타이밍에는 영향 없음). 위의 AttackImpactDelay(시각적 타격 타이밍)와는 별개 개념이라, 여기는
+    // 실제 클립 길이를 그대로 읽어온다.
+    private float AttackAnimSettleDuration => AttackToIdleExitTime * ResolveClipLength(attackClipName, attackClipLengthFallback) + IdleBlendDuration;
 
     private float nextAnimTriggerAllowedTime;
 
@@ -115,18 +119,19 @@ public class WeaponSwing : MonoBehaviour
         if (slashVfx != null) slashVfx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
     }
 
-    // 블레이드 프롭 자체의 빠른 회전이 아니라 애니메이션과 동일한 클립 데이터에 타이밍을 맞춘다 -
-    // 슬래시는 블레이드가 실제로 닿는 순간 나타나고, 공격 애니메이션이 Idle로 정착을 마치면 사라진다.
+    // 블레이드 프롭 자체의 회전(SwingRoutine)에 타이밍을 맞춘다 - 슬래시는 블레이드가 최대로
+    // 뻗는 타격 순간에 나타나고, 블레이드가 원위치로 완전히 돌아오면 사라진다.
     private IEnumerator PlaySlashVfxAtImpact()
     {
-        // 한 번만 계산해서 지역 변수에 담아둔다 - AttackImpactDelay는 매번 클립 목록을
-        // 다시 훑는 프로퍼티라, 여기서 두 번 읽으면 같은 값을 두 번 계산하게 된다.
+        // 한 번만 계산해서 지역 변수에 담아둔다 - AttackImpactDelay는 프로퍼티라 두 번
+        // 읽으면 같은 값을 두 번 계산하게 된다.
         float impactDelay = AttackImpactDelay;
 
         yield return new WaitForSeconds(impactDelay);
         slashVfx.Play(true);
 
-        yield return new WaitForSeconds(AttackAnimSettleDuration - impactDelay);
+        // 스윙 전체 길이에서 타격까지 걸린 시간을 뺀 나머지 = 블레이드가 되돌아오는 시간.
+        yield return new WaitForSeconds(swingDuration - impactDelay);
         slashVfx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         slashVfxRoutine = null;
     }
