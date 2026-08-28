@@ -22,17 +22,25 @@ public class StageProgressView : MonoBehaviour
     [SerializeField] private float lineThickness = 3f;
     [SerializeField] private float arrowOffsetY = 16f;
 
+    // 현재 위치 점이 "여기 있다"고 반짝이는 정도 - 크기를 사인파로 흔든다.
+    [SerializeField] private float pulseSpeed = 3f;
+    [SerializeField] private float pulseScaleAmount = 0.18f;
+
     private static readonly Color TrackColor = new Color(0.32f, 0.32f, 0.38f);
     private static readonly Color FutureDotColor = new Color(0.32f, 0.32f, 0.38f);
-    private static readonly Color CompletedDotColor = new Color(0.85f, 0.85f, 0.9f);
-    private static readonly Color CurrentDotColor = new Color(0.68f, 0.58f, 1f);
-    // 보스 점은 완료/현재/미래와 무관하게 항상 빨강/주황 쪽 - 다른 네 점이 쓰는 상태 색과
+    // 지나온 위치 = 연두색, 현재 위치 = 하늘색.
+    private static readonly Color CompletedDotColor = new Color(0.6f, 0.93f, 0.32f);
+    private static readonly Color CurrentDotColor = new Color(0.3f, 0.75f, 1f);
+    // 보스 점은 완료/현재/미래와 무관하게 항상 빨강 쪽 - 다른 네 점이 쓰는 상태 색과
     // 상관없이 "이 자리가 보스"라는 걸 한눈에 알아보게 하는 게 요점이다.
-    private static readonly Color BossFutureColor = new Color(0.55f, 0.26f, 0.18f);
-    private static readonly Color BossReadyColor = new Color(1f, 0.45f, 0.15f);
+    private static readonly Color BossFutureColor = new Color(0.5f, 0.12f, 0.12f);
+    private static readonly Color BossReadyColor = new Color(0.95f, 0.15f, 0.15f);
 
     private Font font;
     private readonly Image[] dots = new Image[DotCount];
+    // 점 사이 구간 하나하나 - segments[i]는 dots[i]와 dots[i+1] 사이를 잇는다. 이걸 하나의
+    // 통짜 트랙 대신 구간별로 나눠서, 클리어한 구간만 따로 연두색으로 물들일 수 있게 한다.
+    private readonly Image[] segments = new Image[DotCount - 1];
     private RectTransform arrowRect;
     private readonly float[] dotX = new float[DotCount];
 
@@ -60,10 +68,30 @@ public class StageProgressView : MonoBehaviour
     private void Update()
     {
         bool bannerVisible = banner != null && banner.gameObject.activeSelf;
-        if (bannerVisible == bannerWasVisible) return;
+        if (bannerVisible != bannerWasVisible)
+        {
+            bannerWasVisible = bannerVisible;
+            canvasGroup.alpha = bannerVisible ? 0f : 1f;
+        }
 
-        bannerWasVisible = bannerVisible;
-        canvasGroup.alpha = bannerVisible ? 0f : 1f;
+        // 배너에 가려져 있는 동안은 안 보이니 애니메이션을 돌릴 이유가 없다.
+        if (!bannerVisible) PulseCurrentDot();
+    }
+
+    // 현재 위치 점만 크기를 사인파로 흔들어서 "지금 여기 있다"는 걸 계속 눈에 띄게 한다 - 알파는
+    // 항상 1로 고정한다. 알파까지 같이 낮추면 점이 작아지는 순간(가장자리가 반투명해지는 원 스프라이트
+    // 특성과 겹쳐) 밑에 깔린 트랙 세그먼트 선이 원 안에 비쳐 보였다.
+    private void PulseCurrentDot()
+    {
+        int index = currentSubStage - 1;
+        if (index < 0 || index >= DotCount) return;
+
+        Image dot = dots[index];
+        bool isBoss = currentSubStage == DotCount;
+        float baseScale = isBoss ? bossDotScale : currentDotScale;
+
+        float wave = Mathf.Sin(Time.unscaledTime * pulseSpeed);
+        dot.rectTransform.localScale = Vector3.one * (baseScale + wave * pulseScaleAmount);
     }
 
     private void HandleStageChanged(int mainStage, int subStage)
@@ -80,22 +108,32 @@ public class StageProgressView : MonoBehaviour
         if (rt == null) rt = gameObject.AddComponent<RectTransform>();
         rt.sizeDelta = new Vector2(trackWidth + dotSize, 40f);
 
-        // 배경 트랙 - 모든 점이 그 위에 그려지도록 가장 먼저 추가한다.
-        var line = new GameObject("Track", typeof(RectTransform));
-        line.transform.SetParent(transform, false);
-        var lineRt = line.GetComponent<RectTransform>();
-        lineRt.anchorMin = new Vector2(0.5f, 0.5f);
-        lineRt.anchorMax = new Vector2(0.5f, 0.5f);
-        lineRt.pivot = new Vector2(0.5f, 0.5f);
-        lineRt.anchoredPosition = Vector2.zero;
-        lineRt.sizeDelta = new Vector2(trackWidth, lineThickness);
-        line.AddComponent<Image>().color = TrackColor;
-
         float step = trackWidth / (DotCount - 1);
         for (int i = 0; i < DotCount; i++)
         {
             dotX[i] = -trackWidth * 0.5f + i * step;
+        }
 
+        // 점 사이 구간을 하나의 통짜 트랙이 아니라 개별 세그먼트로 깐다 - 점보다 먼저 추가해서
+        // 항상 점 밑에 깔리고, 나중에 Refresh에서 구간별로 색을 따로 칠할 수 있다.
+        for (int i = 0; i < segments.Length; i++)
+        {
+            var segGo = new GameObject("Segment" + (i + 1), typeof(RectTransform));
+            segGo.transform.SetParent(transform, false);
+            var segRt = segGo.GetComponent<RectTransform>();
+            segRt.anchorMin = new Vector2(0.5f, 0.5f);
+            segRt.anchorMax = new Vector2(0.5f, 0.5f);
+            segRt.pivot = new Vector2(0.5f, 0.5f);
+            segRt.anchoredPosition = new Vector2((dotX[i] + dotX[i + 1]) * 0.5f, 0f);
+            segRt.sizeDelta = new Vector2(dotX[i + 1] - dotX[i], lineThickness);
+
+            var segImage = segGo.AddComponent<Image>();
+            segImage.color = TrackColor;
+            segments[i] = segImage;
+        }
+
+        for (int i = 0; i < DotCount; i++)
+        {
             var dotGo = new GameObject("Dot" + (i + 1), typeof(RectTransform));
             dotGo.transform.SetParent(transform, false);
             var dotRt = dotGo.GetComponent<RectTransform>();
@@ -145,6 +183,14 @@ public class StageProgressView : MonoBehaviour
 
             float scale = isBoss ? bossDotScale : (current ? currentDotScale : 1f);
             dots[i].rectTransform.localScale = Vector3.one * scale;
+        }
+
+        // 세그먼트 i는 (i+1)번 점과 (i+2)번 점을 잇는다 - 오른쪽 점에 도착한 순간(그 점이 완료든
+        // 현재 위치든) 그 구간은 이미 지나온 길이므로 바로 연두색으로 물든다.
+        for (int i = 0; i < segments.Length; i++)
+        {
+            int rightStage = i + 2;
+            segments[i].color = currentSubStage >= rightStage ? CompletedDotColor : TrackColor;
         }
 
         if (arrowRect != null)
