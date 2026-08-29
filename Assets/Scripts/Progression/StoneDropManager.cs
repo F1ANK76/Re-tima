@@ -73,10 +73,10 @@ public class StoneDropManager : MonoBehaviour
             if (player == null || player.Stats.IsDead) yield break;
 
             StoneDropPickup stone = Instantiate(stonePrefab, position, Quaternion.identity);
-            // 몬스터가 걸어 들어오는 속도와 동일하게 맞춰서, 형제 픽업 두 종류 모두와 일치시켜
-            // 모든 드롭 타입이 같은 전진 이동으로 보이게 한다.
+            // 몬스터가 걸어 들어오는 속도(MonsterSpawner.ApproachSpeed)와 동일하게 맞춘다 - 그래야 몬스터가
+            // 스톤을 추월하는 일 없이 같은 속도로 나란히 딸려온다.
             stone.Initialize(statType, player.transform, combatLoop,
-                stageConfig != null ? stageConfig.monsterMoveSpeed : 0f, this, i * TrailSpacing);
+                stageConfig != null ? MonsterSpawner.ApproachSpeed : 0f, this, i * TrailSpacing);
 
             if (i < count - 1) yield return new WaitForSeconds(SpawnStagger);
         }

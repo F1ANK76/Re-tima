@@ -35,7 +35,7 @@ public class StatPotionPickup : MonoBehaviour
     // 이게 없으면 player가 null이거나 도달 불가능할 때 물약이 영원히 미끄러지게 된다.
     [SerializeField] private float approachTimeout = 6f;
 
-    // StatDropManager가 StageConfigSO.monsterMoveSpeed로 설정한다 - 몬스터가 걸어 들어오는
+    // StatDropManager가 MonsterSpawner.ApproachSpeed로 설정한다 - 몬스터가 걸어 들어오는
     // 것과 같은 속도여야 한다. 다르면 플레이어가 두 가지 속도로 달리는 것처럼 보인다.
     private float approachSpeed = 5f;
 

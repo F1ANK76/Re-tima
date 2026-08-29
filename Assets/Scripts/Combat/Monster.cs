@@ -158,6 +158,13 @@ public class Monster : MonoBehaviour
     // WeaponSwing 보고 지연값도 없는 몬스터의 임팩트 지연 대체값으로도 쓰인다.
     [SerializeField] private float fallbackAttackImpactDelay = 0.3f;
     [SerializeField] private float deathAnimDuration = 1f;
+    private const float ShrinkDestroyDuration = 0.4f;
+
+    // 이 몬스터의 사체가 실제로 화면에서 사라지기까지 걸리는 시간 - Animator가 있으면
+    // Die 클립 길이(deathAnimDuration), 없으면 ShrinkAndDestroy의 축소 연출 길이를 그대로
+    // 반영한다. StageManager가 다음 스폰 딜레이를 여기에 맞춰서, 사체가 사라지는 순간과
+    // 다음 몬스터 등장이 겹치지 않는다.
+    public float DeathVisualDuration => CharacterAnimator != null ? deathAnimDuration : ShrinkDestroyDuration;
 
     // 공격력이 아무리 높아도(즉사여도) 플레이어가 최소 한 대는 맞아야 한다는 디자인 규칙 -
     // 그래서 일반 몬스터의 타격 판정은 플레이어의 타격 판정(AttackImpactDelay)보다 이 여유만큼
@@ -182,9 +189,15 @@ public class Monster : MonoBehaviour
 
     // 플레이어가 죽었을 때, 몬스터를 파괴하지 않고 공격 루프만 멈춘다 - 전투 도중 사라지거나
     // 쓰러진 플레이어를 계속 때리는 대신 죽음 애니메이션 동안 가만히 서 있게 된다.
+    //
+    // bossLoopStarted/normalLoopStarted도 함께 꺼야 한다 - 안 그러면 이 몬스터가 죽음 시퀀스
+    // 이후 파괴되지 않고 살아남는 경우(재시작 코루틴이 겹친 죽음으로 끊기는 등) Update()가
+    // HasArrived 진입 순간에만 루프를 시작하는 구조라 영원히 다시 공격하지 못하게 된다.
     public void StopAttacking()
     {
         StopAllCoroutines();
+        bossLoopStarted = false;
+        normalLoopStarted = false;
     }
 
     public void PlayAttackAnimation()
@@ -211,38 +224,46 @@ public class Monster : MonoBehaviour
 
     private void Update()
     {
-        if (HasArrived || moveTarget == null) return;
+        if (moveTarget == null) return;
 
-        Vector3 toTarget = moveTarget.position - transform.position;
-        toTarget.y = 0f;
-
-        if (toTarget.magnitude <= stoppingDistance)
+        if (!HasArrived)
         {
+            Vector3 toTarget = moveTarget.position - transform.position;
+            toTarget.y = 0f;
+
+            if (toTarget.magnitude > stoppingDistance)
+            {
+                transform.position += toTarget.normalized * moveSpeed * Time.deltaTime;
+                transform.forward = toTarget.normalized;
+                return;
+            }
+
             HasArrived = true;
             CharacterAnimator?.SetBool(AnimParams.IsMoving, false);
-
-            // 엘리트와 보스는 둘 다 패링 결투로 싸운다: 예고 동작을 보인 뒤 타격한다.
-            // 일반 몬스터는 그냥 고정된 타이머로 서로 타격을 주고받는다.
-            if (!bossLoopStarted && (Type == MonsterType.Boss || Type == MonsterType.Elite))
-            {
-                bossLoopStarted = true;
-                StartCoroutine(TelegraphAttackLoop());
-
-                // 보스 전용: 엘리트도 위 텔레그래프 결투는 공유하지만 게이지로 충전되는
-                // 강타는 아니다 - 그건 보스 전투만의 고유한 상승 요소로 남는다.
-                if (Type == MonsterType.Boss) StartCoroutine(UltimateChargeLoop());
-            }
-            else if (!normalLoopStarted && Type == MonsterType.Normal)
-            {
-                normalLoopStarted = true;
-                StartCoroutine(NormalAttackLoop());
-            }
-
-            return;
         }
 
-        transform.position += toTarget.normalized * moveSpeed * Time.deltaTime;
-        transform.forward = toTarget.normalized;
+        // "방금 도착한 프레임"만이 아니라 도착한 뒤 매 프레임 재확인한다 - StopAttacking()
+        // 이후에도 파괴되지 않고 살아남는 몬스터가(죽음 시퀀스 코루틴이 겹쳐 끊기는 등) 다시는
+        // 공격을 시작 못 하는 일이 없도록, 플레이어가 무적(죽음 시퀀스 중)이 아닌 한 멈춰있던
+        // 루프를 스스로 재시작하게 한다.
+        if (Player != null && Player.IsInvulnerable) return;
+
+        // 엘리트와 보스는 둘 다 패링 결투로 싸운다: 예고 동작을 보인 뒤 타격한다.
+        // 일반 몬스터는 그냥 고정된 타이머로 서로 타격을 주고받는다.
+        if (!bossLoopStarted && (Type == MonsterType.Boss || Type == MonsterType.Elite))
+        {
+            bossLoopStarted = true;
+            StartCoroutine(TelegraphAttackLoop());
+
+            // 보스 전용: 엘리트도 위 텔레그래프 결투는 공유하지만 게이지로 충전되는
+            // 강타는 아니다 - 그건 보스 전투만의 고유한 상승 요소로 남는다.
+            if (Type == MonsterType.Boss) StartCoroutine(UltimateChargeLoop());
+        }
+        else if (!normalLoopStarted && Type == MonsterType.Normal)
+        {
+            normalLoopStarted = true;
+            StartCoroutine(NormalAttackLoop());
+        }
     }
 
     // 리그/Animator도, 휘두를 WeaponSwing 검도 없는 모델을 위한 대체 공격 연출 -
@@ -277,7 +298,7 @@ public class Monster : MonoBehaviour
     private IEnumerator ShrinkAndDestroy()
     {
         Vector3 startScale = transform.localScale;
-        float duration = 0.4f;
+        float duration = ShrinkDestroyDuration;
 
         float t = 0f;
         while (t < duration)

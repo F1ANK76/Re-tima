@@ -27,20 +27,13 @@ public class StageConfigSO : ScriptableObject
 
 
     [Header("Monster Movement")]
-    // 월드의 이동 속도이며 의도적으로 공유된다: 스탯 포션/장비 픽업의 유인 속도, GroundScroller/
-    // BackdropScroller의 스크롤 속도가 모두 여기서 파생되어 플레이어가 걷는 것처럼 보이는 바로 그
-    // 속도로 지면이 흐른다. 바꾸면 이 모든 게 함께 재조정되는 것이 의도이므로, 뒤집어 말하면
-    // "몬스터가 더 빨리 도착하게" 하려고 만지는 값은 아니다.
-    public float monsterMoveSpeed = 2f;
-    // 몬스터가 걸어 들어오는 속도에만 적용되는, 위 속도에 대한 배율. 몬스터 접근은 죽은 시간
-    // (플레이어는 전투 시작을 기다릴 뿐)이지만 픽업 유인과 지면 스크롤은 "앞으로 걷고 있다"는 착각을
-    // 만드므로 분리했다 - 몬스터를 빠르게 한다고 포션이 두 배로 딸려오거나 지면이 걷는 속도와
-    // 어긋나서는 안 된다.
-    public float monsterApproachMultiplier = 2f;
+    // 몬스터가 화면 밖 스폰 지점에서 근접 사거리(meleeRange)까지 걸어오는 데 걸려야 하는 시간.
+    // 실제 속도(MonsterSpawner.ApproachSpeed 참고)는 이 시간과 씬의 실제 스폰~플레이어 거리로부터
+    // 역산되므로, 스폰 지점이나 플레이어 마커를 옮겨도 이 값은 그대로 "도달까지 걸리는 시간"으로
+    // 유지된다.
+    public float monsterApproachDuration = 1f;
+    // MonsterSpawner가 몬스터를 화면 밖으로 스폰시키는, 스폰 지점 기준 추가 거리.
+    public float offscreenSpawnDistance = 8f;
     public float meleeRange = 1.3f;
-
-    // MonsterSpawner가 실제로 몬스터에게 전달하는 값. 세 곳의 개별 스폰 호출 지점에서 두 필드가
-    // 서로 어긋나는 일이 없도록 프로퍼티로 유지한다.
-    public float MonsterApproachSpeed => monsterMoveSpeed * monsterApproachMultiplier;
 
 }

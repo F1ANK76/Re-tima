@@ -1,6 +1,8 @@
 # Only the C# gameplay scripts are tracked in this repo - everything else
 # (Unity's generated caches, imported/third-party art assets, build output)
-# is excluded so the repo stays to source code only.
+# is excluded so the repo stays to source code only. docs/ is the one
+# exception: it holds the gameplay captures the README embeds, which have to
+# live in the repo for the README to render them.
 
 # Ignore everything at the root by default...
 /*
@@ -8,6 +10,7 @@
 # ...except the things we actually want to track.
 !/.gitignore
 !/README.md
+!/docs/
 !/Assets/
 /Assets/*
 !/Assets/Scripts/

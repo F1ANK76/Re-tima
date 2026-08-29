@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class StageManager : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class StageManager : MonoBehaviour
     [SerializeField] private StageBannerView banner;
     [SerializeField] private ClearBannerView clearBanner;
     [SerializeField] private FailBannerView failBanner;
+    [SerializeField] private GameCompleteView gameCompleteView;
     // 없으면 런은 씬이 시작되는 순간 바로 시작된다 - 플레이 모드 테스트나
     // 메뉴가 없는 씬에서 기대하는 동작이 바로 이것이다.
     [SerializeField] private TitleScreenView titleScreen;
@@ -24,10 +26,10 @@ public class StageManager : MonoBehaviour
     private const int BossGaugePerKill = 10;
     private const int BossGaugeMax = 100;
 
-    // 콘텐츠는 여기서 끝난다. 마지막 스테이지 보스를 클리어하면 몬스터 구성이 없는 스테이지로
-    // 가는 대신 직전 서브스테이지로 되돌아가므로 런이 막다른 길에 빠지지 않는다
-    // (3-4 -> 3-5 보스 -> 3-4 -> ...).
-    public const int MaxMainStage = 3;
+    // itch.io 1차 출시 범위 - 스테이지 3(스톤 시스템 해금)은 아직 제대로 즐길 만큼의 콘텐츠가
+    // 갖춰지지 않아 다음 업데이트로 미뤄뒀다. 이 값을 클리어하면 다음 스테이지 대신 종료 화면
+    // (GameCompleteView)이 뜬다.
+    public const int MaxMainStage = 2;
 
     // 이 스테이지의 보스를 물리치는 것이 플레이어의 궁극기를 해금하는 조건이므로
     // (UltimateManager 참고), 이 클리어에는 평소보다 추가 연출이 붙는다.
@@ -38,6 +40,10 @@ public class StageManager : MonoBehaviour
 
     private int bossGaugePercent;
     private Monster currentMonster;
+
+    // 실제 플레이가 시작된 시점(타이틀 화면이 있으면 Play를 누른 순간) - 3-3(최종 보스) 클리어
+    // 배너에 띄우는 "걸린 시간"의 기준점이다.
+    private float runStartTime;
 
     // 스테이지 런이 시작될 때마다 증가한다. 스폰은 자신을 예약한 런보다 오래 사는 대기(스테이지
     // 배너, 몬스터 사이의 딜레이) 뒤에 큐잉되므로, 이 값을 캡처해두고 더 이상 일치하지 않으면
@@ -64,8 +70,16 @@ public class StageManager : MonoBehaviour
 
         // 메뉴는 Play를 누를 때까지 런을 붙잡아둔다; 그 후 첫 스테이지 배너가
         // 메뉴 아래에서 나타나고 메뉴는 그 안으로 서서히 사라진다.
-        if (titleScreen != null) titleScreen.Show(ShowBannerThenSpawn);
-        else ShowBannerThenSpawn();
+        if (titleScreen != null) titleScreen.Show(BeginRun);
+        else BeginRun();
+    }
+
+    // 클리어 타임의 기준점은 씬이 로드된 순간이 아니라 실제로 플레이가 시작되는 순간이어야
+    // 한다 - 타이틀 화면에 얼마나 머물렀는지는 "깨는 데 걸린 시간"에 포함되면 안 된다.
+    private void BeginRun()
+    {
+        runStartTime = Time.time;
+        ShowBannerThenSpawn();
     }
 
     private void HandleMonsterSpawned(Monster monster)
@@ -168,10 +182,12 @@ public class StageManager : MonoBehaviour
         if (monster.Type == MonsterType.Boss)
         {
             int clearedStage = MainStage;
+            // 지금 제작된 콘텐츠는 여기서 끝난다 - 다음 스테이지로 넘기는 대신 종료 화면을 띄운다.
+            bool isFinalClear = clearedStage >= MaxMainStage;
 
             // 보스를 물리치면 항상 다음으로 진행한다. 마지막 제작 스테이지를 지나면 갈 곳이 없으므로,
             // 보스는 자신으로 이어지는 서브스테이지로 되돌아가 계속 파밍 가능한 상태로 남는다.
-            if (MainStage >= MaxMainStage)
+            if (isFinalClear)
             {
                 SubStage = BossSubStage - 1;
             }
@@ -183,9 +199,17 @@ public class StageManager : MonoBehaviour
 
             bossGaugePercent = 0;
             GameEvents.RaiseBossGaugeChanged(bossGaugePercent);
-            // 코루틴 실행 전에 미리 캡처한다: 위에서 MainStage가 이미 진행됐으므로, 판단 기준은
-            // 현재 위치가 아니라 방금 클리어한 스테이지여야 한다.
-            StartCoroutine(PlayVictoryThenShowBanner(clearedStage == SkillUnlockStage));
+
+            if (isFinalClear)
+            {
+                StartCoroutine(PlayVictoryThenShowGameComplete());
+            }
+            else
+            {
+                // 코루틴 실행 전에 미리 캡처한다: 위에서 MainStage가 이미 진행됐으므로, 판단 기준은
+                // 현재 위치가 아니라 방금 클리어한 스테이지여야 한다.
+                StartCoroutine(PlayVictoryThenShowBanner(clearedStage == SkillUnlockStage));
+            }
             return;
         }
 
@@ -213,7 +237,7 @@ public class StageManager : MonoBehaviour
             return;
         }
 
-        StartCoroutine(SpawnNormalAfterDelay());
+        StartCoroutine(SpawnNormalAfterDelay(monster.DeathVisualDuration));
     }
 
     // 처치와 다음 배너/스폰 사이에 대기시켜서, 다음 조우를 향해 이미 포즈
@@ -242,10 +266,29 @@ public class StageManager : MonoBehaviour
     // 대략적인 시간.
     private const float SkillUnlockBannerHold = 1.1f;
 
-    private IEnumerator SpawnNormalAfterDelay()
+    // 최종 보스(MaxMainStage) 클리어 전용 - 다음 스테이지 배너 대신 종료 화면으로 이어진다.
+    private IEnumerator PlayVictoryThenShowGameComplete()
+    {
+        if (clearBanner != null) clearBanner.Show();
+
+        if (combatLoop != null) yield return combatLoop.PlayVictorySequence();
+
+        float elapsedSeconds = Time.time - runStartTime;
+        if (gameCompleteView != null) gameCompleteView.Show(elapsedSeconds, HandleRestartRequested);
+    }
+
+    // 개별 매니저(장비/스톤/스탯/게이지 등)를 하나씩 손으로 되돌리는 대신 씬을 통째로 다시
+    // 로드한다 - "1-1부터 초기화 상태"를 보장하는 가장 확실한 방법이고, 새로 추가되는 진행
+    // 상태가 생겨도 여기 손댈 필요가 없다.
+    private void HandleRestartRequested()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    private IEnumerator SpawnNormalAfterDelay(float delay)
     {
         int generation = stageGeneration;
-        yield return new WaitForSeconds(nextMonsterDelay);
+        yield return new WaitForSeconds(delay);
         if (generation != stageGeneration) yield break;
 
         spawner.SpawnNormal(MainStage, SubStage);

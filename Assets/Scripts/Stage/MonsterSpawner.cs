@@ -24,6 +24,32 @@ public class MonsterSpawner : MonoBehaviour
     // 작업 없이도 같은 프리팹이 스테이지 3의 HP/공격력을 갖고 등장한다.
     private const int BirdRosterStage = 2;
 
+    // 몬스터(그리고 몬스터와 같은 속도로 끌려오는 스탯 포션/장비/스톤 픽업)가 실제로 쓰는 속도.
+    // 씬에 배치된 spawnPoint/playerTransform의 실제 위치로부터 역산하므로, 두 마커 사이의 간격이
+    // (지금 씬처럼) offscreenSpawnDistance와 다르더라도 "스폰부터 도달까지 monsterApproachDuration초"가
+    // 항상 정확히 지켜진다.
+    public static float ApproachSpeed { get; private set; }
+
+    private void Awake()
+    {
+        ApproachSpeed = ComputeApproachSpeed();
+    }
+
+    private float ComputeApproachSpeed()
+    {
+        if (spawnPoint == null || playerTransform == null || stageConfig == null) return 0f;
+
+        Vector3 spawnFrom = spawnPoint.position + new Vector3(stageConfig.offscreenSpawnDistance, 0f, 0f);
+        Vector3 toPlayer = playerTransform.position - spawnFrom;
+        toPlayer.y = 0f;
+
+        // 근접 사거리(meleeRange)만큼은 실제로 걸어갈 필요가 없으므로 총 거리에서 뺀다 - 스케일
+        // 1(일반 몬스터) 기준이라, 더 일찍 멈추는 엘리트/보스는 같은 속도로도 목표 시간보다
+        // 조금 더 빨리 도착한다.
+        float travelDistance = Mathf.Max(0.01f, toPlayer.magnitude - stageConfig.meleeRange);
+        return stageConfig.monsterApproachDuration > 0f ? travelDistance / stageConfig.monsterApproachDuration : 0f;
+    }
+
     private static bool UsesBirdRoster(int mainStage) => mainStage == BirdRosterStage;
 
     private MonsterDefinitionSO ResolveNormal(int mainStage) =>
@@ -34,10 +60,6 @@ public class MonsterSpawner : MonoBehaviour
 
     private MonsterDefinitionSO ResolveBoss(int mainStage) =>
         UsesBirdRoster(mainStage) && stage2BossDefinition != null ? stage2BossDefinition : bossDefinition;
-
-    // 몬스터는 실제 교전 지점보다 더 오른쪽 - 화면 밖 - 에서 스폰되며, 제자리에 갑자기
-    // 나타나거나 순간이동하지 않고 평소 이동 속도/애니메이션 그대로 걸어 들어온다.
-    [SerializeField] private float offscreenSpawnDistance = 8f;
 
     [SerializeField] private float eliteScale = 1.5f;
     [SerializeField] private float bossScale = 2f;
@@ -78,7 +100,7 @@ public class MonsterSpawner : MonoBehaviour
         Monster monster = SpawnOffscreen(def.prefab, 1f);
 
         monster.Initialize(def.monsterType, GetNormalHp(mainStage, subStage), GetNormalAttack(mainStage, subStage), stageConfig.normalMonsterAttackInterval);
-        monster.SetMovement(playerTransform, stageConfig.MonsterApproachSpeed, stageConfig.meleeRange);
+        monster.SetMovement(playerTransform, ApproachSpeed, stageConfig.meleeRange);
 
         GameEvents.RaiseMonsterSpawned(monster);
         return monster;
@@ -98,7 +120,7 @@ public class MonsterSpawner : MonoBehaviour
         float hp = GetEliteHp(mainStage, lastEliteSubStage) * bossHpMultiplier;
         float attack = GetEliteAttack(mainStage, lastEliteSubStage) * bossAttackMultiplier;
         monster.Initialize(def.monsterType, hp, attack);
-        monster.SetMovement(playerTransform, stageConfig.MonsterApproachSpeed, stageConfig.meleeRange);
+        monster.SetMovement(playerTransform, ApproachSpeed, stageConfig.meleeRange);
 
         GameEvents.RaiseMonsterSpawned(monster);
         return monster;
@@ -117,7 +139,7 @@ public class MonsterSpawner : MonoBehaviour
 
         float hp = GetEliteHp(mainStage, subStage);
         monster.Initialize(def.monsterType, hp, GetEliteAttack(mainStage, subStage), stageConfig.normalMonsterAttackInterval);
-        monster.SetMovement(playerTransform, stageConfig.MonsterApproachSpeed, stageConfig.meleeRange);
+        monster.SetMovement(playerTransform, ApproachSpeed, stageConfig.meleeRange);
 
         GameEvents.RaiseMonsterSpawned(monster);
         return monster;
@@ -128,7 +150,7 @@ public class MonsterSpawner : MonoBehaviour
 
     private Monster SpawnOffscreen(GameObject prefab, float scaleMultiplier)
     {
-        Vector3 spawnFrom = spawnPoint.position + new Vector3(offscreenSpawnDistance, 0f, 0f);
+        Vector3 spawnFrom = spawnPoint.position + new Vector3(stageConfig.offscreenSpawnDistance, 0f, 0f);
         GameObject instance = Instantiate(prefab, spawnFrom, spawnPoint.rotation);
         // 대입이 아니라 곱하기: 일부 프리팹(예: 최종 보스)은 이미 자체적인 기본 스케일을
         // 갖고 있으며, 이 값은 그것을 덮어쓰는 게 아니라 그 위에 누적되어야 한다.

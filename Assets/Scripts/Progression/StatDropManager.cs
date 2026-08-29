@@ -27,9 +27,9 @@ public class StatDropManager : MonoBehaviour
         if (potionPrefab == null || player == null) return;
 
         StatPotionPickup potion = Instantiate(potionPrefab, monster.transform.position, Quaternion.identity);
-        // 몬스터가 걸어 들어오는 속도와 동일하게 맞춰서, 포션이 플레이어 쪽으로 미끄러져
-        // 들어오는 것도 별개의 무관한 속도가 아니라 같은 전진 이동으로 보이게 한다.
-        potion.Initialize(statType, grade, amount, player.transform, combatLoop, stageConfig.monsterMoveSpeed);
+        // 몬스터가 걸어 들어오는 속도(MonsterSpawner.ApproachSpeed)와 동일하게 맞춘다 - 그래야 몬스터가
+        // 포션을 추월하는 일 없이 같은 속도로 나란히 딸려온다.
+        potion.Initialize(statType, grade, amount, player.transform, combatLoop, MonsterSpawner.ApproachSpeed);
     }
 
     private float GetAmount(StatType statType, StatGrade grade)
