@@ -2,8 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 장비 상태 표시부. 슬롯(Sword, Shield)당 한 줄: EquipmentPreviewRig로 렌더한 실제 장착
-// 애셋(등급 오라 포함), 그 옆 위쪽에 "Rare Sword ATK + 3" 줄, 아래에 "Lv.2" + 숙련도 게이지
-// (EquipmentMasteryGaugeView, 독립 HUD 바가 아닌 임베드 형태 - 다음 레벨까지의 진행도).
+// 애셋(등급 오라 포함), 그 옆에 "Rare Sword ATK + 3" 줄. (숙련도 게이지/레벨 표시는 제거됨 -
+// EquipmentDropManager의 숙련도 시스템이 비활성화되어 더 이상 보여줄 값이 없다.)
 // 씬 자식으로 미리 두지 않고 최초 활성화 시 코드로 빌드한다 - 패널이 숨겨진 채 시작해서
 // Unity가 비활성 GameObject의 Awake를 그때까지 지연시키므로. TitleScreenView와 동일한 방식.
 public class EquipmentPanelView : MonoBehaviour
@@ -17,8 +17,6 @@ public class EquipmentPanelView : MonoBehaviour
     private const float RowHeight = 118f;
     private const float PanelWidth = 460f;
     private const float LabelHeight = 48f;
-    private const float GaugeHeight = 24f;
-    private const float LevelTextWidth = 56f;
     // 행 자체의 상하 여백과 일치시켜(BuildRow 참고), 패널의 네 변 모두 아이콘과 텍스트
     // 주위에 동일한 여유 공간을 유지하도록 한다.
     private const float Padding = 20f;
@@ -38,10 +36,6 @@ public class EquipmentPanelView : MonoBehaviour
     private const float StageInstanceSpacing = 50f;
     private static int stageInstanceCounter;
     private int stageInstanceIndex;
-    // 두 숙련도 게이지 모두 동일한 하늘색으로 채워진다 - 슬롯마다 색을 달리해봐야 의미
-    // 있게 읽히지 않고, 그저 서로 일관성 없어 보이기만 했다.
-    private static readonly Color SwordGaugeColor = new Color(0.4f, 0.75f, 1f);
-    private static readonly Color ShieldGaugeColor = new Color(0.4f, 0.75f, 1f);
 
     private EquipmentPreviewRig swordRig;
     private EquipmentPreviewRig shieldRig;
@@ -49,8 +43,6 @@ public class EquipmentPanelView : MonoBehaviour
     private Image shieldIconFrame;
     private Text swordLabel;
     private Text shieldLabel;
-    private Text swordLevelText;
-    private Text shieldLevelText;
 
     // 관리 창이 패널을 코드로 빌드할 수 있게 해준다. 오브젝트가 비활성일 때 호출해야 한다 -
     // 활성 GameObject에 컴포넌트를 붙이면 Awake(그리고 이 필드를 읽는 Build)가 즉시 실행된다.
@@ -98,13 +90,13 @@ public class EquipmentPanelView : MonoBehaviour
         // 패널은 Equip 탭의 전체 콘텐츠로 순수 장비 스탯만 보여준다. 플레이어 실제 총합에도
         // 반영되는 스톤 옵션은 Stone 탭 몫(ManagementWindowView.OptionLine 참고).
         ApplyRow("Sword", equipmentDropManager.EquippedSwordGrade, EquipmentType.Sword,
-            equipmentDropManager.SwordLevel, equipmentDropManager.SwordEquipmentBonus, "ATK", swordRig, swordIconFrame, swordLabel, swordLevelText);
+            equipmentDropManager.SwordEquipmentBonus, "ATK", swordRig, swordIconFrame, swordLabel);
         ApplyRow("Shield", equipmentDropManager.EquippedShieldGrade, EquipmentType.Shield,
-            equipmentDropManager.ShieldLevel, equipmentDropManager.ShieldEquipmentBonus, "HP", shieldRig, shieldIconFrame, shieldLabel, shieldLevelText);
+            equipmentDropManager.ShieldEquipmentBonus, "HP", shieldRig, shieldIconFrame, shieldLabel);
     }
 
     private static void ApplyRow(string typeLabel, StatGrade? grade, EquipmentType equipType,
-        int level, float bonus, string statLabel, EquipmentPreviewRig rig, Image iconFrame, Text label, Text levelText)
+        float bonus, string statLabel, EquipmentPreviewRig rig, Image iconFrame, Text label)
     {
         Color color;
         if (grade.HasValue)
@@ -122,10 +114,6 @@ public class EquipmentPanelView : MonoBehaviour
 
         label.color = color;
         iconFrame.color = grade.HasValue ? color : EmptySlotBorderColor;
-        // 등급과 무관하게 항상 흰색 - 숙련도 레벨은 등급과 독립적으로 진행되고(해당 타입을
-        // 하나도 장착하기 전에도 표시되며 이미 0보다 클 수 있다) 그래서 등급 색을 안 빌린다.
-        levelText.color = Color.white;
-        levelText.text = $"Lv.{level}";
     }
 
     private void Build()
@@ -137,8 +125,8 @@ public class EquipmentPanelView : MonoBehaviour
 
         RawImage swordIcon;
         RawImage shieldIcon;
-        BuildRow("SwordRow", 0, font, EquipmentType.Sword, SwordGaugeColor, out swordIcon, out swordIconFrame, out swordLabel, out swordLevelText);
-        BuildRow("ShieldRow", 1, font, EquipmentType.Shield, ShieldGaugeColor, out shieldIcon, out shieldIconFrame, out shieldLabel, out shieldLevelText);
+        BuildRow("SwordRow", 0, font, out swordIcon, out swordIconFrame, out swordLabel);
+        BuildRow("ShieldRow", 1, font, out shieldIcon, out shieldIconFrame, out shieldLabel);
 
 
         Vector3 stageOffset = new Vector3(0f, 0f, stageInstanceIndex * StageInstanceSpacing);
@@ -148,8 +136,8 @@ public class EquipmentPanelView : MonoBehaviour
         shieldIcon.texture = shieldRig.Texture;
     }
 
-    private void BuildRow(string name, int rowIndex, Font font, EquipmentType equipType, Color gaugeColor,
-        out RawImage icon, out Image iconFrame, out Text label, out Text levelText)
+    private void BuildRow(string name, int rowIndex, Font font,
+        out RawImage icon, out Image iconFrame, out Text label)
     {
         var row = new GameObject(name, typeof(RectTransform));
         row.transform.SetParent(transform, false);
@@ -196,17 +184,10 @@ public class EquipmentPanelView : MonoBehaviour
 
         float textX = Padding + IconSize + IconTextGap;
         float textWidth = PanelWidth - textX - Padding;
-        float topY = (LabelHeight + GaugeHeight) * 0.5f - LabelHeight * 0.5f + 3f;
-        float bottomY = -(LabelHeight + GaugeHeight) * 0.5f + GaugeHeight * 0.5f - 3f;
 
-        // 위쪽 줄은 "{grade} {type} {stat} + {bonus}"로 전체 너비, 아래쪽 줄은 게이지 옆 "Lv.N".
-        // 둘 다 아이콘 오른쪽 가장자리에 좌측 정렬, 두 줄 합친 중점이 행의 세로 중앙에 맞는다.
-        label = CreateLabel(row.transform, font, "Label", textX, textWidth, LabelHeight, topY, TextAnchor.MiddleLeft, 22);
-        levelText = CreateLabel(row.transform, font, "LevelText", textX, LevelTextWidth, GaugeHeight, bottomY, TextAnchor.MiddleLeft, 18);
-
-        float gaugeX = textX + LevelTextWidth + 6f;
-        float gaugeWidth = textWidth - LevelTextWidth - 6f;
-        BuildGauge(row.transform, equipType, gaugeColor, gaugeX, gaugeWidth, bottomY);
+        // "{grade} {type} {stat} + {bonus}" 한 줄만 표시한다 - 아이콘 오른쪽 가장자리에 좌측
+        // 정렬, 행의 세로 중앙에 맞춘다. (숙련도 게이지/레벨 줄은 제거됨.)
+        label = CreateLabel(row.transform, font, "Label", textX, textWidth, LabelHeight, 0f, TextAnchor.MiddleLeft, 22);
     }
 
     private static Text CreateLabel(Transform parent, Font font, string name, float x, float width, float height,
@@ -230,28 +211,6 @@ public class EquipmentPanelView : MonoBehaviour
         rt.anchoredPosition = new Vector2(x, y);
         rt.sizeDelta = new Vector2(width, height);
         return text;
-    }
-
-    private void BuildGauge(Transform parent, EquipmentType equipType, Color gaugeColor, float x, float width, float y)
-    {
-        var go = new GameObject("MasteryGauge", typeof(RectTransform));
-        // 아래 Configure까지 비활성으로 둔다: EquipmentMasteryGaugeView.Awake는 레이아웃을
-        // 정할 때 Configure가 채우는 같은 필드를 읽는데, 비활성 GameObject에서는 Awake가
-        // 지연되므로 AddComponent 시점과 Configure 시점이 경합하지 않는다.
-        go.SetActive(false);
-        go.transform.SetParent(parent, false);
-
-        var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 0.5f);
-        rt.anchorMax = new Vector2(0f, 0.5f);
-        rt.pivot = new Vector2(0f, 0.5f);
-        rt.anchoredPosition = new Vector2(x, y);
-        rt.sizeDelta = new Vector2(width, GaugeHeight);
-
-        var gauge = go.AddComponent<EquipmentMasteryGaugeView>();
-        gauge.Configure(equipmentDropManager, equipType, gaugeColor, anchorToBottomCenter: false, includeTypeAndLevelInLabel: false);
-
-        go.SetActive(true);
     }
 
     private EquipmentPreviewRig BuildRig(string name, Vector3 stagePosition)

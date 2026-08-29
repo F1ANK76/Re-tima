@@ -73,7 +73,10 @@ public class MonsterSpawner : MonoBehaviour
     [Header("Attack curve")]
     // 공격력도 HP와 같은 서브스테이지 곡선을 따른다 - 한 메인 스테이지 안에서도 서브스테이지가
     // 오를수록 세진다. 엘리트는 그 값의 배수, 보스는 HP처럼 직전 엘리트 공격력의 배수다.
-    [SerializeField] private float eliteAttackMultiplier = 5f;
+    // 일반 몹 공격력이 절반으로 낮아진 만큼(GetNormalAttack 참고) 엘리트가 예전과 같은 실제
+    // 공격력을 유지하도록 이 배수를 2배로 올렸다 - 보스는 엘리트 값을 그대로 이어받으므로
+    // bossAttackMultiplier는 손댈 필요가 없다.
+    [SerializeField] private float eliteAttackMultiplier = 10f;
     [SerializeField] private float bossAttackMultiplier = 1.5f;
 
     // 서브스테이지별 HP/공격력 곡선에 대한 단일 진실 공급원(single source of truth)으로,
@@ -85,8 +88,9 @@ public class MonsterSpawner : MonoBehaviour
 
     public static float GetNormalHp(int mainStage, int subStage) => GetNormalValue(mainStage, subStage);
 
-    // HP와 동일한 곡선.
-    public static float GetNormalAttack(int mainStage, int subStage) => GetNormalValue(mainStage, subStage);
+    // HP와 같은 곡선의 절반 - 1-1=0.5, 1-2=1, 2-1=1.5, 2-2=2. 엘리트/보스 공격력은 이 값을
+    // 기준으로 배수를 곱하므로(위 주석 참고) 함께 절반으로 낮아진다.
+    public static float GetNormalAttack(int mainStage, int subStage) => GetNormalValue(mainStage, subStage) * 0.5f;
 
     public Monster SpawnNormal(int mainStage, int subStage)
     {

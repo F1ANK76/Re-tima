@@ -29,11 +29,11 @@ public static class EquipmentGradeBonus
     {
         switch (grade)
         {
-            case StatGrade.Normal: return 1f;
-            case StatGrade.Rare: return 2f;
-            case StatGrade.Epic: return 3f;
-            case StatGrade.Unique: return 4f;
-            default: return 5f;
+            case StatGrade.Normal: return 0.3f;
+            case StatGrade.Rare: return 0.5f;
+            case StatGrade.Epic: return 1f;
+            case StatGrade.Unique: return 1.5f;
+            default: return 2f;
         }
     }
 
@@ -41,11 +41,11 @@ public static class EquipmentGradeBonus
     {
         switch (grade)
         {
-            case StatGrade.Normal: return 30f;
-            case StatGrade.Rare: return 50f;
-            case StatGrade.Epic: return 100f;
-            case StatGrade.Unique: return 150f;
-            default: return 200f;
+            case StatGrade.Normal: return 10f;
+            case StatGrade.Rare: return 15f;
+            case StatGrade.Epic: return 20f;
+            case StatGrade.Unique: return 25f;
+            default: return 30f;
         }
     }
 }

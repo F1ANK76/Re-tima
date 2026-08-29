@@ -13,17 +13,17 @@ public class StageConfigSO : ScriptableObject
 
     [Header("Stat Drop Amounts - ATK")]
     public float atkAmountNormal = 0.1f;
-    public float atkAmountRare = 0.3f;
-    public float atkAmountEpic = 0.5f;
-    public float atkAmountUnique = 1f;
-    public float atkAmountLegendary = 2f;
+    public float atkAmountRare = 0.2f;
+    public float atkAmountEpic = 0.3f;
+    public float atkAmountUnique = 0.5f;
+    public float atkAmountLegendary = 1f;
 
     [Header("Stat Drop Amounts - HP")]
-    public float hpAmountNormal = 5f;
-    public float hpAmountRare = 10f;
-    public float hpAmountEpic = 30f;
-    public float hpAmountUnique = 50f;
-    public float hpAmountLegendary = 100f;
+    public float hpAmountNormal = 3f;
+    public float hpAmountRare = 5f;
+    public float hpAmountEpic = 10f;
+    public float hpAmountUnique = 20f;
+    public float hpAmountLegendary = 30f;
 
 
     [Header("Monster Movement")]

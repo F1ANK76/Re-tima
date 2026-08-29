@@ -21,8 +21,8 @@ public class EquipmentDropManager : MonoBehaviour
     private StatGrade? equippedSwordGrade;
     private StatGrade? equippedShieldGrade;
 
-    // 퍼센트 단위의 상한 없는 숙련도 게이지 - 예전 파편 시스템과 같은 이유로 의도적으로 랩어라운드나
-    // 클램프를 하지 않는다: 350%도 후반 런에서는 정상적인 값이다.
+    // 숙련도 게이지 시스템은 비활성화됐다(CompleteDrop 참고) - 아래 필드들은 더 이상 증가하지
+    // 않고 항상 0으로 남아, 장비 보너스가 순수하게 장착 등급만으로 결정되게 한다.
     private float swordMasteryPercent;
     private float shieldMasteryPercent;
     private int swordLevel;
@@ -92,8 +92,10 @@ public class EquipmentDropManager : MonoBehaviour
         {
             float oldBonus = SwordAtkBonus;
 
-            swordMasteryPercent += EquipmentGradeBonus.GetProgressPercent(grade);
-            swordLevel = Mathf.FloorToInt(swordMasteryPercent / 100f);
+            // 숙련도 게이지 시스템 비활성화 - 동급 이하 중복 픽업은 더 이상 추가 보너스로
+            // 전환되지 않는다. 장비 보너스는 이제 장착 등급만으로 결정된다.
+            // swordMasteryPercent += EquipmentGradeBonus.GetProgressPercent(grade);
+            // swordLevel = Mathf.FloorToInt(swordMasteryPercent / 100f);
 
             if (!equippedSwordGrade.HasValue || grade > equippedSwordGrade.Value) equippedSwordGrade = grade;
 
@@ -103,8 +105,8 @@ public class EquipmentDropManager : MonoBehaviour
         {
             float oldBonus = ShieldHpBonus;
 
-            shieldMasteryPercent += EquipmentGradeBonus.GetProgressPercent(grade);
-            shieldLevel = Mathf.FloorToInt(shieldMasteryPercent / 100f);
+            // shieldMasteryPercent += EquipmentGradeBonus.GetProgressPercent(grade);
+            // shieldLevel = Mathf.FloorToInt(shieldMasteryPercent / 100f);
 
             if (!equippedShieldGrade.HasValue || grade > equippedShieldGrade.Value) equippedShieldGrade = grade;
 

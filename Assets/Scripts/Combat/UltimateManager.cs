@@ -15,7 +15,7 @@ public class UltimateManager : MonoBehaviour
     [SerializeField] private CombatLoop combatLoop;
 
     private const float ChargeDuration = 15f;
-    private const float DamageMultiplier = 1.5f;
+    private const float DamageMultiplier = 3f;
 
     private const float UltimateAnimDuration = 24f / 30f;
     // 클립 자체의 루트 모션 커브상 캐릭터는 24프레임 중 19프레임(30fps)째에 이미 지면 높이로
