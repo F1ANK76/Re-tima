@@ -15,7 +15,7 @@ public class ManagementWindowView : MonoBehaviour
     [SerializeField] private EquipmentDropManager equipmentDropManager;
     [SerializeField] private StageManager stageManager;
     // Equip 탭에 임베드된 EquipmentPanelView가 프리뷰에 사용하는 것과 동일한 프리팹이다.
-    [SerializeField] private EquipmentDropPickup previewPickupPrefab;
+    [SerializeField] private DropPickup previewPickupPrefab;
 
     // 각 탭이 어느 메인 스테이지에서 잠금 해제되는지. Stat은 처음부터 열려 있고(인덱스 0은
     // 무의미 - 절대 잠기지 않는다), Equip은 그 드롭이 실제로 시작되는 시점(EquipmentDropManager

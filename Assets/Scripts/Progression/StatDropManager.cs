@@ -7,7 +7,7 @@ public class StatDropManager : MonoBehaviour
 {
     [SerializeField] private PlayerCharacter player;
     [SerializeField] private StageConfigSO stageConfig;
-    [SerializeField] private StatPotionPickup potionPrefab;
+    [SerializeField] private DropPickup potionPrefab;
     [SerializeField] private CombatLoop combatLoop;
 
     // DropCoordinator가 이 타입을 드롭하기로 정했을 때 호출한다.
@@ -22,14 +22,14 @@ public class StatDropManager : MonoBehaviour
         float amount = GetAmount(statType, grade);
 
         // 스탯은 즉시 적용되지 않는다 - 몬스터가 죽은 위치에 드롭되는 포션에 넘겨지고, 그 포션이
-        // 플레이어에게 도달했을 때만 지급된다(StatPotionPickup 참고). prefab이나 player가 없으면
+        // 플레이어에게 도달했을 때만 지급된다(DropPickup 참고). prefab이나 player가 없으면
         // 넘겨줄 대상 자체가 없어 드롭도 없다.
         if (potionPrefab == null || player == null) return;
 
-        StatPotionPickup potion = Instantiate(potionPrefab, monster.transform.position, Quaternion.identity);
+        DropPickup potion = Instantiate(potionPrefab, monster.transform.position, Quaternion.identity);
         // 몬스터가 걸어 들어오는 속도(MonsterSpawner.ApproachSpeed)와 동일하게 맞춘다 - 그래야 몬스터가
         // 포션을 추월하는 일 없이 같은 속도로 나란히 딸려온다.
-        potion.Initialize(statType, grade, amount, player.transform, combatLoop, MonsterSpawner.ApproachSpeed);
+        potion.InitializeStatPotion(statType, grade, amount, player.transform, combatLoop, MonsterSpawner.ApproachSpeed);
     }
 
     private float GetAmount(StatType statType, StatGrade grade)

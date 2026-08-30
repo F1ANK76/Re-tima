@@ -128,13 +128,9 @@ public class StageManager : MonoBehaviour
         currentMonster = null;
 
         // 플레이어를 죽인 처치(또는 그 이전 처치)의 드롭은 미끄러져 들어오던 걸 마치지 못하고
-        // 제자리에 멈춘다 - StatPotionPickup/EquipmentDropPickup.HandlePlayerDied 참고. 리스폰된
+        // 제자리에 멈춘다 - DropPickup.HandlePlayerDied 참고. 리스폰된
         // 필드에 잡동사니로 남지 않게 몬스터와 함께 정리한다.
-        foreach (StatPotionPickup potion in FindObjectsByType<StatPotionPickup>(FindObjectsSortMode.None))
-        {
-            Destroy(potion.gameObject);
-        }
-        foreach (EquipmentDropPickup pickup in FindObjectsByType<EquipmentDropPickup>(FindObjectsSortMode.None))
+        foreach (DropPickup pickup in FindObjectsByType<DropPickup>(FindObjectsSortMode.None))
         {
             Destroy(pickup.gameObject);
         }
@@ -386,11 +382,7 @@ public class StageManager : MonoBehaviour
 
         // PlayDeathThenRestart와 동일한 필드 초기화 - 드롭이 진행 중일 때 점프하더라도
         // 떠나는 스테이지에 물약/장비 픽업이 낙오되어 남아있으면 안 된다.
-        foreach (StatPotionPickup potion in FindObjectsByType<StatPotionPickup>(FindObjectsSortMode.None))
-        {
-            Destroy(potion.gameObject);
-        }
-        foreach (EquipmentDropPickup pickup in FindObjectsByType<EquipmentDropPickup>(FindObjectsSortMode.None))
+        foreach (DropPickup pickup in FindObjectsByType<DropPickup>(FindObjectsSortMode.None))
         {
             Destroy(pickup.gameObject);
         }

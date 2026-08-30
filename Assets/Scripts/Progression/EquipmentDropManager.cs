@@ -10,7 +10,7 @@ public class EquipmentDropManager : MonoBehaviour
 {
     [SerializeField] private PlayerCharacter player;
     [SerializeField] private StageConfigSO stageConfig;
-    [SerializeField] private EquipmentDropPickup pickupPrefab;
+    [SerializeField] private DropPickup pickupPrefab;
     [SerializeField] private CombatLoop combatLoop;
 
     // DropCoordinator가 장비를 활성 드롭 타입 목록에 넣기 시작하는 메인 스테이지.
@@ -87,10 +87,10 @@ public class EquipmentDropManager : MonoBehaviour
             return;
         }
 
-        EquipmentDropPickup pickup = Instantiate(pickupPrefab, monster.transform.position, Quaternion.identity);
+        DropPickup pickup = Instantiate(pickupPrefab, monster.transform.position, Quaternion.identity);
         // 몬스터가 걸어 들어오는 속도(MonsterSpawner.ApproachSpeed)와 동일하게 맞춘다 - 그래야 몬스터가
         // 드롭을 추월하는 일 없이 같은 속도로 나란히 딸려온다.
-        pickup.Initialize(equipType, grade, player.transform, combatLoop, MonsterSpawner.ApproachSpeed, this);
+        pickup.InitializeEquipment(equipType, grade, player.transform, combatLoop, MonsterSpawner.ApproachSpeed, this);
     }
 
     // 플레이어가 픽업에 도달하면 EquipmentDropPickup이 호출한다. 등급과 무관하게 해당 타입의

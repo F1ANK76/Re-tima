@@ -2,8 +2,8 @@ using System.Collections;
 using Benjathemaker;
 using UnityEngine;
 
-// 드롭 픽업의 공통 뼈대. StatPotionPickup(스탯 포션)과 EquipmentDropPickup(장비)이 정확히 같은
-// 세 박자를 쓴다:
+// 필드에 떨어지는 모든 드롭 아이템. 종류(kind)만 다르고 동작은 완전히 같아서 클래스 하나로
+// 합쳐져 있다 - 스탯 포션(스테이지 1~)과 장비(스테이지 2~)가 동일한 세 박자를 쓴다:
 //   1. 몬스터를 지나쳐 던져진 아이템이 바닥에 튕기며 안착하는 동안 플레이어는 idle로 멈춘다.
 //   2. 안착하는 순간 플레이어를 다시 움직임 상태로 풀어준다.
 //   3. 아이템이 지면 높이에서 남은 거리를 좁혀 접촉 시 효과를 지급한다.
@@ -13,15 +13,23 @@ using UnityEngine;
 // 플레이어를 향해 세계가 다가오는 것과 같다. 유도/자석 끌림이 아니다 - 가속도 부양도 없어야
 // 아이템이 날아오는 게 아니라 플레이어가 그 위를 달려 지나가는 것으로 읽힌다.
 //
-// 던지기 물리, 등급 아우라/반짝임, 글로우 텍스처 생성이 전부 여기 모여있고, 서브클래스는
-// 비주얼 스폰(SpawnVisual)과 접촉 시 효과(ApplyEffect) 두 지점만 채운다.
-//
-// 이 클래스가 EquipmentDropPickup.cs가 아니라 여기 있는 이유: 유니티는 파일명과 이름이 일치하는
-// 클래스 하나만 GameObject에 붙일 수 있는 MonoScript로 임포트한다. 그래서 붙일 수 있는 두
-// 픽업은 각자 자기 이름의 파일에 있어야 하고, 추상 베이스(절대 직접 붙지 않는다)만 이렇게
-// 한쪽에 얹어 파일 수를 줄일 수 있다.
-public abstract class DropPickup : MonoBehaviour
+// 종류별로 다른 부분은 딱 두 군데(SpawnVisual의 메시 선택, ApplyEffect의 효과 지급)뿐이라
+// 상속으로 나누는 대신 kind로 분기한다. 프리팹은 종류마다 하나씩 있고(StatPotionPickup.prefab,
+// EquipmentDropPickup.prefab) 각자 자기 kind와 자기 비주얼 슬롯만 채워둔다 - 반대편 종류의
+// 슬롯은 그 프리팹에서 그냥 비어있다.
+public class DropPickup : MonoBehaviour
 {
+    public enum Kind
+    {
+        StatPotion,
+        Equipment
+    }
+
+    [Header("Kind")]
+    // 프리팹마다 고정이다. 이 값이 아래 비주얼 슬롯 중 어느 쪽을 쓸지, 그리고 접촉 시
+    // 무엇을 지급할지를 함께 결정한다.
+    [SerializeField] private Kind kind = Kind.StatPotion;
+
     [Header("Toss + bounce (beat 1)")]
     // 던져지고 안착하기까지 전체 과정, 시작부터 정지까지.
     [SerializeField] private float landDuration = 0.75f;
@@ -47,8 +55,30 @@ public abstract class DropPickup : MonoBehaviour
     // 것과 같은 속도여야 한다. 다르면 플레이어가 두 가지 속도로 달리는 것처럼 보인다.
     private float approachSpeed = 5f;
 
-    [Header("Visual")]
-    [SerializeField] protected float visualBaseScale = 0.4f;
+    [Header("Visual (shared)")]
+    [SerializeField] private float visualBaseScale = 0.4f;
+
+    [Header("Visual - StatPotion")]
+    // ATK는 RedVial, HP는 GreenVial로 드롭된다. 물약 색은 등급 틴트/발광 없이 그대로 둬야
+    // 등급과 무관하게 ATK인지 HP인지 한눈에 구분된다 - 희귀도는 아래 아우라가 전담한다.
+    [SerializeField] private GameObject atkVisualPrefab;
+    [SerializeField] private GameObject hpVisualPrefab;
+
+    [Header("Visual - Equipment")]
+    // 타입별로 메시 하나씩. 희귀도는 등급별로 다른 모델이 아니라 아우라/반짝임/크기 램프로만
+    // 표현된다(물약과 동일한 규칙).
+    [SerializeField] private GameObject swordVisualPrefab;
+    [SerializeField] private GameObject shieldVisualPrefab;
+    // 임포트로 딸려온 재질이 무엇이든 그 위에 덮어씌운다 - 생성된 FBX는 PBR 텍스처를 외부
+    // 사이드카 경로(model.fbm 폴더)로 참조하는데 다운로드한 .fbx 하나만으로는 그게 없어,
+    // 텍스처 없는 재질로 임포트되어 화면에 보이지 않게 렌더링된다. 여기서 덮어씌우면 FBX
+    // 임포트가 어떻게 해석되든 재질 설정이 그와 무관하게 유지된다.
+    [SerializeField] private Material swordMaterial;
+    [SerializeField] private Material shieldMaterial;
+    // 방패 메시는 XZ 평면에 눕혀진 원반(면이 위를 향함)으로 제작되어, 그대로 떨어뜨리면
+    // 바닥에 놓인 그릇처럼 보인다. 세우는 회전은 애셋별 프레이밍이라 드롭 로직에 안 박는다.
+    [SerializeField] private Vector3 swordVisualEuler = Vector3.zero;
+    [SerializeField] private Vector3 shieldVisualEuler = new Vector3(90f, 0f, 0f);
 
     [Header("Grade aura")]
     // 세 아우라 레이어 모두 GradeVisuals.GetAuraStrength(Normal 0.2 ~ Legendary 1)를 이
@@ -86,10 +116,24 @@ public abstract class DropPickup : MonoBehaviour
     private static readonly float[] HopHeights = { 1f, 0.34f, 0.13f, 0.05f };
     private static readonly float[] HopDurations = { 0.42f, 0.26f, 0.18f, 0.14f };
 
-    protected Renderer[] renderers;
-    protected StatGrade grade;
-    protected Transform player;
-    protected CombatLoop combatLoop;
+    private Renderer[] renderers;
+    // SpawnAura가 붙이는 아우라/반짝임 쿼드가 아니라 메시 자체의 렌더러만 - 모든 등급/메시에
+    // 맞는 고정 카메라 거리를 추측하는 대신, EquipmentPreviewRig가 아이템의 실제 실루엣에
+    // 맞춰 UI 아이콘을 프레이밍하도록 노출한다.
+    public Renderer[] VisualRenderers => renderers;
+
+    private StatGrade grade;
+    private Transform player;
+    private CombatLoop combatLoop;
+
+    // kind == StatPotion일 때만 의미가 있다.
+    private StatType statType;
+    private float amount;
+
+    // kind == Equipment일 때만 의미가 있다.
+    private EquipmentType equipType;
+    private EquipmentDropManager dropManager;
+
     // PushIdleHold가 PopIdleHold로 짝이 맞춰졌는지 추적한다 - HandlePlayerDied가
     // TossThenRunOver를 세 박자 중 어디서든(자신의 PopIdleHold에 도달하기도 전에도)
     // StopAllCoroutines로 끊을 수 있어서, 이게 없으면 던지는 중 죽었을 때 CombatLoop의
@@ -106,16 +150,31 @@ public abstract class DropPickup : MonoBehaviour
     // 이 아이템의 모든 반짝임이 공유하는 재질 하나 - auraMaterial과 같은 이유로,
     // 코드로 생성되어 다른 누구도 대신 수거해주지 않는다(OnDestroy 참고).
     private Material sparkleMaterial;
+    // 등급 색을 입힌 공용 sword/shield 재질의 인스턴스별 복사본 - 활성화된 모든 픽업이
+    // 같은 공용 애셋을 참조하므로 원본 애셋 자체는 절대 건드리지 않아야 한다.
+    private Material visualMaterialInstance;
 
-    // 서브클래스가 자기 타입에 맞는 비주얼(물약/검/방패 메시)을 생성하고 renderers를 채운다.
-    protected abstract void SpawnVisual();
+    // StatDropManager가 스폰할 때 호출한다.
+    public void InitializeStatPotion(StatType statType, StatGrade grade, float amount, Transform player, CombatLoop combatLoop, float approachSpeed)
+    {
+        kind = Kind.StatPotion;
+        this.statType = statType;
+        this.amount = amount;
 
-    // 접촉 시 실제 효과 적용(스탯 증가, 장비 장착 등). Destroy는 Collect()가 처리하므로
-    // 여기선 순수하게 효과 적용만 담당한다.
-    protected abstract void ApplyEffect();
+        BeginDropSequence(grade, player, combatLoop, approachSpeed);
+    }
 
-    // 서브클래스의 Initialize가 자기 전용 필드를 채운 뒤 마지막에 호출한다.
-    protected void BeginDropSequence(StatGrade grade, Transform player, CombatLoop combatLoop, float approachSpeed)
+    // EquipmentDropManager가 스폰할 때(그리고 EquipmentPreviewRig가 UI 아이콘용으로) 호출한다.
+    public void InitializeEquipment(EquipmentType equipType, StatGrade grade, Transform player, CombatLoop combatLoop, float approachSpeed, EquipmentDropManager dropManager)
+    {
+        kind = Kind.Equipment;
+        this.equipType = equipType;
+        this.dropManager = dropManager;
+
+        BeginDropSequence(grade, player, combatLoop, approachSpeed);
+    }
+
+    private void BeginDropSequence(StatGrade grade, Transform player, CombatLoop combatLoop, float approachSpeed)
     {
         this.grade = grade;
         this.player = player;
@@ -183,6 +242,80 @@ public abstract class DropPickup : MonoBehaviour
         return transform.position.y - combined.min.y;
     }
 
+    // 종류에 맞는 메시를 자식으로 인스턴스화한다. 물약은 애셋 자체가 색 정체성을 갖고 있어
+    // 그대로 쓰고, 장비는 공용 메시에 등급 색 재질을 입힌다.
+    private void SpawnVisual()
+    {
+        GameObject prefab = kind == Kind.StatPotion
+            ? (statType == StatType.Attack ? atkVisualPrefab : hpVisualPrefab)
+            : (equipType == EquipmentType.Sword ? swordVisualPrefab : shieldVisualPrefab);
+
+        if (prefab == null)
+        {
+            renderers = GetComponentsInChildren<Renderer>();
+            return;
+        }
+
+        Quaternion localRotation = kind == Kind.StatPotion
+            ? Quaternion.identity
+            : Quaternion.Euler(equipType == EquipmentType.Sword ? swordVisualEuler : shieldVisualEuler);
+
+        GameObject visual = Instantiate(prefab, transform);
+        visual.transform.localPosition = Vector3.zero;
+        visual.transform.localRotation = localRotation;
+        visual.transform.localScale = Vector3.one * visualBaseScale;
+
+        if (kind == Kind.StatPotion)
+        {
+            // 이 애셋에는 자체 idle 회전/부유/스케일 루프가 딸려있다 - PlayToss/PlayRunOver가
+            // 이미 매 프레임 위치와 스케일을 제어하므로 두면 같은 transform을 두고 충돌한다.
+            SimpleGemsAnim anim = visual.GetComponent<SimpleGemsAnim>();
+            if (anim != null) Destroy(anim);
+        }
+
+        renderers = visual.GetComponentsInChildren<Renderer>();
+
+        if (kind == Kind.Equipment)
+        {
+            Material overrideMaterial = equipType == EquipmentType.Sword ? swordMaterial : shieldMaterial;
+            if (overrideMaterial != null)
+            {
+                // 공유가 아니라 인스턴스화: _BaseColor 틴트는 재질의 원래 값에 그대로 곱해지므로,
+                // 공용 애셋을 수정해버리면 화면에 있는 모든 sword/shield의 색까지 함께 바뀐다.
+                visualMaterialInstance = new Material(overrideMaterial)
+                {
+                    color = GradeVisuals.GetColor(grade)
+                };
+
+                for (int i = 0; i < renderers.Length; i++) renderers[i].sharedMaterial = visualMaterialInstance;
+            }
+        }
+    }
+
+    // 접촉 시 실제 효과 지급. 물약은 플레이어 스탯을 직접 올리고, 장비는 장착 판정이 있는
+    // EquipmentDropManager에 위임한다.
+    private void ApplyEffect()
+    {
+        if (kind == Kind.StatPotion)
+        {
+            PlayerCharacter pc = player != null ? player.GetComponent<PlayerCharacter>() : null;
+            if (pc != null)
+            {
+                if (statType == StatType.Attack) pc.IncreaseAttack(amount);
+                else pc.IncreaseMaxHp(amount);
+            }
+
+            // "+N STAT" 팝업과 플레이어 버프 아우라 VFX를 둘 다 구동한다 - 처치 순간이 아니라
+            // 픽업 순간에 반응한다. 별도 포즈는 의도적으로 넣지 않았다: 플레이어는 달리는
+            // 중이고(PlayRunOver 참고) 이걸 먹는 건 달리기를 멈추는 게 아니라 그 중 한 박자다.
+            GameEvents.RaiseStatDropGained(grade, statType, amount);
+        }
+        else
+        {
+            if (dropManager != null) dropManager.CompleteDrop(equipType, grade);
+        }
+    }
+
     // 빌보드 오브젝트 하나에 두 레이어: 가산 헤일로 쿼드(눈에 보이는 광채)와 포인트
     // 라이트(바닥에 던지는 색광). 둘 다 색상은 등급에서, 세기는 GetAuraStrength에서 온다.
     private void SpawnAura()
@@ -213,7 +346,7 @@ public abstract class DropPickup : MonoBehaviour
         light.shadows = LightShadows.None;
 
         aura.AddComponent<Billboard>();
-        aura.AddComponent<StatPotionAuraMotion>();
+        aura.AddComponent<DropPickupAuraMotion>();
 
         SpawnSparkles(color, strength);
     }
@@ -230,7 +363,7 @@ public abstract class DropPickup : MonoBehaviour
         var ring = new GameObject("SparkleRing");
         ring.transform.SetParent(transform, false);
         ring.transform.localPosition = Vector3.zero;
-        ring.AddComponent<StatPotionSparkleRing>().Initialize(sparkleOrbitSpeed);
+        ring.AddComponent<DropPickupSparkleRing>().Initialize(sparkleOrbitSpeed);
 
         for (int i = 0; i < sparkleCount; i++)
         {
@@ -248,7 +381,7 @@ public abstract class DropPickup : MonoBehaviour
             sparkle.AddComponent<Billboard>();
             // 위상을 고리 전체에 분산시킨다: 별 i는 별 i-1보다 1/count 사이클만큼 늦게
             // 시작하므로, 깜빡임들이 동시에 번쩍이지 않고 서로를 쫓아가듯 이어진다.
-            sparkle.AddComponent<StatPotionSparkle>()
+            sparkle.AddComponent<DropPickupSparkle>()
                    .Initialize(sparkleSize, sparkleBlinkSpeed, (float)i / sparkleCount);
         }
     }
@@ -502,85 +635,25 @@ public abstract class DropPickup : MonoBehaviour
         Destroy(gameObject);
     }
 
-    protected virtual void OnDestroy()
+    private void OnDestroy()
     {
         if (auraMaterial != null) Destroy(auraMaterial);
         if (sparkleMaterial != null) Destroy(sparkleMaterial);
+        if (visualMaterialInstance != null) Destroy(visualMaterialInstance);
     }
 }
 
-// StatDropManager가 스폰한다(즉시 적용 방식 대체). ATK는 RedVial, HP는 GreenVial로 드롭되며,
-// 접촉 시 PlayerCharacter에 바로 수치를 적용한다.
-public class StatPotionPickup : DropPickup
-{
-    [Header("Visual (per stat type)")]
-    // ATK는 RedVial, HP는 GreenVial로 드롭된다. 물약 색은 등급 틴트/발광 없이 그대로 둬야
-    // 등급과 무관하게 ATK인지 HP인지 한눈에 구분된다 - 희귀도는 아우라가 전담한다.
-    [SerializeField] private GameObject atkVisualPrefab;
-    [SerializeField] private GameObject hpVisualPrefab;
-
-    private StatType statType;
-    private float amount;
-
-    public void Initialize(StatType statType, StatGrade grade, float amount, Transform player, CombatLoop combatLoop, float approachSpeed)
-    {
-        this.statType = statType;
-        this.amount = amount;
-
-        BeginDropSequence(grade, player, combatLoop, approachSpeed);
-    }
-
-    // 스탯 타입에 맞는 RedVial/GreenVial을 자식으로 인스턴스화한다 - 공용 아이콘 메시에
-    // 손으로 색을 입히는 대신 애셋 자체가 정체성을 갖는다.
-    protected override void SpawnVisual()
-    {
-        GameObject prefab = statType == StatType.Attack ? atkVisualPrefab : hpVisualPrefab;
-        if (prefab == null)
-        {
-            renderers = GetComponentsInChildren<Renderer>();
-            return;
-        }
-
-        GameObject visual = Instantiate(prefab, transform);
-        visual.transform.localPosition = Vector3.zero;
-        visual.transform.localRotation = Quaternion.identity;
-        visual.transform.localScale = Vector3.one * visualBaseScale;
-
-        // 이 애셋에는 자체 idle 회전/부유/스케일 루프가 딸려있다 - PlayToss/PlayRunOver가
-        // 이미 매 프레임 위치와 스케일을 제어하므로 두면 같은 transform을 두고 충돌한다.
-        SimpleGemsAnim anim = visual.GetComponent<SimpleGemsAnim>();
-        if (anim != null) Destroy(anim);
-
-        renderers = visual.GetComponentsInChildren<Renderer>();
-    }
-
-    protected override void ApplyEffect()
-    {
-        PlayerCharacter pc = player != null ? player.GetComponent<PlayerCharacter>() : null;
-        if (pc != null)
-        {
-            if (statType == StatType.Attack) pc.IncreaseAttack(amount);
-            else pc.IncreaseMaxHp(amount);
-        }
-
-        // "+N STAT" 팝업과 플레이어 버프 아우라 VFX를 둘 다 구동한다 - 처치 순간이 아니라
-        // 픽업 순간에 반응한다. 별도 포즈는 의도적으로 넣지 않았다: 플레이어는 달리는
-        // 중이고(PlayRunOver 참고) 이걸 먹는 건 달리기를 멈추는 게 아니라 그 중 한 박자다.
-        GameEvents.RaiseStatDropGained(grade, statType, amount);
-    }
-}
-
-// 아우라의 페이드인과 idle 맥동. 픽업이 던지기/달려가기 시퀀스에만 집중하도록 분리했고,
-// 그 시퀀스의 어느 박자에서든 픽업이 매 프레임 개입하지 않아도 광채가 알아서 계속 숨쉬게
-// 하기 위한 것이다.
-public class StatPotionAuraMotion : MonoBehaviour
+// 아우라의 페이드인과 idle 맥동. DropPickup이 던지기/달려가기 시퀀스에만 집중하도록 분리했고,
+// 그 시퀀스의 어느 박자에서든 DropPickup이 매 프레임 개입하지 않아도 광채가 알아서 계속
+// 숨쉬게 하기 위한 것이다.
+public class DropPickupAuraMotion : MonoBehaviour
 {
     // 아이템 자체의 등장 애니메이션과 맞춰서, 메시가 아직 커지는 중인데 광채만
     // 갑자기 최고 강도로 켜지지 않고 아이템과 함께 나타나도록 한다.
     [SerializeField] private float fadeInDuration = 0.25f;
     // 지속적인 숨쉬기 진폭. 원래 0.14였는데, 그 진폭으로는 맥동이 아이템의 약 1.5초 수명 동안
     // 눈에 거의 보이지 않아 더 깊게 잡았다. 그래도 스트로브가 아닌 은은한 부풀림 정도다 -
-    // 날카로운 "반짝"은 반짝임(sparkle)들의 몫이다(StatPotionSparkle 참고).
+    // 날카로운 "반짝"은 반짝임(sparkle)들의 몫이다(DropPickupSparkle 참고).
     [SerializeField] private float pulseAmplitude = 0.3f;
     [SerializeField] private float pulseSpeed = 3f;
 
@@ -618,7 +691,7 @@ public class StatPotionAuraMotion : MonoBehaviour
 
 // 전체 반짝임 고리를 천천히 회전시킨다. 개별 깜빡임과는 별개로 동작하여,
 // 반짝임들이 화면상 고정된 위치에 계속 머물지 않고 아이템 주변을 떠돈다.
-public class StatPotionSparkleRing : MonoBehaviour
+public class DropPickupSparkleRing : MonoBehaviour
 {
     private float degreesPerSecond;
 
@@ -633,7 +706,7 @@ public class StatPotionSparkleRing : MonoBehaviour
 // 별빛 반짝임 하나의 깜빡임. localScale만 제어한다 - 아이템의 모든 반짝임이 단일 머티리얼을
 // 공유하므로, 별마다 머티리얼 인스턴스를 만들지 않고 각자 위상으로 깜빡이게 하려면
 // 스케일을 애니메이션하는 방법을 쓴다.
-public class StatPotionSparkle : MonoBehaviour
+public class DropPickupSparkle : MonoBehaviour
 {
     // 사인을 높은 거듭제곱으로 올려 부드러운 파형을 좁은 스파이크로 바꾼다: 긴 어두운 간격
     // 사이의 짧고 빠른 섬광, 이것이 맥동과 반짝임을 구분짓는다.

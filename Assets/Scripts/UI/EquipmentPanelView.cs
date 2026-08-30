@@ -11,7 +11,7 @@ public class EquipmentPanelView : MonoBehaviour
     [SerializeField] private EquipmentDropManager equipmentDropManager;
     // EquipmentDropManager가 월드에 드롭하는 것과 동일한 프리팹이다 - 패널은 별도의 아이콘
     // 애셋이 아니라, 정지 상태로 배치된 동일 비주얼의 인스턴스를 보여준다.
-    [SerializeField] private EquipmentDropPickup previewPickupPrefab;
+    [SerializeField] private DropPickup previewPickupPrefab;
 
     private const int IconSize = 96;
     private const float RowHeight = 118f;
@@ -46,7 +46,7 @@ public class EquipmentPanelView : MonoBehaviour
 
     // 관리 창이 패널을 코드로 빌드할 수 있게 해준다. 오브젝트가 비활성일 때 호출해야 한다 -
     // 활성 GameObject에 컴포넌트를 붙이면 Awake(그리고 이 필드를 읽는 Build)가 즉시 실행된다.
-    public void Configure(EquipmentDropManager manager, EquipmentDropPickup previewPrefab)
+    public void Configure(EquipmentDropManager manager, DropPickup previewPrefab)
     {
         equipmentDropManager = manager;
         previewPickupPrefab = previewPrefab;

@@ -2,7 +2,7 @@ using UnityEngine;
 
 // 장비 패널용 소형 진열장: 플레이 영역에서 멀리 떨어진 무대를 고정 카메라가 찍고, RawImage가
 // 그 렌더 텍스처를 읽는다. 표시용 mesh/material/aura를 250줄쯤 중복 작성하는 대신
-// EquipmentDropPickup.Initialize를 재사용한다 - 던지기/굴러가기 코루틴은 첫 동기 단계 이상
+// DropPickup.Initialize를 재사용한다 - 던지기/굴러가기 코루틴은 첫 동기 단계 이상
 // 진행되기 전에 정지되므로 아이템은 이미 "착지한" 상태로 놓이고, Update로 구동되는 오라 발광과
 // 반짝임은 실제 드롭 때와 똑같이 계속 애니메이션된다.
 public class EquipmentPreviewRig : MonoBehaviour
@@ -18,14 +18,14 @@ public class EquipmentPreviewRig : MonoBehaviour
     private const float FrameFill = 0.62f;
     private const float MinBoundsRadius = 0.05f;
 
-    private EquipmentDropPickup pickupPrefab;
-    private EquipmentDropPickup current;
+    private DropPickup pickupPrefab;
+    private DropPickup current;
     private Camera previewCamera;
     private RenderTexture renderTexture;
 
     public RenderTexture Texture => renderTexture;
 
-    public void Initialize(EquipmentDropPickup prefab)
+    public void Initialize(DropPickup prefab)
     {
         pickupPrefab = prefab;
 
@@ -58,7 +58,7 @@ public class EquipmentPreviewRig : MonoBehaviour
         current = Instantiate(pickupPrefab, transform.position, Quaternion.identity, transform);
         // "player"/combatLoop/dropManager는 여기서는 전부 의미가 없다 - 이것들을 사용할 던지기
         // 코루틴은 어차피 첫 프레임을 넘어서까지 실행되지 않는다(아래 참고).
-        current.Initialize(equipType, grade, transform, null, 0f, null);
+        current.InitializeEquipment(equipType, grade, transform, null, 0f, null);
         current.StopAllCoroutines();
 
         // Initialize의 `StartCoroutine(TossThenRunOver())`는 첫 줄부터 던지기 서브 코루틴에 대한
