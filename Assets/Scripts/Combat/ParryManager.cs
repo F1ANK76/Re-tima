@@ -11,7 +11,7 @@ public class ParryManager : MonoBehaviour
     [SerializeField] private Text cooldownText;
     [SerializeField] private WeaponSwing weaponSwing;
     [SerializeField] private PlayerCharacter player;
-    [SerializeField] private ParryShieldEffect parrySuccessVfx;
+    [SerializeField] private GameObject parrySuccessVfx;
     [SerializeField] private ParticleSystem teleportVfx;
     [SerializeField] private CombatLoop combatLoop;
 
@@ -27,6 +27,9 @@ public class ParryManager : MonoBehaviour
     // Teleport 프리팹의 가장 긴 서브 시스템 수명과 일치시켜서, 화려한 연출 도중에
     // 끊기지 않고 한 사이클을 온전히 다 재생하도록 한다.
     private const float TeleportVfxDuration = 0.7f;
+    // 패링 윈도우(0.5초)보다 살짝 길게 잡아서, 판정이 끝난 뒤에도 방패가 잠깐 남아있다가
+    // 사라지도록 하는 의도적인 여유.
+    private const float ShieldEffectDuration = 0.8f;
     // 패링 성공의 보상 - 리포스트 타격은 플레이어 공격력의 2배로 들어간다.
     private const float RiposteDamageMultiplier = 2f;
 
@@ -35,6 +38,7 @@ public class ParryManager : MonoBehaviour
     private bool duelActive;
     private Monster currentDuelist;
     private Coroutine cooldownRoutine;
+    private Coroutine shieldEffectRoutine;
 
     // 타격 전에 예비 동작(텔레그래프)을 보이는 몬스터만 패링 가능하다 - 일반 몬스터는
     // 아무 조짐 없이 고정된 타이머로 공격하므로 반응할 대상이 애초에 없다.
@@ -120,10 +124,9 @@ public class ParryManager : MonoBehaviour
         Animator animator = weaponSwing != null ? weaponSwing.CharacterAnimator : null;
         if (animator != null) animator.Play(PlayerAnimStates.Defend, 0, 0f);
 
-        // 방패 이펙트는 성공 여부와 무관하게 시도하는 순간 바로 뜬다. 자체 지속 시간
-        // (0.8초)이 패링 윈도우(0.5초)보다 살짝 길어서, 판정이 끝난 뒤에도 잠깐 남아있다가
-        // 사라진다 - 의도적인 여유이며, 실제 성공/실패 판정과는 무관하다.
-        if (parrySuccessVfx != null) parrySuccessVfx.Show();
+        // 방패 이펙트는 성공 여부와 무관하게 시도하는 순간 바로 뜬다 - 실제 성공/실패
+        // 판정과는 무관하다.
+        ShowShieldEffect();
 
         yield return new WaitForSeconds(ParryWindowDuration);
 
@@ -215,5 +218,21 @@ public class ParryManager : MonoBehaviour
     private void UpdateButtonInteractable()
     {
         if (parryButton != null) parryButton.interactable = duelActive && !onCooldown;
+    }
+
+    private void ShowShieldEffect()
+    {
+        if (parrySuccessVfx == null) return;
+
+        parrySuccessVfx.SetActive(true);
+        if (shieldEffectRoutine != null) StopCoroutine(shieldEffectRoutine);
+        shieldEffectRoutine = StartCoroutine(HideShieldEffectAfterDelay());
+    }
+
+    private IEnumerator HideShieldEffectAfterDelay()
+    {
+        yield return new WaitForSeconds(ShieldEffectDuration);
+        parrySuccessVfx.SetActive(false);
+        shieldEffectRoutine = null;
     }
 }
