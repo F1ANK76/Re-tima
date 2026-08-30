@@ -68,6 +68,14 @@ public class EquipmentPreviewRig : MonoBehaviour
         current.transform.localPosition = Vector3.zero;
         current.transform.localScale = Vector3.one * GradeVisuals.GetPotionScale(grade);
 
+        // 아우라/반짝임 쿼드는 기본적으로 Camera.main을 향한다. 이 무대는 플레이 영역에서 멀리
+        // 떨어져 있어서 그대로 두면 프리뷰 카메라 기준으로 거의 옆면으로 서고, 가산 쿼드가
+        // 아이템을 관통해 세로로 반 갈린 것처럼 보인다. Start보다 먼저 여기서 대상을 바꿔준다.
+        foreach (Billboard billboard in current.GetComponentsInChildren<Billboard>(true))
+        {
+            billboard.SetCamera(previewCamera);
+        }
+
         FrameOnVisual();
     }
 
