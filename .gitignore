@@ -14,3 +14,8 @@
 !/Assets/
 /Assets/*
 !/Assets/Scripts/
+
+# Dead code with zero references anywhere in the project (verified by GUID/class-name
+# search and a clean play-mode run) - kept on disk, just not tracked.
+/Assets/Scripts/Data/EquipmentOptionTable.cs
+/Assets/Scripts/Data/EquipmentOptionTable.cs.meta
