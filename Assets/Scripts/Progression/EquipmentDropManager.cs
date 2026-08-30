@@ -16,6 +16,10 @@ public class EquipmentDropManager : MonoBehaviour
     // DropCoordinator가 장비를 활성 드롭 타입 목록에 넣기 시작하는 메인 스테이지.
     public const int UnlockStage = 2;
 
+    // 등급과 무관하게 숙련도 레벨당 고정으로 부여되는 스탯.
+    private const float SwordLevelAtkBonus = 1f;
+    private const float ShieldLevelHpBonus = 10f;
+
     // null은 해당 타입이 아직 아무것도 장착되지 않았음을 뜻한다 - 이미 실질적인(작지만) 보너스가
     // 있는 "Normal 등급 장착" 상태와는 구분된다.
     private StatGrade? equippedSwordGrade;
@@ -53,8 +57,8 @@ public class EquipmentDropManager : MonoBehaviour
 
     // 스톤 옵션을 뺀 등급 + 숙련도만 - Equip 탭에 표시되는 값이라 여기서 "장비"는 sword/shield
     // 자체만을 뜻한다. 옵션은 Stone 탭에만 표시된다(ManagementWindowView.OptionLine 참고).
-    public float SwordEquipmentBonus => GradeBonus(equippedSwordGrade, EquipmentGradeBonus.GetSwordAtk) + swordLevel * EquipmentGradeBonus.SwordLevelAtkBonus;
-    public float ShieldEquipmentBonus => GradeBonus(equippedShieldGrade, EquipmentGradeBonus.GetShieldHp) + shieldLevel * EquipmentGradeBonus.ShieldLevelHpBonus;
+    public float SwordEquipmentBonus => GradeBonus(equippedSwordGrade, GetGradeSwordAtk) + swordLevel * SwordLevelAtkBonus;
+    public float ShieldEquipmentBonus => GradeBonus(equippedShieldGrade, GetGradeShieldHp) + shieldLevel * ShieldLevelHpBonus;
 
     // 플레이어 스탯에 실제 적용되는 총합(장비 보너스 + 스톤 옵션). 아래 old-vs-new 델타 계산과
     // TryApplyOption 전용이고 표시에는 안 쓴다 - 옵션은 이 탭에서 숨겨도 게임플레이엔 반영된다.
@@ -62,6 +66,32 @@ public class EquipmentDropManager : MonoBehaviour
     public float ShieldHpBonus => ShieldEquipmentBonus + shieldHpOption;
 
     private static float GradeBonus(StatGrade? grade, System.Func<StatGrade, float> lookup) => grade.HasValue ? lookup(grade.Value) : 0f;
+
+    // 장착 장비의 고정 보상 테이블 - 검이나 방패의 등급이 기본 보너스를 그대로 결정한다.
+    // 스테이지 스케일링은 전혀 없다: Legendary 검은 어느 스테이지에서 드롭됐든 항상 +5 ATK다.
+    private static float GetGradeSwordAtk(StatGrade grade)
+    {
+        switch (grade)
+        {
+            case StatGrade.Normal: return 0.3f;
+            case StatGrade.Rare: return 0.5f;
+            case StatGrade.Epic: return 1f;
+            case StatGrade.Unique: return 1.5f;
+            default: return 2f;
+        }
+    }
+
+    private static float GetGradeShieldHp(StatGrade grade)
+    {
+        switch (grade)
+        {
+            case StatGrade.Normal: return 10f;
+            case StatGrade.Rare: return 15f;
+            case StatGrade.Epic: return 20f;
+            case StatGrade.Unique: return 25f;
+            default: return 30f;
+        }
+    }
 
     // DropCoordinator가 이 타입을 드롭하기로 정했을 때 호출한다.
     public void RollAndSpawn(Monster monster)
@@ -94,8 +124,6 @@ public class EquipmentDropManager : MonoBehaviour
 
             // 숙련도 게이지 시스템 비활성화 - 동급 이하 중복 픽업은 더 이상 추가 보너스로
             // 전환되지 않는다. 장비 보너스는 이제 장착 등급만으로 결정된다.
-            // swordMasteryPercent += EquipmentGradeBonus.GetProgressPercent(grade);
-            // swordLevel = Mathf.FloorToInt(swordMasteryPercent / 100f);
 
             if (!equippedSwordGrade.HasValue || grade > equippedSwordGrade.Value) equippedSwordGrade = grade;
 
@@ -104,9 +132,6 @@ public class EquipmentDropManager : MonoBehaviour
         else
         {
             float oldBonus = ShieldHpBonus;
-
-            // shieldMasteryPercent += EquipmentGradeBonus.GetProgressPercent(grade);
-            // shieldLevel = Mathf.FloorToInt(shieldMasteryPercent / 100f);
 
             if (!equippedShieldGrade.HasValue || grade > equippedShieldGrade.Value) equippedShieldGrade = grade;
 
