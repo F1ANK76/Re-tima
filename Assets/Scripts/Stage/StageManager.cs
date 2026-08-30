@@ -138,10 +138,6 @@ public class StageManager : MonoBehaviour
         {
             Destroy(pickup.gameObject);
         }
-        foreach (StoneDropPickup stone in FindObjectsByType<StoneDropPickup>(FindObjectsSortMode.None))
-        {
-            Destroy(stone.gameObject);
-        }
 
         // 위에서 픽업을 곧바로 Destroy()하면 아직 던져지는 도중(idle hold는 걸렸고 아직 안 풀린
         // 상태)일 때 자신의 PopIdleHold 호출을 건너뛴다 - 그러면 풀어줄 주체가 아무것도 남지 않아
@@ -397,10 +393,6 @@ public class StageManager : MonoBehaviour
         foreach (EquipmentDropPickup pickup in FindObjectsByType<EquipmentDropPickup>(FindObjectsSortMode.None))
         {
             Destroy(pickup.gameObject);
-        }
-        foreach (StoneDropPickup stone in FindObjectsByType<StoneDropPickup>(FindObjectsSortMode.None))
-        {
-            Destroy(stone.gameObject);
         }
 
         // 위에서 픽업을 곧바로 Destroy()하면 아직 던져지는 도중(idle hold는 걸렸고 아직 안 풀린

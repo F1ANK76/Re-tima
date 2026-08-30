@@ -32,14 +32,6 @@ public class EquipmentDropManager : MonoBehaviour
     private int swordLevel;
     private int shieldLevel;
 
-    // 스톤 리롤로 슬롯에 박은 추가 옵션 값 + 그 값을 만든 등급(UI 색 표시용으로만 보관).
-    // 누적이 아니라 대체다: 슬롯은 지금까지 나온 것 중 가장 좋은 롤 하나만 유지한다.
-    private float swordAtkOption;
-    private float shieldHpOption;
-    private StatGrade? swordAtkOptionGrade;
-    private StatGrade? shieldHpOptionGrade;
-
-
     public StatGrade? EquippedSwordGrade => equippedSwordGrade;
     public StatGrade? EquippedShieldGrade => equippedShieldGrade;
     public int SwordLevel => swordLevel;
@@ -48,22 +40,10 @@ public class EquipmentDropManager : MonoBehaviour
     // 산출하는 데 쓰이는 상한 없는 누적 총량과는 다른 값이다.
     public float SwordMasteryProgressPercent => swordMasteryPercent % 100f;
     public float ShieldMasteryProgressPercent => shieldMasteryPercent % 100f;
-    public float SwordAtkOption => swordAtkOption;
-    public float ShieldHpOption => shieldHpOption;
-    public StatGrade? SwordAtkOptionGrade => swordAtkOptionGrade;
-    public StatGrade? ShieldHpOptionGrade => shieldHpOptionGrade;
-    public float GetOption(StatType statType) => statType == StatType.Attack ? swordAtkOption : shieldHpOption;
-    public StatGrade? GetOptionGrade(StatType statType) => statType == StatType.Attack ? swordAtkOptionGrade : shieldHpOptionGrade;
 
-    // 스톤 옵션을 뺀 등급 + 숙련도만 - Equip 탭에 표시되는 값이라 여기서 "장비"는 sword/shield
-    // 자체만을 뜻한다. 옵션은 Stone 탭에만 표시된다(ManagementWindowView.OptionLine 참고).
+    // Equip 탭에 표시되는 값 - 장착 등급 + 숙련도만으로 결정된다.
     public float SwordEquipmentBonus => GradeBonus(equippedSwordGrade, GetGradeSwordAtk) + swordLevel * SwordLevelAtkBonus;
     public float ShieldEquipmentBonus => GradeBonus(equippedShieldGrade, GetGradeShieldHp) + shieldLevel * ShieldLevelHpBonus;
-
-    // 플레이어 스탯에 실제 적용되는 총합(장비 보너스 + 스톤 옵션). 아래 old-vs-new 델타 계산과
-    // TryApplyOption 전용이고 표시에는 안 쓴다 - 옵션은 이 탭에서 숨겨도 게임플레이엔 반영된다.
-    public float SwordAtkBonus => SwordEquipmentBonus + swordAtkOption;
-    public float ShieldHpBonus => ShieldEquipmentBonus + shieldHpOption;
 
     private static float GradeBonus(StatGrade? grade, System.Func<StatGrade, float> lookup) => grade.HasValue ? lookup(grade.Value) : 0f;
 
@@ -120,58 +100,26 @@ public class EquipmentDropManager : MonoBehaviour
     {
         if (equipType == EquipmentType.Sword)
         {
-            float oldBonus = SwordAtkBonus;
+            float oldBonus = SwordEquipmentBonus;
 
             // 숙련도 게이지 시스템 비활성화 - 동급 이하 중복 픽업은 더 이상 추가 보너스로
             // 전환되지 않는다. 장비 보너스는 이제 장착 등급만으로 결정된다.
 
             if (!equippedSwordGrade.HasValue || grade > equippedSwordGrade.Value) equippedSwordGrade = grade;
 
-            if (player != null) player.IncreaseAttack(SwordAtkBonus - oldBonus);
+            if (player != null) player.IncreaseAttack(SwordEquipmentBonus - oldBonus);
         }
         else
         {
-            float oldBonus = ShieldHpBonus;
+            float oldBonus = ShieldEquipmentBonus;
 
             if (!equippedShieldGrade.HasValue || grade > equippedShieldGrade.Value) equippedShieldGrade = grade;
 
-            if (player != null) player.IncreaseMaxHp(ShieldHpBonus - oldBonus);
+            if (player != null) player.IncreaseMaxHp(ShieldEquipmentBonus - oldBonus);
         }
 
         // 이제 모든 픽업은 알릴 가치가 있다 - 장착 상태를 바꾸지 않는 픽업이라도 숙련도
         // 게이지는 움직였기 때문이다.
         GameEvents.RaiseEquipmentPickedUp(equipType, grade);
-    }
-
-
-    // 롤된 옵션을 슬롯의 기존 값보다 높을 때만(엄격한 초과 >) 확정한다. UI가 아니라 여기서
-    // 강제한다 - "슬롯은 최선의 옵션을 유지한다"는 데이터 규칙이라 데이터와 함께 있어야 한다.
-    public bool TryApplyOption(StatType statType, StatGrade grade, float value)
-    {
-        if (statType == StatType.Attack)
-        {
-            if (value <= swordAtkOption) return false;
-
-            // 쓰기 전에 캡처해서 델타로 적용 - CompleteDrop과 같은 방식이며, 나머지 보너스의
-            // 구성을 몰라도 플레이어 스탯이 옵션을 그대로 추적할 수 있다.
-            float oldBonus = SwordAtkBonus;
-            swordAtkOption = value;
-            swordAtkOptionGrade = grade;
-            if (player != null) player.IncreaseAttack(SwordAtkBonus - oldBonus);
-        }
-        else
-        {
-            if (value <= shieldHpOption) return false;
-
-            float oldBonus = ShieldHpBonus;
-            shieldHpOption = value;
-            shieldHpOptionGrade = grade;
-            if (player != null) player.IncreaseMaxHp(ShieldHpBonus - oldBonus);
-        }
-
-        GameEvents.RaiseEquipmentPickedUp(
-            statType == StatType.Attack ? EquipmentType.Sword : EquipmentType.Shield,
-            equippedSwordGrade ?? StatGrade.Normal);
-        return true;
     }
 }

@@ -18,9 +18,6 @@ public static class GameEvents
     // 장착된 등급을 넘었는지 여부와 무관하게 항상 숙련도 게이지에 반영되므로
     // (EquipmentDropManager.CompleteDrop 참고), 모든 픽업이 알릴 가치가 있다.
     public static event Action<EquipmentType, StatGrade> OnEquipmentPickedUp;
-    // 슬롯의 스톤 개수가 변할 때마다 발생하며, 새 총합과 델타를 함께 실어 보낸다 - 그래서
-    // 픽업 팝업은 "+4"라고 표시할 수 있고, 카운터 표시는 총합만 그대로 가져다 쓰면 된다.
-    public static event Action<StatType, int, int> OnStonesChanged;
     public static event Action OnPlayerDied;
 
     public static void RaiseMonsterSpawned(Monster monster) => OnMonsterSpawned?.Invoke(monster);
@@ -31,6 +28,5 @@ public static class GameEvents
     public static void RaiseBossGaugeChanged(int percent) => OnBossGaugeChanged?.Invoke(percent);
     public static void RaiseStatDropGained(StatGrade grade, StatType statType, float amount) => OnStatDropGained?.Invoke(grade, statType, amount);
     public static void RaiseEquipmentPickedUp(EquipmentType equipType, StatGrade grade) => OnEquipmentPickedUp?.Invoke(equipType, grade);
-    public static void RaiseStonesChanged(StatType statType, int total, int delta) => OnStonesChanged?.Invoke(statType, total, delta);
     public static void RaisePlayerDied() => OnPlayerDied?.Invoke();
 }

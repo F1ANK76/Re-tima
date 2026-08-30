@@ -86,9 +86,7 @@ public class EquipmentPanelView : MonoBehaviour
     {
         if (equipmentDropManager == null) return;
 
-        // SwordAtkBonus/ShieldHpBonus가 아니라 SwordEquipmentBonus/ShieldEquipmentBonus - 이
-        // 패널은 Equip 탭의 전체 콘텐츠로 순수 장비 스탯만 보여준다. 플레이어 실제 총합에도
-        // 반영되는 스톤 옵션은 Stone 탭 몫(ManagementWindowView.OptionLine 참고).
+        // Equip 탭의 전체 콘텐츠로, 장착 등급 + 숙련도로 결정되는 순수 장비 스탯만 보여준다.
         ApplyRow("Sword", equipmentDropManager.EquippedSwordGrade, EquipmentType.Sword,
             equipmentDropManager.SwordEquipmentBonus, "ATK", swordRig, swordIconFrame, swordLabel);
         ApplyRow("Shield", equipmentDropManager.EquippedShieldGrade, EquipmentType.Shield,
