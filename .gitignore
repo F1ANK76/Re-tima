@@ -19,3 +19,10 @@
 # search and a clean play-mode run) - kept on disk, just not tracked.
 /Assets/Scripts/Data/EquipmentOptionTable.cs
 /Assets/Scripts/Data/EquipmentOptionTable.cs.meta
+
+# Bird monster roster is wired up (prefabs/defs/animator all reference each other) but
+# never actually spawned: MonsterSpawner's stage2*Definition slots are fileID:0 in the
+# only scene in the build, so every stage falls back to the stage-1 Footman roster.
+# Kept on disk, just not tracked.
+/Assets/Scripts/Combat/BirdWaddle.cs
+/Assets/Scripts/Combat/BirdWaddle.cs.meta
