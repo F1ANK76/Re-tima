@@ -2,7 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 좌측 상단 버튼 뒤에 뜨는 관리 창: 왼쪽 세로 탭 열(Stat, Equip)과 그 오른쪽의 콘텐츠
-// 영역 하나. UI의 다른 부분(TitleScreenView, EquipmentPanelView)과 동일하게 전부 코드로 빌드.
+// 영역 하나. 창 자체는 전부 코드로 빌드하지만, Equip 탭 안의 EquipmentPanelView는 프리팹을
+// 그대로 심는다(BuildEquipPage 참고) - 같은 레이아웃을 여기서 다시 코드로 지을 필요가 없다.
 //
 // Stone 탭은 itch.io 1차 출시 범위(StageManager.MaxMainStage = 2)에 스톤 시스템 해금
 // 스테이지(3)가 포함되지 않아 제거했다 - 영원히 잠긴 채로만 보이는 탭을 노출하지 않기 위함.
@@ -16,6 +17,9 @@ public class ManagementWindowView : MonoBehaviour
     [SerializeField] private StageManager stageManager;
     // Equip 탭에 임베드된 EquipmentPanelView가 프리뷰에 사용하는 것과 동일한 프리팹이다.
     [SerializeField] private DropPickup previewPickupPrefab;
+    // Equip 탭에 그대로 심을 EquipmentPanelView 프리팹 - 우측 상단 버튼이 보여주는 것과
+    // 동일한 레이아웃을 코드로 다시 짓지 않고 재사용한다.
+    [SerializeField] private EquipmentPanelView equipmentPanelPrefab;
 
     // 각 탭이 어느 메인 스테이지에서 잠금 해제되는지. Stat은 처음부터 열려 있고(인덱스 0은
     // 무의미 - 절대 잠기지 않는다), Equip은 그 드롭이 실제로 시작되는 시점(EquipmentDropManager
@@ -263,25 +267,24 @@ public class ManagementWindowView : MonoBehaviour
         statHp = CreateRow(parent, "Hp", 1, 22, Color.white);
     }
 
-    // 두 번째 EquipmentPanelView를 호스팅하여, 손으로 복사해서 어긋날 수 있는 표시 값이
-    // 아니라 우측 상단 버튼이 보여주는 것과 정확히 동일한 내용을 이 탭에서도 보여준다.
+    // EquipmentPanelView 프리팹을 그대로 심는다 - 같은 레이아웃을 손으로 복사해서 두
+    // 버전이 서로 어긋나게 두지 않는다.
     private void BuildEquipPage(Transform parent)
     {
-        var go = new GameObject("EquipPanel", typeof(RectTransform));
-        // 먼저 비활성화한다: EquipmentPanelView.Awake는 이 참조들로 스스로를 빌드하는데,
-        // 이미 활성인 오브젝트에 컴포넌트를 추가하면 그게 Configure보다 먼저 실행된다.
-        go.SetActive(false);
-        go.transform.SetParent(parent, false);
+        if (equipmentPanelPrefab == null) return;
 
-        var rt = go.GetComponent<RectTransform>();
+        // 프리팹 자체가 비활성 상태로 저장돼 있다: EquipmentPanelView.Awake는 이 참조들로
+        // 스스로를 빌드하는데, 활성 상태로 인스턴스화하면 그게 Configure보다 먼저 실행된다.
+        var panel = Instantiate(equipmentPanelPrefab);
+        var rt = panel.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(0f, 1f);
         rt.pivot = new Vector2(0f, 1f);
         rt.anchoredPosition = new Vector2(Pad, -Pad);
 
-        var panel = go.AddComponent<EquipmentPanelView>();
         panel.Configure(equipmentDropManager, previewPickupPrefab);
-        go.SetActive(true);
+        panel.gameObject.SetActive(true);
     }
 
     private Text CreateRow(Transform parent, string name, int index, int size, Color color)
