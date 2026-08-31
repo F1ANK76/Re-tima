@@ -2,25 +2,44 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// 테스트 전용 스테이지 점프 패널이다. 릴리스 빌드에는 절대 컴파일되지 않는다(위의 #if 참고) -
-// 플레이 씬의 아무 GameObject에나 붙이고 StageManager를 할당해서 사용한다.
+// 테스트 전용 스테이지 점프 패널(F1로 토글). 릴리스 빌드에는 존재하지 않는다.
+//
+// 씬에 미리 배치하지 않고 런타임에 스스로 생성한다. 예전에는 씬에 GameObject로 올려뒀는데,
+// 그러면 릴리스 빌드에서 클래스만 사라지고 씬에는 그 컴포넌트의 직렬화 데이터가 남아
+// 로드할 때마다 다음 에러가 찍혔다:
+//   "A scripted object (probably DebugStageSelector?) has a different serialization layout
+//    when loading. (Read 32 bytes but expected 60 bytes)"
+// 씬에 아무 흔적도 남기지 않으면 릴리스 빌드가 참조할 것 자체가 없어 문제가 성립하지 않는다.
+// 참조도 직렬화 필드 대신 실행 시점에 찾으므로 인스펙터 연결이 필요 없다.
 public class DebugStageSelector : MonoBehaviour
 {
-    [SerializeField] private StageManager stageManager;
-    // 선택 사항: 메인 메뉴에서 곧장 점프할 경우 Play 버튼을 눌렀을 때와 정확히 똑같이 전환되어야
-    // 한다(메뉴 UI, Play 버튼, HUD 숨김이 함께 사라진다) - 점프한 스테이지 위에 오버레이가 남으면 안 된다.
-    [SerializeField] private TitleScreenView titleScreen;
-    // 프로젝트의 Player Settings에서 Active Input Handling이 새 Input System 전용으로
-    // 설정되어 있어서, 레거시 Input 클래스가 아니라 Keyboard를 통해 읽어야 한다.
-    [SerializeField] private Key toggleKey = Key.F1;
+    private const Key ToggleKey = Key.F1;
 
-    // 처음에는 숨겨진 상태로 시작한다 - 이 패널은 디버그용 편의 기능일 뿐, 토글 키를 누르기도
-    // 전에 플레이어를 맞이하거나(혹은 모든 스크린샷에 나타나거나) 해서는 안 된다.
-    private bool visible = false;
+    private StageManager stageManager;
+    private TitleScreenView titleScreen;
+
+    // 처음에는 숨겨진 상태로 시작한다 - 디버그용 편의 기능일 뿐이라 토글 키를 누르기도 전에
+    // 플레이어를 맞이하거나(혹은 모든 스크린샷에 나타나거나) 해서는 안 된다.
+    private bool visible;
+
+    // 씬 로드가 끝난 뒤 자동으로 자기 자신을 만든다 - 씬마다 손으로 올려둘 필요가 없다.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void AutoCreate()
+    {
+        var go = new GameObject("DebugStageSelector(Auto)");
+        go.AddComponent<DebugStageSelector>();
+    }
+
+    private void Awake()
+    {
+        stageManager = FindFirstObjectByType<StageManager>();
+        // 타이틀 화면은 Play를 누르면 비활성화되므로 비활성 오브젝트까지 포함해 찾는다.
+        titleScreen = FindFirstObjectByType<TitleScreenView>(FindObjectsInactive.Include);
+    }
 
     private void Update()
     {
-        if (Keyboard.current != null && Keyboard.current[toggleKey].wasPressedThisFrame) visible = !visible;
+        if (Keyboard.current != null && Keyboard.current[ToggleKey].wasPressedThisFrame) visible = !visible;
     }
 
     private void OnGUI()
@@ -39,7 +58,7 @@ public class DebugStageSelector : MonoBehaviour
         float height = 60f + StageManager.MaxMainStage * 26f;
 
         GUILayout.BeginArea(new Rect(10, Screen.height - height - 10, width, height), GUI.skin.box);
-        GUILayout.Label($"Stage Jump ({toggleKey} to hide) - now {stageManager.MainStage}-{stageManager.SubStage}");
+        GUILayout.Label($"Stage Jump ({ToggleKey} to hide) - now {stageManager.MainStage}-{stageManager.SubStage}");
 
         for (int main = 1; main <= StageManager.MaxMainStage; main++)
         {
