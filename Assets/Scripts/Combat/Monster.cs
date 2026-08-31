@@ -461,15 +461,37 @@ public class Monster : MonoBehaviour
     }
 
     // 창이 플레이어에게 닿을 만큼 타격 스테이트가 충분히 재생될 때까지 실행된다.
+    //
+    // "임팩트 지점을 지났다"는 판정은 두 가지로 잡는다. normalizedTime이 임팩트 비율을 넘긴
+    // 프레임을 직접 보는 게 정상 경로지만, 그것만으로는 부족하다: AttackWindUp은 0.3초짜리
+    // 클립인데 임팩트(0.92)부터 이탈(전이 exitTime 0.95)까지가 클립의 3%, 약 9ms라서 60fps
+    // 기준 한 프레임(약 17ms)보다도 좁다. 그래서 그 사이에 프레임이 안 떨어지면 조건이 영영
+    // 참이 되지 않고 아래 8초 타임아웃까지 흘러가, 몬스터가 그동안 Idle로 가만히 서 있다가
+    // 뒤늦게 엉뚱한 타이밍에 데미지를 넣는다(실측: 5번 중 4번꼴로 놓침).
+    //
+    // 그래서 "그 스테이트에 들어갔다가 이미 빠져나왔다"도 임팩트 통과로 함께 인정한다 -
+    // 스테이트를 벗어났다는 건 끝(exitTime 0.95)까지 재생됐다는 뜻이고, 그건 임팩트 지점을
+    // 확실히 지난 것이다. 이 경우 판정이 최대 한 프레임 늦어질 뿐이라 눈에 띄지 않는다.
     private IEnumerator WaitForStrikeImpact(Animator animator, string strikeState, float strikeLength, float impactTime)
     {
         const float SafetyTimeout = 8f;
         float elapsed = 0f;
+        bool enteredStrikeState = false;
 
         while (!IsDead && elapsed < SafetyTimeout)
         {
             AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
-            if (state.IsName(strikeState) && state.normalizedTime * strikeLength >= impactTime) yield break;
+
+            if (state.IsName(strikeState))
+            {
+                enteredStrikeState = true;
+                if (state.normalizedTime * strikeLength >= impactTime) yield break;
+            }
+            else if (enteredStrikeState)
+            {
+                // 프레임 샘플링이 좁은 임팩트 구간을 건너뛴 경우 - 이미 지나갔으므로 바로 종료.
+                yield break;
+            }
 
             elapsed += Time.deltaTime;
             yield return null;
