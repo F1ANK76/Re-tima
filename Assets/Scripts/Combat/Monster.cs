@@ -315,6 +315,13 @@ public class Monster : MonoBehaviour
     // 비트(뛰어올랐다 쿵 내려찍는 순간)가 곧 타격이다. 그 전 어느 시점의 패링으로든 무효화.
     private IEnumerator TelegraphAttackLoop()
     {
+        // 이 while 루프 안 어디선가(ParryManager/Player 쪽 호출 등) 예외가 나면 코루틴은
+        // StopAttacking()을 거치지 않고 조용히 죽는다 - bossLoopStarted는 true로 남고,
+        // Update()의 자가복구는 그 플래그가 false일 때만 재시작하므로 몬스터가 영원히 다시
+        // 공격하지 못하게 된다. try/finally로 감싸서 "죽었으면(정상 사망 제외) 무조건
+        // 플래그를 되돌린다"를 보장한다.
+        try
+        {
         CharacterAnimator?.SetBool(UseTelegraphParam, true);
 
         float windUpLength = ResolveClipLength(windUpClipName, windUpClipFallbackLength);
@@ -412,6 +419,14 @@ public class Monster : MonoBehaviour
             // 한 공격의 착지 스윙과 다음 공격의 진입 동작을 분리해줘서, 연달아 두 번
             // 충전하는 게 하나의 이중 스윙처럼 뭉개져 보이지 않게 한다.
             if (postAttackPause > 0f) yield return new WaitForSeconds(postAttackPause);
+        }
+        }
+        finally
+        {
+            // 정상적으로 죽어서 루프를 빠져나온 거라면 true로 둔다 - 죽음 애니메이션이
+            // 끝나 실제로 파괴되기 전까지 남은 프레임 동안 Update()가 다시 살아나 새
+            // 루프를 도는 낭비를 막는다.
+            if (!IsDead) bossLoopStarted = false;
         }
     }
 
@@ -696,6 +711,10 @@ public class Monster : MonoBehaviour
     // 앞당겨서 강제한다.
     private IEnumerator NormalAttackLoop()
     {
+        // TelegraphAttackLoop과 같은 이유의 try/finally - Player.TakeDamage 쪽에서 예외가
+        // 나도 normalLoopStarted가 정직하게 풀려서 Update()가 다음 프레임에 다시 살릴 수 있게.
+        try
+        {
         // 일반 몬스터는 손대지 않은 원본 클립을 그대로 재생한다 - 충전도, 분리도 없다.
         CharacterAnimator?.SetBool(UseTelegraphParam, false);
 
@@ -727,6 +746,11 @@ public class Monster : MonoBehaviour
             }
 
             yield return new WaitForSeconds(Mathf.Max(0f, attackInterval - impactDelay));
+        }
+        }
+        finally
+        {
+            if (!IsDead) normalLoopStarted = false;
         }
     }
 
