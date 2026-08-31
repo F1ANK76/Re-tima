@@ -28,8 +28,6 @@ public class BossGaugeView : MonoBehaviour
     private Color fillBaseColor;
     private Color textBaseColor;
 
-    private RectTransform barRect;
-
     private int displayedPercent;
     private Coroutine gaugeRoutine;
 
@@ -40,7 +38,6 @@ public class BossGaugeView : MonoBehaviour
 
     private void Awake()
     {
-        barRect = fillRect != null ? fillRect.parent as RectTransform : null;
         fillImage = fillRect != null ? fillRect.GetComponent<Image>() : null;
         if (fillImage != null) fillBaseColor = fillImage.color;
         if (percentText != null) textBaseColor = percentText.color;
