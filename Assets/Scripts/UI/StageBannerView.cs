@@ -3,23 +3,21 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
+[RequireComponent(typeof(CanvasGroup))]
 public class StageBannerView : MonoBehaviour
 {
     [SerializeField] private Text bannerText;
+    [SerializeField] private CanvasGroup textGroup;
     [SerializeField] private float displayDuration = 2f;
     [SerializeField] private float fadeDuration = 0.25f;
     [SerializeField] private float popStartScale = 1.6f;
     // 오프닝 카드가 비어있는 상태로 얼마나 머무른 뒤 타이틀이 애니메이션으로 나타나는지 -
     // 이렇게 해야 커튼이 끊긴 프레임이 아니라 의도된 박자로 읽힌다.
     [SerializeField] private float openingHoldDuration = 0.4f;
-    // OFF면 Image에 원래 지정된 단색 그대로 사용한다.
-    [SerializeField] private bool useGeneratedBackdrop = true;
 
     private CanvasGroup canvasGroup;
-    private CanvasGroup textGroup;
     private RectTransform textRect;
     private Coroutine routine;
-    private Sprite generatedBackdrop;
 
     // 세션 첫 안내는 완전히 불투명한 커튼 뒤에서 시작해 타이틀 전에 게임이 보이지 않게 한다.
     // 이후 안내(새 서브스테이지, 사망 후 재시작)는 이미 보고 있던 게임플레이 위로 페이드인된다.
@@ -27,50 +25,16 @@ public class StageBannerView : MonoBehaviour
 
     private void Awake()
     {
-        // 배경과 텍스트를 따로 페이드시키려면 각각에 그룹이 필요하다.
-        canvasGroup = gameObject.AddComponent<CanvasGroup>();
+        canvasGroup = GetComponent<CanvasGroup>();
         if (bannerText != null)
         {
             textRect = bannerText.rectTransform;
-            textGroup = bannerText.gameObject.AddComponent<CanvasGroup>();
             // 씬이 어떤 텍스트로 저장되어 있었든 상관없이 빈 상태로 시작한다.
-            textGroup.alpha = 0f;
+            if (textGroup != null) textGroup.alpha = 0f;
         }
-
-        if (useGeneratedBackdrop) ApplyGeneratedBackdrop();
 
         // 배너는 기본적으로 비활성화 상태로 시작한다 - 안내가 필요할 때 Show()를 호출한다.
         gameObject.SetActive(false);
-    }
-
-    // 배너가 활성화될 때마다 런타임에 배경을 생성한다
-    private void ApplyGeneratedBackdrop()
-    {
-        Image image = GetComponent<Image>();
-        if (image == null) return;
-
-        generatedBackdrop = TitleCardBackdrop.Create();
-        image.sprite = generatedBackdrop;
-        // 원래 지정된 fill 색은 순검정이라, 그대로 두면 곱셈 블렌딩으로 그림이 지워져 버린다.
-        image.color = Color.white;
-
-        // 밝은 카드를 쓰는 대가로 흰 텍스트가 파스텔 배경 위에 놓이게 되는데, 부드러운 자두색
-        // 그림자를 넣으면 뒤의 하늘을 어둡게 만들지 않으면서 타이틀의 대비를 되찾을 수 있다.
-        if (bannerText != null && bannerText.GetComponent<Shadow>() == null)
-        {
-            Shadow shadow = bannerText.gameObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0.16f, 0.11f, 0.25f, 0.55f);
-            shadow.effectDistance = new Vector2(4f, -4f);
-        }
-    }
-
-    private void OnDestroy()
-    {
-        if (generatedBackdrop == null) return;
-
-        // 런타임에 만들어졌으므로, 이 뒤에 있는 텍스처를 대신 정리해줄 것이 아무것도 없다.
-        Destroy(generatedBackdrop.texture);
-        Destroy(generatedBackdrop);
     }
 
     public void Show(string text, Action onComplete)
