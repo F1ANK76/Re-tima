@@ -2,8 +2,10 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 좌측 상단 버튼 뒤에 뜨는 관리 창: 왼쪽 세로 탭 열(Stat, Equip)과 그 오른쪽의 콘텐츠
-// 영역 하나. 창 자체는 전부 코드로 빌드하지만, Equip 탭 안의 EquipmentPanelView는 프리팹을
-// 그대로 심는다(BuildEquipPage 참고) - 같은 레이아웃을 여기서 다시 코드로 지을 필요가 없다.
+// 영역 하나. 창의 레이아웃(타이틀바/탭/페이지 배경)은 씬에 미리 지어져 있다 - 이 스크립트는
+// 탭 전환/잠금 해제/스탯 갱신 같은 상태만 다룬다. Equip 탭 안의 EquipmentPanelView만 예외로,
+// 프리팹을 런타임에 그대로 심는다(BuildEquipPage 참고) - 우측 상단 버튼의 패널과 같은
+// 프리팹을 쓰므로 손으로 복사해서 두 버전이 어긋날 일이 없다.
 //
 // Stone 탭은 itch.io 1차 출시 범위(StageManager.MaxMainStage = 2)에 스톤 시스템 해금
 // 스테이지(3)가 포함되지 않아 제거했다 - 영원히 잠긴 채로만 보이는 탭을 노출하지 않기 위함.
@@ -21,44 +23,53 @@ public class ManagementWindowView : MonoBehaviour
     // 동일한 레이아웃을 코드로 다시 짓지 않고 재사용한다.
     [SerializeField] private EquipmentPanelView equipmentPanelPrefab;
 
+    [SerializeField] private Button closeButton;
+
+    // 씬에 미리 배치된 탭 버튼/라벨/페이지 - 인덱스 0 = Stat, 1 = Equip. 순서와 개수가 바뀔 일이
+    // 없어서(Stone 탭은 영구 제거됨) 굳이 코드로 반복 생성하지 않는다.
+    [SerializeField] private Image[] tabButtons;
+    [SerializeField] private Button[] tabButtonComponents;
+    [SerializeField] private Text[] tabLabels;
+    [SerializeField] private GameObject[] tabPages;
+
     // 각 탭이 어느 메인 스테이지에서 잠금 해제되는지. Stat은 처음부터 열려 있고(인덱스 0은
     // 무의미 - 절대 잠기지 않는다), Equip은 그 드롭이 실제로 시작되는 시점(EquipmentDropManager
     // 자체의 잠금 해제 스테이지)에 정확히 열려서, 보여줄 것도 없는 상태에서 탭이 시스템을 먼저
     // 광고하는 일은 없다.
     private static readonly int[] TabUnlockStage = { 1, 2 };
 
-    private const float WindowWidth = 760f;
-    private const float WindowHeight = 470f;
-    private const float TabColumnWidth = 150f;
-    private const float TabHeight = 54f;
-    private const float TitleHeight = 52f;
+    // Equip 탭 안에 EquipmentPanelView 프리팹 인스턴스를 배치할 때만 쓰인다 - 그 외 레이아웃은
+    // 전부 씬에 고정돼 있다.
     private const float Pad = 14f;
 
-    private static readonly Color WindowBackground = new Color(0.09f, 0.09f, 0.12f, 0.97f);
-    private static readonly Color ContentBackground = new Color(0.14f, 0.14f, 0.18f, 0.95f);
+    // 탭 버튼은 잠금/선택 상태에 따라 런타임에 계속 다시 칠해진다(ApplyTabColors) - 그래서
+    // 초기 저작값이 아니라 여기 상수로 남아 있다.
     private static readonly Color TabIdle = new Color(0.2f, 0.2f, 0.25f);
     private static readonly Color TabActive = new Color(0.38f, 0.32f, 0.56f);
     private static readonly Color TabLocked = new Color(0.13f, 0.13f, 0.15f);
-    private static readonly Color TabLockedLabel = new Color(0.4f, 0.4f, 0.44f);
 
-    private Font font;
-    private readonly GameObject[] tabPages = new GameObject[2];
-    private readonly Image[] tabButtons = new Image[2];
-    private readonly Button[] tabButtonComponents = new Button[2];
-    private readonly Text[] tabLabels = new Text[2];
     // 인덱스 0(Stat)은 처음부터 true이고 절대 바뀔 필요가 없다; 1은 RefreshTabUnlocks가
     // 잠금 해제하는 스테이지를 감지하는 순간 켜진다.
     private readonly bool[] tabUnlocked = { true, false };
     private int activeTab;
 
     // Stat 탭
-    private Text statAtk;
-    private Text statHp;
+    [SerializeField] private Text statAtk;
+    [SerializeField] private Text statHp;
 
     private void Awake()
     {
-        font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        Build();
+        if (closeButton != null) closeButton.onClick.AddListener(Close);
+
+        for (int i = 0; i < tabButtonComponents.Length; i++)
+        {
+            if (tabButtonComponents[i] == null) continue;
+            int captured = i;
+            tabButtonComponents[i].onClick.AddListener(() => SelectTab(captured));
+        }
+
+        BuildEquipPage(tabPages[1].transform);
+
         // 첫 페인트가 일어나기 전에 잠긴 외형을 적용한다 - 이게 없으면 잠긴 두 탭이 한
         // 프레임 동안 기본 TabIdle 색으로 잠금 해제된 것처럼 잠깐 번쩍이게 된다.
         RefreshTabUnlocks();
@@ -153,120 +164,6 @@ public class ManagementWindowView : MonoBehaviour
         RefreshAll();
     }
 
-    private void Build()
-    {
-        var rt = GetComponent<RectTransform>();
-        if (rt == null) rt = gameObject.AddComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 0.5f);
-        rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = Vector2.zero;
-        rt.sizeDelta = new Vector2(WindowWidth, WindowHeight);
-
-        var bg = GetComponent<Image>();
-        if (bg == null) bg = gameObject.AddComponent<Image>();
-        bg.color = WindowBackground;
-        // 클릭을 모두 삼켜서 창 뒤의 게임플레이가 이걸 통해 클릭되지 않도록 한다.
-        bg.raycastTarget = true;
-
-        BuildTitleBar();
-        BuildTabs();
-        BuildPages();
-    }
-
-    private void BuildTitleBar()
-    {
-        var title = CreateText(transform, "Title", "MANAGEMENT", 24, TextAnchor.MiddleLeft, Color.white);
-        var trt = title.GetComponent<RectTransform>();
-        trt.anchorMin = new Vector2(0f, 1f);
-        trt.anchorMax = new Vector2(1f, 1f);
-        trt.pivot = new Vector2(0.5f, 1f);
-        trt.offsetMin = new Vector2(Pad + 8f, -TitleHeight);
-        trt.offsetMax = new Vector2(-70f, 0f);
-
-        var closeGo = new GameObject("CloseButton", typeof(RectTransform));
-        closeGo.transform.SetParent(transform, false);
-        var img = closeGo.AddComponent<Image>();
-        img.color = new Color(0.4f, 0.22f, 0.24f);
-        var btn = closeGo.AddComponent<Button>();
-        btn.targetGraphic = img;
-        btn.onClick.AddListener(Close);
-
-        var crt = closeGo.GetComponent<RectTransform>();
-        crt.anchorMin = new Vector2(1f, 1f);
-        crt.anchorMax = new Vector2(1f, 1f);
-        crt.pivot = new Vector2(1f, 1f);
-        crt.anchoredPosition = new Vector2(-Pad, -Pad);
-        crt.sizeDelta = new Vector2(38f, 32f);
-
-        var x = CreateText(closeGo.transform, "X", "X", 18, TextAnchor.MiddleCenter, Color.white);
-        Stretch(x.GetComponent<RectTransform>());
-    }
-
-    private void BuildTabs()
-    {
-        string[] names = { "Stat", "Equip" };
-        for (int i = 0; i < names.Length; i++)
-        {
-            var go = new GameObject(names[i] + "Tab", typeof(RectTransform));
-            go.transform.SetParent(transform, false);
-
-            var img = go.AddComponent<Image>();
-            img.color = TabIdle;
-            tabButtons[i] = img;
-
-            var btn = go.AddComponent<Button>();
-            btn.targetGraphic = img;
-            btn.interactable = tabUnlocked[i];
-            tabButtonComponents[i] = btn;
-            int captured = i;
-            btn.onClick.AddListener(() => SelectTab(captured));
-
-            var brt = go.GetComponent<RectTransform>();
-            brt.anchorMin = new Vector2(0f, 1f);
-            brt.anchorMax = new Vector2(0f, 1f);
-            brt.pivot = new Vector2(0f, 1f);
-            brt.anchoredPosition = new Vector2(Pad, -TitleHeight - i * (TabHeight + 6f));
-            brt.sizeDelta = new Vector2(TabColumnWidth - Pad, TabHeight);
-
-            var label = CreateText(go.transform, "Label", names[i].ToUpper(), 20, TextAnchor.MiddleCenter,
-                tabUnlocked[i] ? Color.white : TabLockedLabel);
-            Stretch(label.GetComponent<RectTransform>());
-            tabLabels[i] = label;
-        }
-    }
-
-    private void BuildPages()
-    {
-        for (int i = 0; i < tabPages.Length; i++)
-        {
-            var page = new GameObject("Page_" + i, typeof(RectTransform));
-            page.transform.SetParent(transform, false);
-
-            var img = page.AddComponent<Image>();
-            img.color = ContentBackground;
-
-            var prt = page.GetComponent<RectTransform>();
-            prt.anchorMin = new Vector2(0f, 0f);
-            prt.anchorMax = new Vector2(1f, 1f);
-            prt.offsetMin = new Vector2(TabColumnWidth, Pad);
-            prt.offsetMax = new Vector2(-Pad, -TitleHeight);
-
-            tabPages[i] = page;
-        }
-
-        BuildStatPage(tabPages[0].transform);
-        BuildEquipPage(tabPages[1].transform);
-    }
-
-    // 실시간 플레이어 스탯 두 개만. 예전에 그 아래 있던 장비 세부 내역은 이제 Equip 탭이
-    // 온전히 담당하며, 여기서 반복해봐야 두 표시 값이 어긋날 여지만 생긴다.
-    private void BuildStatPage(Transform parent)
-    {
-        statAtk = CreateRow(parent, "Atk", 0, 22, Color.white);
-        statHp = CreateRow(parent, "Hp", 1, 22, Color.white);
-    }
-
     // EquipmentPanelView 프리팹을 그대로 심는다 - 같은 레이아웃을 손으로 복사해서 두
     // 버전이 서로 어긋나게 두지 않는다.
     private void BuildEquipPage(Transform parent)
@@ -285,44 +182,5 @@ public class ManagementWindowView : MonoBehaviour
 
         panel.Configure(equipmentDropManager, previewPickupPrefab);
         panel.gameObject.SetActive(true);
-    }
-
-    private Text CreateRow(Transform parent, string name, int index, int size, Color color)
-    {
-        var text = CreateText(parent, name, "", size, TextAnchor.MiddleLeft, color);
-        var rt = text.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(1f, 1f);
-        rt.pivot = new Vector2(0.5f, 1f);
-        rt.offsetMin = new Vector2(Pad, 0f);
-        rt.offsetMax = new Vector2(-Pad, 0f);
-        rt.anchoredPosition = new Vector2(0f, -Pad - index * 38f);
-        rt.sizeDelta = new Vector2(rt.sizeDelta.x, 34f);
-        return text;
-    }
-
-    private Text CreateText(Transform parent, string name, string content, int size,
-        TextAnchor anchor, Color color)
-    {
-        var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-
-        var text = go.AddComponent<Text>();
-        text.font = font;
-        text.fontSize = size;
-        text.fontStyle = FontStyle.Bold;
-        text.alignment = anchor;
-        text.horizontalOverflow = HorizontalWrapMode.Overflow;
-        text.color = color;
-        text.text = content;
-        return text;
-    }
-
-    private static void Stretch(RectTransform rt)
-    {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
     }
 }

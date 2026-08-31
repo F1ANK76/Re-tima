@@ -16,13 +16,9 @@ public class BossGaugeView : MonoBehaviour
 
     [Header("Boss icon (right end of the bar)")]
     // 바가 무엇을 향해 채워지는지 표시한다 - 채움이 대기 중인 아이콘에 도달하는 것만으로
-    // 별도 텍스트 없이 "채우면 저게 소환된다"가 읽힌다. 흰색 실루엣이어야 한다: 두 상태 모두
-    // Image.color로만 제어되므로 이미 색이 입혀진 스프라이트는 틴트와 충돌한다.
-    [SerializeField] private Sprite bossIconSprite;
-    [SerializeField] private float bossIconSize = 44f;
-    // 아이콘 가장자리와 바 오른쪽 가장자리 사이의 간격. 아이콘을 자기 절반 너비 + 이 값만큼
-    // 안쪽에 두어 바 밖으로 튀어나오지 않고, 100% 연출에서 게이지가 펀치될 여유도 남는다.
-    [SerializeField] private float bossIconInset = 6f;
+    // 별도 텍스트 없이 "채우면 저게 소환된다"가 읽힌다. 씬에 미리 배치된 자식이라(바 오른쪽
+    // 가장자리 안쪽으로 앵커) 위치/스프라이트는 인스펙터에서 조정한다 - 색만 여기서 토글한다.
+    [SerializeField] private Image bossIconImage;
     // 두 상태 모두 흰색이며, 오직 불투명도만 다르므로 아이콘은 색조가 바뀌지도 움직이지도
     // 않는다. 게이지가 아직 차오르는 중일 땐 흐릿하게, 가득 차면 완전히 선명하게 보인다.
     [SerializeField] private Color bossIconDimColor = new Color(1f, 1f, 1f, 0.5f);
@@ -33,7 +29,6 @@ public class BossGaugeView : MonoBehaviour
     private Color textBaseColor;
 
     private RectTransform barRect;
-    private Image bossIconImage;
 
     private int displayedPercent;
     private Coroutine gaugeRoutine;
@@ -50,7 +45,6 @@ public class BossGaugeView : MonoBehaviour
         if (fillImage != null) fillBaseColor = fillImage.color;
         if (percentText != null) textBaseColor = percentText.color;
 
-        BuildBossIcon();
         SetBossReady(false);
     }
 
@@ -149,31 +143,6 @@ public class BossGaugeView : MonoBehaviour
         transform.localScale = Vector3.one;
         if (fillImage != null) fillImage.color = fillBaseColor;
         if (percentText != null) percentText.color = textBaseColor;
-    }
-
-    // 바에 자식으로 붙이고 마지막에 추가하여 채움 위에 그려진다 - 채움이 아이콘을 가리며
-    // 지나가는 게 아니라 아이콘 아래로 훑고 지나간다.
-    private void BuildBossIcon()
-    {
-        if (barRect == null || bossIconSprite == null) return;
-
-        var go = new GameObject("BossIcon", typeof(RectTransform));
-        go.transform.SetParent(barRect, false);
-
-        var iconRect = go.GetComponent<RectTransform>();
-        // 바의 오른쪽 가장자리에 고정되고 세로로는 가운데 정렬되어, 특정 해상도에서 바의
-        // 너비가 실제로 어떻게 결정되든 항상 바 끝에 위치한다.
-        iconRect.anchorMin = new Vector2(1f, 0.5f);
-        iconRect.anchorMax = new Vector2(1f, 0.5f);
-        iconRect.pivot = new Vector2(0.5f, 0.5f);
-        iconRect.sizeDelta = new Vector2(bossIconSize, bossIconSize);
-        // 자신의 절반 너비에 inset을 더한 만큼 왼쪽으로 당겨지는데, 이게 바 끝에 걸쳐
-        // 늘어지지 않고 바 안쪽에 머물게 해준다.
-        iconRect.anchoredPosition = new Vector2(-(bossIconSize * 0.5f + bossIconInset), 0f);
-
-        bossIconImage = go.AddComponent<Image>();
-        bossIconImage.sprite = bossIconSprite;
-        bossIconImage.raycastTarget = false;
     }
 
     private static float EaseOutQuad(float x) => 1f - (1f - x) * (1f - x);
