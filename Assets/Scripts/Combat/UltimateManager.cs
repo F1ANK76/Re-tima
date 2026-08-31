@@ -31,6 +31,9 @@ public class UltimateManager : MonoBehaviour
 
     private float chargeTimer;
     private Monster currentMonster;
+    // 패링이 애니메이터를 가로채 궁극기를 하드컷했을 때 ParryManager가 CancelUltimate()로
+    // 멈춰 세울 수 있도록 실행 중인 코루틴을 들고 있는다.
+    private Coroutine ultimateRoutine;
     private int currentMainStage = 1;
     private bool IsUnlocked => currentMainStage >= UnlockStage;
 
@@ -111,7 +114,7 @@ public class UltimateManager : MonoBehaviour
         {
             chargeTimer = 0f;
             if (combatLoop != null) combatLoop.SuppressNewAttacks = false;
-            StartCoroutine(PlayUltimate());
+            ultimateRoutine = StartCoroutine(PlayUltimate());
         }
     }
 
@@ -160,6 +163,21 @@ public class UltimateManager : MonoBehaviour
         {
             animator.Play(PlayerAnimStates.Idle, 0, 0f);
         }
+
+        if (combatLoop != null) combatLoop.PopSuspend();
+        ultimateRoutine = null;
+    }
+
+    // 패링이 애니메이터를 Defend로 하드컷하는 순간 ParryManager가 호출한다. StopCoroutine은 대기 중인
+    // 코드를 실행해주지 않으므로 - 아직 데미지/폭발 전이면 그대로 증발시키고, 서스펜드 해제와 코루틴
+    // 정리는 여기서 직접 해준다. 이미 데미지가 나간 뒤라면(랜딩 딜레이 경과 후) 그 데미지 자체는
+    // 되돌리지 않는다 - 취소는 "아직 안 벌어진 것"만 막을 수 있다.
+    public void CancelUltimate()
+    {
+        if (ultimateRoutine == null) return;
+
+        StopCoroutine(ultimateRoutine);
+        ultimateRoutine = null;
 
         if (combatLoop != null) combatLoop.PopSuspend();
     }

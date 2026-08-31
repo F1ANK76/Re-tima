@@ -14,6 +14,7 @@ public class ParryManager : MonoBehaviour
     [SerializeField] private GameObject parrySuccessVfx;
     [SerializeField] private ParticleSystem teleportVfx;
     [SerializeField] private CombatLoop combatLoop;
+    [SerializeField] private UltimateManager ultimateManager;
 
     private const float ParryWindowDuration = 0.5f;
     // 실패(타이밍을 놓친 시도)는 성공보다 더 오래 물린다 - 연속 패링 남발 방지용 최소 텀인
@@ -123,6 +124,10 @@ public class ParryManager : MonoBehaviour
         // 공격 스윙을 끝까지 기다리지 않고 즉시 끊어버린다.
         Animator animator = weaponSwing != null ? weaponSwing.CharacterAnimator : null;
         if (animator != null) animator.Play(PlayerAnimStates.Defend, 0, 0f);
+
+        // 위와 같은 이유로 궁극기도 하드컷된다 - 애니메이터는 이미 Defend로 넘어갔는데 궁극기
+        // 코루틴이 자기 타이머로 계속 돌아 뒤늦게 데미지/폭발을 따로 터뜨리지 않도록 여기서 함께 취소한다.
+        if (ultimateManager != null) ultimateManager.CancelUltimate();
 
         // 방패 이펙트는 성공 여부와 무관하게 시도하는 순간 바로 뜬다 - 실제 성공/실패
         // 판정과는 무관하다.
