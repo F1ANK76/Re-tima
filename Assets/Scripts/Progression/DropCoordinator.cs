@@ -1,23 +1,46 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-// 처치 하나당 드롭 타입 하나만 나가도록 두 드롭 매니저(StatDropManager/EquipmentDropManager)를
-// 조율한다. 각 매니저는 더 이상 스스로 OnMonsterDied를 듣지 않고, 여기서 뽑힌 타입의
-// RollAndSpawn만 호출당한다.
+// 처치 하나당 드롭 타입 하나만 나가도록 모든 DropSource를 조율한다. 각 소스는 스스로
+// OnMonsterDied를 듣지 않고, 여기서 뽑힌 소스의 RollAndSpawn만 호출당한다.
 //
 // 드롭 여부 자체는 dropChance 하나로만 결정된다(예전 statDropBaseChance와 같은 50%). 일단
-// 드롭이 뜨기로 정해지면, 그중 어느 타입이냐를 나눈다: 활성 타입 목록은 현재 메인 스테이지에
-// 따라 늘어난다 - 1스테는 포션만, 2스테부터 장비도 함께 뜬다. 그 안에서 어느 게 뜰지는 "그
-// 타입이 몇 번째로 해금된 스테이지의 것이냐"를 그대로 가중치로 쓴 랜덤 롤이 정한다(포션=1,
-// 장비=2) - 그래서 항상 가장 최근에 해금된 타입이 그 안에서 가장 잘 뜬다.
+// 드롭이 뜨기로 정해지면, 그중 어느 타입이냐를 아래 목록이 나눈다: 현재 메인 스테이지가
+// unlockStage 이상인 소스만 후보가 되고, 그 안에서 weight 비율로 하나가 뽑힌다.
+//
+// 소스가 목록이라 새 드롭 타입은 DropSource를 상속한 파일 하나를 만들어 여기에 끌어다 놓기만
+// 하면 된다 - 예전처럼 소스별 필드와 2분기 if/else를 이 파일에서 고칠 필요가 없다.
 public class DropCoordinator : MonoBehaviour
 {
-    [SerializeField] private StatDropManager statDropManager;
-    [SerializeField] private EquipmentDropManager equipmentDropManager;
+    // 드롭 타입 하나의 등록 항목. 확률과 해금 시점이 코드 상수가 아니라 인스펙터 값이므로
+    // 밸런스를 만질 때 재컴파일이 필요 없다.
+    [System.Serializable]
+    public class Entry
+    {
+        public DropSource source;
+
+        // 후보로 올라온 소스들 사이에서의 상대 가중치. 기존 밸런스는 "몇 번째로 해금된
+        // 타입이냐"를 그대로 쓴다(포션=1, 장비=2) - 그래서 최근에 해금된 타입이 더 잘 뜬다.
+        [Min(0f)] public float weight = 1f;
+
+        // 이 타입이 드롭 후보 목록에 합류하는 메인 스테이지.
+        [Min(1)] public int unlockStage = 1;
+    }
+
+    [SerializeField] private List<Entry> sources = new List<Entry>();
 
     // 처치당 "뭔가 하나라도 뜰지"를 결정하는 전체 확률 - 스테이지나 타입 수와 무관하게 고정이다.
     [Range(0f, 1f)] [SerializeField] private float dropChance = 0.5f;
 
     private int currentMainStage = 1;
+
+    // 목록이 비면 처치해도 아무것도 드롭되지 않는데, 그건 화면상 "드롭 운이 없다"와 구분이
+    // 안 된다. 씬 배선이 끊긴 채로 조용히 굴러가지 않도록 시작할 때 한 번 짚고 넘어간다.
+    private void Awake()
+    {
+        if (sources.Count == 0)
+            Debug.LogWarning("DropCoordinator: 등록된 드롭 소스가 없다 - 처치해도 아무것도 드롭되지 않는다.", this);
+    }
 
     private void OnEnable()
     {
@@ -44,21 +67,39 @@ public class DropCoordinator : MonoBehaviour
 
         if (Random.value > dropChance) return;
 
-        float statWeight = statDropManager != null ? 1f : 0f;
-        float equipWeight = (currentMainStage >= EquipmentDropManager.UnlockStage && equipmentDropManager != null) ? 2f : 0f;
+        float total = 0f;
+        for (int i = 0; i < sources.Count; i++)
+        {
+            if (IsCandidate(sources[i])) total += sources[i].weight;
+        }
 
-        float total = statWeight + equipWeight;
         if (total <= 0f) return;
 
         float roll = Random.value * total;
 
-        if (roll < statWeight)
+        for (int i = 0; i < sources.Count; i++)
         {
-            statDropManager.RollAndSpawn(monster);
+            Entry entry = sources[i];
+            if (!IsCandidate(entry)) continue;
+
+            roll -= entry.weight;
+            if (roll < 0f)
+            {
+                entry.source.RollAndSpawn(monster);
+                return;
+            }
         }
-        else
+
+        // 누적 뺄셈의 부동소수 오차로 마지막 후보에서도 roll이 0 밑으로 내려가지 않는 경우 -
+        // 드롭이 뜨기로 이미 정해졌으므로 조용히 삼키지 않고 마지막 후보에게 넘긴다.
+        for (int i = sources.Count - 1; i >= 0; i--)
         {
-            equipmentDropManager.RollAndSpawn(monster);
+            if (!IsCandidate(sources[i])) continue;
+            sources[i].source.RollAndSpawn(monster);
+            return;
         }
     }
+
+    private bool IsCandidate(Entry entry)
+        => entry != null && entry.source != null && entry.weight > 0f && currentMainStage >= entry.unlockStage;
 }

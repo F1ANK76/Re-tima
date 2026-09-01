@@ -3,8 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-[RequireComponent(typeof(CanvasGroup))]
-public class StageBannerView : MonoBehaviour
+public class StageBannerView : CancellableBannerView
 {
     [SerializeField] private Text bannerText;
     [SerializeField] private CanvasGroup textGroup;
@@ -15,9 +14,7 @@ public class StageBannerView : MonoBehaviour
     // 이렇게 해야 커튼이 끊긴 프레임이 아니라 의도된 박자로 읽힌다.
     [SerializeField] private float openingHoldDuration = 0.4f;
 
-    private CanvasGroup canvasGroup;
     private RectTransform textRect;
-    private Coroutine routine;
 
     // 세션 첫 안내는 완전히 불투명한 커튼 뒤에서 시작해 타이틀 전에 게임이 보이지 않게 한다.
     // 이후 안내(새 서브스테이지, 사망 후 재시작)는 이미 보고 있던 게임플레이 위로 페이드인된다.
@@ -55,20 +52,6 @@ public class StageBannerView : MonoBehaviour
         if (textRect != null) textRect.localScale = Vector3.one * popStartScale;
         gameObject.SetActive(true);
         routine = StartCoroutine(PlayThenHide(openOnBlack, onComplete));
-    }
-
-    // 콜백 없이 대기 중인 안내를 폐기한다 - 사망으로 배너 뒤의 스폰이 무효화될 때 쓴다.
-    // 애니메이션 없이 즉시: 사망 후엔 재시작 시퀀스가 페이드 완료를 기다릴 이유가 없다.
-    public void Cancel()
-    {
-        if (routine != null)
-        {
-            StopCoroutine(routine);
-            routine = null;
-        }
-
-        canvasGroup.alpha = 0f;
-        gameObject.SetActive(false);
     }
 
     private IEnumerator PlayThenHide(bool openOnBlack, Action onComplete)
@@ -114,7 +97,7 @@ public class StageBannerView : MonoBehaviour
             float p = Mathf.Clamp01(t / fadeDuration);
             if (textGroup != null) textGroup.alpha = p;
             if (textRect != null)
-                textRect.localScale = Vector3.one * Mathf.LerpUnclamped(popStartScale, 1f, EaseOutBack(p));
+                textRect.localScale = Vector3.one * Mathf.LerpUnclamped(popStartScale, 1f, Easing.OutBack(p, 1.2f));
             yield return null;
         }
 
@@ -133,13 +116,5 @@ public class StageBannerView : MonoBehaviour
         }
 
         group.alpha = toAlpha;
-    }
-
-    private static float EaseOutBack(float x)
-    {
-        const float overshoot = 1.2f;
-        const float c3 = overshoot + 1f;
-        float m = x - 1f;
-        return 1f + c3 * m * m * m + overshoot * m * m;
     }
 }

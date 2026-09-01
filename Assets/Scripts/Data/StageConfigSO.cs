@@ -7,10 +7,6 @@ public class StageConfigSO : ScriptableObject
     public float tickInterval = 0.5f;
     public float normalMonsterAttackInterval = 0.4f;
 
-    [Header("Monster Scaling")]
-    public float hpGrowthPerStage = 0.15f;
-    public float atkGrowthPerStage = 0.10f;
-
     [Header("Stat Drop Amounts - ATK")]
     public float atkAmountNormal = 0.1f;
     public float atkAmountRare = 0.2f;

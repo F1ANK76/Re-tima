@@ -48,7 +48,7 @@ public class FailBannerView : MonoBehaviour
             float k = Mathf.Clamp01(t / popInDuration);
 
             canvasGroup.alpha = k;
-            scaleTarget.localScale = Vector3.one * PopCurve(k);
+            scaleTarget.localScale = Vector3.one * Easing.PopCurve(k, startScale, punchScale);
             yield return null;
         }
 
@@ -70,18 +70,5 @@ public class FailBannerView : MonoBehaviour
         canvasGroup.alpha = 0f;
         scaleTarget.localScale = Vector3.one;
         gameObject.SetActive(false);
-    }
-
-    // 팝 애니메이션의 처음 ~60% 구간에서는 최종 크기를 넘어서까지 커졌다가, 이후 다시 그 크기로 서서히 안착한다.
-    private float PopCurve(float k)
-    {
-        if (k < 0.6f)
-        {
-            float rise = k / 0.6f;
-            return Mathf.Lerp(startScale, punchScale, 1f - (1f - rise) * (1f - rise));
-        }
-
-        float settle = (k - 0.6f) / 0.4f;
-        return Mathf.Lerp(punchScale, 1f, settle * settle * (3f - 2f * settle));
     }
 }

@@ -17,10 +17,13 @@ public class UltimateManager : MonoBehaviour
     private const float ChargeDuration = 15f;
     private const float DamageMultiplier = 3f;
 
-    private const float UltimateAnimDuration = 24f / 30f;
-    // 클립 자체의 루트 모션 커브상 캐릭터는 24프레임 중 19프레임(30fps)째에 이미 지면 높이로
-    // 돌아와 있다 - 전체 길이에서 대충 추측한 값이 아니라 실제 착지 순간이다.
-    private const float LandingDelay = 19f / 30f;
+    // 클립을 이름으로 못 찾았을 때만 쓰는 대체값 - JumpFull_Spin_RM_SwordAndShield의 클립
+    // 길이(30fps에서 24프레임)와 일치. 정상 경로에서는 아래 시퀀스가 클립에서 실제 길이를 읽는다.
+    private const float UltimateClipFallbackLength = 24f / 30f;
+    // 클립 자체의 루트 모션 커브상 캐릭터는 24프레임 중 19프레임째에 이미 지면 높이로 돌아와
+    // 있다 - 전체 길이에서 대충 추측한 값이 아니라 실제 착지 순간이다. 초가 아니라 비율로
+    // 들고 있어야 클립이 교체돼도 착지 지점이 비례해 따라간다.
+    private const float LandingFraction = 19f / 24f;
     // 폭발을 계속 방출시킬 시간. 시스템 자체 파티클(연기)은 최대 1초까지 살아있으므로 이 값은
     // 버스트보다 길기만 하면 된다 - 실제 시각적 길이를 의미하지 않는다.
     private const float ExplosionVfxDuration = 0.5f;
@@ -147,7 +150,13 @@ public class UltimateManager : MonoBehaviour
         Animator animator = weaponSwing != null ? weaponSwing.CharacterAnimator : null;
         if (animator != null) animator.Play(PlayerAnimStates.Ultimate, 0, 0f);
 
-        yield return new WaitForSeconds(LandingDelay);
+        // 이 컨트롤러는 스테이트 이름과 클립 이름이 같아서 상수 하나로 둘 다 가리킨다.
+        // animator가 null이면 ResolveClipLength가 대체값을 돌려주므로 시퀀스는 그대로 굴러간다.
+        float ultimateLength = AnimClipTiming.ResolveClipLength(
+            animator, PlayerAnimStates.Ultimate, UltimateClipFallbackLength);
+        float landingDelay = ultimateLength * LandingFraction;
+
+        yield return new WaitForSeconds(landingDelay);
 
         Monster target = currentMonster;
         if (player != null && target != null)
@@ -157,7 +166,7 @@ public class UltimateManager : MonoBehaviour
 
         if (explosionVfx != null) StartCoroutine(PlayExplosionVfx());
 
-        yield return new WaitForSeconds(UltimateAnimDuration - LandingDelay);
+        yield return new WaitForSeconds(ultimateLength - landingDelay);
 
         if (animator != null && animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Ultimate))
         {

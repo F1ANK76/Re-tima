@@ -20,13 +20,18 @@ public class WeaponSwing : MonoBehaviour
     // 임포트 데이터 기준 30fps에서 0-16 프레임)와 일치.
     [SerializeField] private float attackClipLengthFallback = 16f / 30f;
 
-    // Attack01 클립의 실제 팔 회전 커브(Right Arm Front-Back)를 뽑아 확인한 값 - 0~0.17초는
-    // 검을 뒤로 빼는 예비동작(값이 계속 음수)이고, 0.19초 근방에서 음수->양수로 넘어가며 실제로
-    // 앞을 향해 휘두르기 시작한다. 데미지/슬래시는 이 "진짜로 휘두르기 시작하는 순간"에 맞춰야
-    // 한다 - 코드 스윙 자체의 절반 지점(swingDuration*0.5)은 이 스켈레톤 애니메이션과 아무
-    // 상관 없는 별개의 타이밍이라, 그 값을 쓰면 예비동작이 채 끝나기도 전에 슬래시가 떴다.
-    private const float AttackWindupDuration = 0.19f;
-    public float AttackImpactDelay => AttackWindupDuration;
+    // Attack01 클립의 실제 팔 회전 커브(Right Arm Front-Back)를 뽑아 확인한 값 - 클립 앞쪽
+    // 32%는 검을 뒤로 빼는 예비동작(값이 계속 음수)이고, 35.6% 지점에서 음수->양수로 넘어가며
+    // 실제로 앞을 향해 휘두르기 시작한다(0.5333초 클립 기준 0.19초). 데미지/슬래시는 이 "진짜로
+    // 휘두르기 시작하는 순간"에 맞춰야 한다 - 코드 스윙 자체의 절반 지점(swingDuration*0.5)은
+    // 이 스켈레톤 애니메이션과 아무 상관 없는 별개의 타이밍이라, 그 값을 쓰면 예비동작이 채
+    // 끝나기도 전에 슬래시가 떴다.
+    //
+    // 초가 아니라 비율로 들고 있는 이유: 클립이 다른 길이로 교체돼도 임팩트가 비례해 따라가고,
+    // 실제 길이는 아래에서 클립에서 직접 읽으므로 코드와 클립이 어긋날 여지가 줄어든다.
+    private const float AttackImpactFraction = 0.356f;
+    public float AttackImpactDelay => AnimClipTiming.ResolveClipTime(
+        CharacterAnimator, attackClipName, attackClipLengthFallback, AttackImpactFraction);
 
     // SwordAndShieldStance.controller의 Attack01 -> Idle 전환 설정 그대로다: 클립의 이 지점에서
     // 전환이 시작되어, 이만큼의 시간에 걸쳐 블렌딩된다. 둘 다 컨트롤러의 전환(Transition) 자체에
@@ -70,21 +75,8 @@ public class WeaponSwing : MonoBehaviour
         restRotation = transform.localRotation;
     }
 
-    // Monster.ResolveClipLength와 동일한 패턴: 컨트롤러에서 이름으로 클립을 찾아 실제 길이를
-    // 반환하고, 못 찾으면 대체값을 쓴다.
     private float ResolveClipLength(string clipName, float fallback)
-    {
-        Animator animator = CharacterAnimator;
-        if (animator != null && animator.runtimeAnimatorController != null)
-        {
-            foreach (AnimationClip clip in animator.runtimeAnimatorController.animationClips)
-            {
-                if (clip != null && clip.name == clipName && clip.length > 0f) return clip.length;
-            }
-        }
-
-        return fallback;
-    }
+        => AnimClipTiming.ResolveClipLength(CharacterAnimator, clipName, fallback);
 
     public void PlaySwing()
     {

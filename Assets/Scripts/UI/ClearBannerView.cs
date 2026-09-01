@@ -7,8 +7,7 @@ using UnityEngine.UI;
 // 에도 같은 애니메이션을 재사용한다 - 같은 연출을 다른 순간, 다른 문구로 쓴다. 순수 연출용이라
 // 아무것도 이걸 기다리지 않으므로 unscaled time으로 돌며, 그 밖에 무슨 일이 벌어지고 있든
 // (승리 포즈, 다음 스테이지 배너) 스스로 재생을 끝낸다.
-[RequireComponent(typeof(CanvasGroup))]
-public class ClearBannerView : MonoBehaviour
+public class ClearBannerView : CancellableBannerView
 {
     [SerializeField] private RectTransform scaleTarget;
     [SerializeField] private Text label;
@@ -24,9 +23,7 @@ public class ClearBannerView : MonoBehaviour
     // 페이드되는 동안 위로 얼마나 떠오르는지 - 그냥 훅 사라지는 게 아니라 퇴장하듯 보이게 한다.
     [SerializeField] private float riseDistance = 45f;
 
-    private CanvasGroup canvasGroup;
     private Vector2 restPosition;
-    private Coroutine routine;
 
     // 팝인부터 완전히 페이드아웃될 때까지의 시간 - 표시되는 게 아니라 완전히 사라질 때까지 기다려야
     // 하는 호출자는, 위 세 값이 재조정되면 어긋날 지속시간을 하드코딩하는 대신 이 값을 읽는다.
@@ -57,18 +54,6 @@ public class ClearBannerView : MonoBehaviour
         routine = StartCoroutine(PlayRoutine());
     }
 
-    public void Cancel()
-    {
-        if (routine != null)
-        {
-            StopCoroutine(routine);
-            routine = null;
-        }
-
-        canvasGroup.alpha = 0f;
-        gameObject.SetActive(false);
-    }
-
     private IEnumerator PlayRoutine()
     {
         scaleTarget.anchoredPosition = restPosition;
@@ -80,7 +65,7 @@ public class ClearBannerView : MonoBehaviour
             float k = Mathf.Clamp01(t / popInDuration);
 
             canvasGroup.alpha = Mathf.Clamp01(k * 3f);
-            scaleTarget.localScale = Vector3.one * PopCurve(k);
+            scaleTarget.localScale = Vector3.one * Easing.PopCurve(k, startScale, punchScale);
             yield return null;
         }
 
@@ -106,18 +91,5 @@ public class ClearBannerView : MonoBehaviour
         scaleTarget.localScale = Vector3.one;
         scaleTarget.anchoredPosition = restPosition;
         gameObject.SetActive(false);
-    }
-
-    // 팝 애니메이션의 처음 ~60% 구간에서는 최종 크기를 넘어서까지 커졌다가, 이후 다시 그 크기로 서서히 안착한다.
-    private float PopCurve(float k)
-    {
-        if (k < 0.6f)
-        {
-            float rise = k / 0.6f;
-            return Mathf.Lerp(startScale, punchScale, 1f - (1f - rise) * (1f - rise));
-        }
-
-        float settle = (k - 0.6f) / 0.4f;
-        return Mathf.Lerp(punchScale, 1f, settle * settle * (3f - 2f * settle));
     }
 }

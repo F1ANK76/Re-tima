@@ -22,9 +22,10 @@ public class ParryManager : MonoBehaviour
     private const int CooldownSeconds = 2;
     private const int SuccessCooldownSeconds = 1;
 
-    // PlayerAnimStates.Riposte 자체의 클립 길이(FBX 임포트 데이터 기준 30fps에서 0-16 프레임)와
-    // 일치한다 - WeaponSwing이 Attack01의 임팩트 타이밍에 쓰는 것과 같은 규칙이다.
-    private const float RiposteAnimDuration = 16f / 30f;
+    // 클립을 이름으로 못 찾았을 때만 쓰는 대체값 - Attack04_SwordAndShiled의 클립 길이(FBX
+    // 임포트 데이터 기준 30fps에서 0-16 프레임)와 일치. 정상 경로에서는 아래 PlayRiposteAnimation이
+    // 클립에서 실제 길이를 읽는다.
+    private const float RiposteClipFallbackLength = 16f / 30f;
     // Teleport 프리팹의 가장 긴 서브 시스템 수명과 일치시켜서, 화려한 연출 도중에
     // 끊기지 않고 한 사이클을 온전히 다 재생하도록 한다.
     private const float TeleportVfxDuration = 0.7f;
@@ -178,7 +179,12 @@ public class ParryManager : MonoBehaviour
         if (combatLoop != null) combatLoop.RiposteInProgress = true;
 
         animator.Play(PlayerAnimStates.Riposte, 0, 0f);
-        yield return new WaitForSeconds(RiposteAnimDuration);
+
+        // 이 컨트롤러(SwordAndShieldStance)는 스테이트 이름과 그 안의 클립 이름이 같아서 상수
+        // 하나로 둘 다 가리킨다 - Monster가 stateName과 clipName을 따로 들고 있는 건 몬스터
+        // 컨트롤러에서는 둘이 다르기 때문이지, 규칙이 달라서가 아니다.
+        yield return new WaitForSeconds(
+            AnimClipTiming.ResolveClipLength(animator, PlayerAnimStates.Riposte, RiposteClipFallbackLength));
 
         if (animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Riposte))
         {

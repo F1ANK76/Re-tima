@@ -78,7 +78,7 @@ public class BossGaugeView : MonoBehaviour
         while (t < fillTweenDuration)
         {
             t += Time.unscaledDeltaTime;
-            float p = EaseOutQuad(Mathf.Clamp01(t / fillTweenDuration));
+            float p = Easing.OutQuad(Mathf.Clamp01(t / fillTweenDuration));
             ApplyPercent(Mathf.RoundToInt(Mathf.Lerp(start, target, p)));
             yield return null;
         }
@@ -125,12 +125,12 @@ public class BossGaugeView : MonoBehaviour
             // 빠르게 펀치된 뒤 남은 시간 동안 서서히 안착 - 스탯 드롭 팝업의 팝인과 같은
             // 곡선을 재사용해 여기서도 "묵직하게 착지했다"는 느낌을 준다.
             float scaleT = Mathf.Clamp01(p / 0.35f);
-            float scale = Mathf.Lerp(1f, readyPunchScale, EaseOutBack(scaleT));
-            if (scaleT >= 1f) scale = Mathf.Lerp(readyPunchScale, 1f, EaseOutQuad(Mathf.InverseLerp(0.35f, 1f, p)));
+            float scale = Mathf.LerpUnclamped(1f, readyPunchScale, Easing.OutBack(scaleT));
+            if (scaleT >= 1f) scale = Mathf.Lerp(readyPunchScale, 1f, Easing.OutQuad(Mathf.InverseLerp(0.35f, 1f, p)));
             transform.localScale = Vector3.one * scale;
 
             // 밝게 번쩍인 뒤, 흰색으로 계속 남아있지 않고 채움 자체의 색으로 다시 페이드된다.
-            float flash = 1f - EaseOutQuad(p);
+            float flash = 1f - Easing.OutQuad(p);
             if (fillImage != null) fillImage.color = Color.Lerp(fillBaseColor, Color.white, flash);
             if (percentText != null) percentText.color = Color.Lerp(textBaseColor, Color.white, flash);
 
@@ -140,15 +140,5 @@ public class BossGaugeView : MonoBehaviour
         transform.localScale = Vector3.one;
         if (fillImage != null) fillImage.color = fillBaseColor;
         if (percentText != null) percentText.color = textBaseColor;
-    }
-
-    private static float EaseOutQuad(float x) => 1f - (1f - x) * (1f - x);
-
-    private static float EaseOutBack(float x)
-    {
-        const float overshoot = 1.6f;
-        const float c3 = overshoot + 1f;
-        float m = x - 1f;
-        return 1f + c3 * m * m * m + overshoot * m * m;
     }
 }
