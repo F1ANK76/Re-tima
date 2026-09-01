@@ -1,28 +1,28 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class MonsterSpawner : MonoBehaviour
 {
-    [Header("Stage 1 roster")]
-    [SerializeField] private MonsterDefinitionSO monsterDefinition;
-    [SerializeField] private MonsterDefinitionSO eliteDefinition;
-    [SerializeField] private MonsterDefinitionSO bossDefinition;
+    // 메인 스테이지 하나의 몬스터 구성. 스테이지가 늘어날 때 이 목록에 항목 하나만 추가하면
+    // 되고, 코드는 손댈 필요가 없다 - 예전에는 스테이지당 SerializeField 세 개를 새로 만들고
+    // Resolve 함수 세 개의 분기까지 함께 늘려야 했다.
+    [System.Serializable]
+    public class StageRoster
+    {
+        [Min(1)] public int mainStage = 1;
+        public MonsterDefinitionSO normal;
+        public MonsterDefinitionSO elite;
+        public MonsterDefinitionSO boss;
+    }
 
-    [Header("Stage 2+ roster")]
-    // 메인 스테이지마다 몬스터 구성이 다르다: 위 필드는 스테이지 1, 여기는 스테이지 2부터.
-    // 빈 슬롯은 스테이지 1 항목으로 조용히 폴백하므로, 절반만 채워도 런타임 오류 없이 스폰된다.
-    [SerializeField] private MonsterDefinitionSO stage2MonsterDefinition;
-    [SerializeField] private MonsterDefinitionSO stage2EliteDefinition;
-    [SerializeField] private MonsterDefinitionSO stage2BossDefinition;
+    // 첫 항목이 기본 구성이다 - 자기 항목이 없는 스테이지, 그리고 항목은 있지만 슬롯이 빈
+    // 경우가 모두 여기로 떨어진다(아래 Resolve 참고). 그래서 새 스테이지를 절반만 채워도
+    // 런타임 오류 없이 스폰된다.
+    [SerializeField] private List<StageRoster> rosters = new List<StageRoster>();
 
     [SerializeField] private StageConfigSO stageConfig;
     [SerializeField] private Transform spawnPoint;
     [SerializeField] private Transform playerTransform;
-
-    // "스테이지 2 이후 전부"가 아니라 정확히 스테이지 2 전용이다 - 스테이지 3은 세 번째 구성을
-    // 새로 만들지 않고 의도적으로 스테이지 1의 보병을 다시 쓰며, 스테이지 3의 수치로만 싸우게 한다.
-    // 아래 GetNormalHp/GetNormalAttack이 mainStage/subStage로 값을 정하므로, 스테이지별 구성
-    // 작업 없이도 같은 프리팹이 스테이지 3의 HP/공격력을 갖고 등장한다.
-    private const int BirdRosterStage = 2;
 
     // 몬스터(그리고 몬스터와 같은 속도로 끌려오는 스탯 포션/장비/스톤 픽업)가 실제로 쓰는 속도.
     // 씬에 배치된 spawnPoint/playerTransform의 실제 위치로부터 역산하므로, 두 마커 사이의 간격이
@@ -33,6 +33,11 @@ public class MonsterSpawner : MonoBehaviour
     private void Awake()
     {
         ApproachSpeed = ComputeApproachSpeed();
+
+        // 목록이 비면 어느 스테이지에서도 몬스터가 스폰되지 않는데, 그건 화면상 "아직 안 나왔다"와
+        // 구분이 안 된다. 씬 배선이 끊긴 채로 조용히 굴러가지 않도록 시작할 때 한 번 짚는다.
+        if (rosters.Count == 0 || rosters[0] == null || rosters[0].normal == null)
+            Debug.LogWarning("MonsterSpawner: 기본 구성(rosters의 첫 항목)이 비어 있다 - 몬스터가 스폰되지 않는다.", this);
     }
 
     private float ComputeApproachSpeed()
@@ -50,16 +55,26 @@ public class MonsterSpawner : MonoBehaviour
         return stageConfig.monsterApproachDuration > 0f ? travelDistance / stageConfig.monsterApproachDuration : 0f;
     }
 
-    private static bool UsesBirdRoster(int mainStage) => mainStage == BirdRosterStage;
+    private MonsterDefinitionSO ResolveNormal(int mainStage) => Resolve(mainStage, r => r.normal);
+    private MonsterDefinitionSO ResolveElite(int mainStage) => Resolve(mainStage, r => r.elite);
+    private MonsterDefinitionSO ResolveBoss(int mainStage) => Resolve(mainStage, r => r.boss);
 
-    private MonsterDefinitionSO ResolveNormal(int mainStage) =>
-        UsesBirdRoster(mainStage) && stage2MonsterDefinition != null ? stage2MonsterDefinition : monsterDefinition;
+    // 요청한 스테이지의 구성에서 슬롯을 꺼내고, 비어 있으면 기본 구성(첫 항목)으로 떨어진다.
+    // 슬롯 단위로 폴백하는 게 핵심이다: 새 스테이지에 일반 몬스터만 새로 준비했다면 엘리트와
+    // 보스는 기본 구성 것을 그대로 쓰면 되고, 그러다 준비되는 대로 하나씩 채워 넣을 수 있다.
+    private MonsterDefinitionSO Resolve(int mainStage, System.Func<StageRoster, MonsterDefinitionSO> slot)
+    {
+        for (int i = 0; i < rosters.Count; i++)
+        {
+            if (rosters[i] == null || rosters[i].mainStage != mainStage) continue;
 
-    private MonsterDefinitionSO ResolveElite(int mainStage) =>
-        UsesBirdRoster(mainStage) && stage2EliteDefinition != null ? stage2EliteDefinition : eliteDefinition;
+            MonsterDefinitionSO exact = slot(rosters[i]);
+            if (exact != null) return exact;
+            break;
+        }
 
-    private MonsterDefinitionSO ResolveBoss(int mainStage) =>
-        UsesBirdRoster(mainStage) && stage2BossDefinition != null ? stage2BossDefinition : bossDefinition;
+        return rosters.Count > 0 && rosters[0] != null ? slot(rosters[0]) : null;
+    }
 
     [SerializeField] private float eliteScale = 1.5f;
     [SerializeField] private float bossScale = 2f;
