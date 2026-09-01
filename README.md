@@ -2,7 +2,7 @@
 
 Action Idle RPG · Unity 6 (URP) · C#
 
-메이플스토리 울티마 스쿼드를 참고하여 만든 방치형 성장과 직접 조작 전투(패링)를 결합한 액션 RPG입니다.
+메이플스토리 울티마 스쿼드를 참고하여 만든 방치형 성장과 직접 조작 전투(패링)를 결합한 방치형 RPG입니다.
 
 이 저장소는 게임플레이 프로그래밍 스코프를 확인할 수 있도록 `Assets/Scripts` 소스코드만 포함합니다.
 
@@ -15,6 +15,11 @@ Action Idle RPG · Unity 6 (URP) · C#
 - `UI/` — HUD, 관리창, 배너/게이지 연출
 - `Core/` — 이벤트 버스(`GameEvents`), 이징 곡선(`Easing`)
 - `Debug/` — 개발용 디버그 도구
+
+## 동작 과정
+
+1. 플레이 버튼 클릭 시 TitleScreenView.HandlePlayPressed()가 실행됨
+- 내부의 onPlay?.Invoke()가 onPlay에 보관된 StageManager.BeginRun을 실행
 
 ## 설계
 
