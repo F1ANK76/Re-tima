@@ -44,11 +44,6 @@ public class StageManager : MonoBehaviour
     // 배너에 띄우는 "걸린 시간"의 기준점이다.
     private float runStartTime;
 
-    // 스테이지 런이 시작될 때마다 증가한다. 스폰은 자신을 예약한 런보다 오래 사는 대기(스테이지
-    // 배너, 몬스터 사이의 딜레이) 뒤에 큐잉되므로, 이 값을 캡처해두고 더 이상 일치하지 않으면
-    // 실행을 취소한다 - 없으면 대기 중 사망 시 이전 런의 몬스터가 새 스테이지에 떨어진다.
-    private int stageGeneration;
-
     private void OnEnable()
     {
         GameEvents.OnMonsterSpawned += HandleMonsterSpawned;
@@ -77,8 +72,8 @@ public class StageManager : MonoBehaviour
     // 한다 - 타이틀 화면에 얼마나 머물렀는지는 "깨는 데 걸린 시간"에 포함되면 안 된다.
     private void BeginRun()
     {
-        runStartTime = Time.time;
-        ShowBannerThenSpawn();
+        runStartTime = Time.time; // 실제 플레이가 시작된 시점 기록
+        ShowBannerThenSpawn(); // 첫 스테이지 시작
     }
 
     private void HandleMonsterSpawned(Monster monster)
@@ -92,7 +87,6 @@ public class StageManager : MonoBehaviour
     private void HandlePlayerDied()
     {
         StopAllCoroutines();
-        stageGeneration++;
 
         // 배너는 자기 GameObject에서 자기 코루틴을 돌려 위의 StopAllCoroutines가 닿지 않는다.
         // 그냥 두면 배너 뒤에 큐잉된 스폰이 아래 초기화 이후 실행돼 새 스테이지에 몬스터를 떨군다.
@@ -278,9 +272,7 @@ public class StageManager : MonoBehaviour
 
     private IEnumerator SpawnNormalAfterDelay(float delay)
     {
-        int generation = stageGeneration;
         yield return new WaitForSeconds(delay);
-        if (generation != stageGeneration) yield break;
 
         spawner.SpawnNormal(MainStage, SubStage);
     }
@@ -291,17 +283,13 @@ public class StageManager : MonoBehaviour
 
     private IEnumerator SpawnEliteAfterDelay()
     {
-        int generation = stageGeneration;
-
         // 1번 박자: nextMonsterDelay(일반 몬스터 리스폰 사이의 숨 고르기용 값이며 연출 길이와는
         // 무관)가 아니라 게이지 자체의 강조/번쩍임 연출 시간에 맞춘다 - 그래야 아래 배너 딜레이가
         // 어긋난 별도 타이머가 아니라 게이지 축하 연출이 실제로 끝나는 시점부터 카운트된다.
         float flourishDelay = bossGauge != null ? bossGauge.ReadyFlourishDuration : nextMonsterDelay;
         yield return new WaitForSeconds(flourishDelay);
-        if (generation != stageGeneration) yield break;
 
         yield return new WaitForSeconds(EliteBannerDelayAfterFlourish);
-        if (generation != stageGeneration) yield break;
 
         // 3번 박자: 배너가 등장-유지-페이드아웃까지 스스로 다 재생하기 전엔 엘리트가 걸어 들어오지
         // 않는다 - 엘리트가 존재하기 훨씬 전에 배너가 뜨므로, 텍스트는 이미 화면에 있는 것의 라벨이
@@ -310,7 +298,6 @@ public class StageManager : MonoBehaviour
         {
             clearBanner.Show("Elite Boss !");
             yield return new WaitForSeconds(clearBanner.TotalPlayDuration);
-            if (generation != stageGeneration) yield break;
         }
 
         spawner.SpawnElite(MainStage, SubStage);
@@ -318,33 +305,16 @@ public class StageManager : MonoBehaviour
 
     private void ShowBannerThenSpawn()
     {
-        // 이제 이 알림이 스테이지를 주도한다; 그 이전부터 큐잉되어 있던 것은
-        // 전부 낡은 것이다.
-        int generation = ++stageGeneration;
-
         if (player != null) player.RestoreToFullHp();
 
-        // 엘리트 처치 축하 연출은 게이지를 가득 찬 상태로 보여주지만(HandleMonsterDied 참고) 실제
-        // 카운터는 새 서브스테이지를 위해 이미 0이다 - 빈 게이지로 시작하도록 UI를 재동기화한다.
         GameEvents.RaiseBossGaugeChanged(bossGaugePercent);
-
         GameEvents.RaiseStageChanged(MainStage, SubStage);
 
-        // 마지막 서브스테이지는 보스 조우이므로, 번호가 아니라 그 사실 그대로
-        // 알린다.
         string label = SubStage == BossSubStage ? $"Stage {MainStage}-Boss" : $"Stage {MainStage}-{SubStage}";
+
         if (banner != null)
         {
-            banner.Show(label, () =>
-            {
-                if (generation != stageGeneration) return;
-
-                SpawnForCurrentSubStage();
-            });
-        }
-        else
-        {
-            SpawnForCurrentSubStage();
+            banner.Show(label, SpawnForCurrentSubStage);
         }
     }
 
@@ -368,7 +338,6 @@ public class StageManager : MonoBehaviour
     public void DebugJumpTo(int mainStage, int subStage)
     {
         StopAllCoroutines();
-        stageGeneration++;
 
         if (banner != null) banner.Cancel();
         if (clearBanner != null) clearBanner.Cancel();
