@@ -21,7 +21,6 @@ Action Idle RPG · Unity 6 (URP) · C#
 1. 플레이 버튼 클릭 시 TitleScreenView.HandlePlayPressed()가 실행됨
 - 이후 내부의 onPlay?.Invoke()가 onPlay에 보관된 StageManager.BeginRun을 실행
 2. 이후 StageManager.ShowBannerThenSpawn() 호출 후 banner.Show를 호출해서 스테이지 배너를 잠깐 보여줬다가 배너가 닫힌 후 몬스터를 SpawnForCurrentSubStage()로 소환
-- Show() 함수가 시작시킨 코루틴(PlayThenHide)이 애니메이션을 다 재생하고 끝나면, 그 코루틴 마지막에서 콜백(onComplete)을 호출해서 몬스터를 소환하는 구조
 
 ## 설계
 
