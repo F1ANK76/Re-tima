@@ -21,6 +21,9 @@ Action Idle RPG · Unity 6 (URP) · C#
 1. 플레이 버튼 클릭 시 TitleScreenView.HandlePlayPressed()가 실행됨
 - 이후 내부의 onPlay?.Invoke()가 onPlay에 보관된 StageManager.BeginRun을 실행
 2. 이후 StageManager.ShowBannerThenSpawn() 호출 후 banner.Show를 호출해서 스테이지 배너를 잠깐 보여줬다가 배너가 닫힌 후 몬스터를 SpawnForCurrentSubStage()로 소환
+3. 플레이어는 씬 로드 시점부터 CombatLoop.Update() 내부 shouldBeMoving 값을 매 프레임 세팅하고 값이 true 라면 제자리 달리기 애니메이션을 계속 재생
+- 배경과 바닥이 스크롤돼서 전진하는 것처럼 보이게 구현
+4. 그 상태로 스폰된 몬스터가 근접 사거리에 도달했는지 체크 후 도달 시 DoTick()으로 자동 공격 시작
 
 ## 설계
 
