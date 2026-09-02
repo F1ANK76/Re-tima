@@ -76,17 +76,13 @@ public class TitleScreenView : MonoBehaviour
 
     private void HandlePlayPressed()
     {
-        // 아래의 interactable 끄기는 두 번째 클릭은 막아도 두 번째 호출은 막지 못한다 - 런이
-        // 두 번 시작되거나, 이미 비활성화한 오브젝트에 페이드 코루틴이 또 생겨선 안 된다.
-        if (playPressed) return;
+        if (playPressed) return;      // 중복 클릭 차단
         playPressed = true;
 
-        HideAndFadeOut();
+        HideAndFadeOut();             // 타이틀 치우기 시작 (기다리지 않음)
 
-        // 페이드 후가 아니라 전에 발동한다: 스테이지 카드가 이 화면 아래에서 불투명하게
-        // 올라오므로, 게임플레이가 잠깐 번쩍이지 않고 곧바로 "Stage 1-1"로 넘어가 보인다.
-        onPlay?.Invoke();
-        onPlay = null;
+        onPlay?.Invoke();             // ★ 게임 시작 — StageManager.BeginRun()
+        onPlay = null;                // 콜백 버리기
     }
 
     // Play와 동일하게 숨기되 핸드오프 콜백은 뺀다 - 이미 자체 스폰 플로우를 진행하는
