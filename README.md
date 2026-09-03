@@ -24,8 +24,8 @@ Action Idle RPG · Unity 6 (URP) · C#
 - `MonsterSpawner.Spawn()`: SO 데이터 반환 → 스탯 계산 → 화면 밖 프리팹 생성 → 스탯 주입 → 이동 → 이벤트 발생
 3. 플레이어는 씬 로드 시점부터 `CombatLoop.Update()`가 매 프레임 `shouldBeMoving`을 세팅하고, true면 제자리 달리기 애니메이션을 계속 재생
 - 배경과 바닥이 스크롤돼서 전진하는 것처럼 보이게 구현
-4. 스폰된 몬스터가 근접 사거리에 도달하면 `HasArrived`가 켜지고 양쪽 공격이 시작됨
+4. 스폰된 몬스터가 플레이어 근접 사거리에 도달하면 `HasArrived`가 켜지고 양쪽 공격이 시작됨
 - 플레이어: `DoTick()`이 스윙을 재생하고 `DealDamageAfterSwing()` 코루틴이 칼 닿는 타이밍에 데미지를 넣음
-- 일반 몬스터: `NormalAttackLoop()` 코루틴이 같은 일을 반복 (엘리트·보스는 `TelegraphAttackLoop()`)
+- 일반 몬스터: `NormalAttackLoop()` 코루틴이 같은 일을 반복
 
 ## 설계
