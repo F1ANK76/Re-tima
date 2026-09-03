@@ -28,5 +28,6 @@ Action Idle RPG · Unity 6 (URP) · C#
 - 플레이어: `DoTick()`이 스윙을 재생하고 `DealDamageAfterSwing()` 코루틴이 칼 닿는 타이밍에 데미지를 넣음
 - 일반 몬스터: `NormalAttackLoop()` 코루틴이 같은 일을 반복
 5. 서로 TakeDamage()로 피해를 입히고 몬스터 처치 시 GameEvents.RaiseMonsterDied(this)로 알림
+6. DropCoordinator.HandleMonsterDied()`가 50% 확률(`dropChance`)로 아이템 드롭
 
 ## 설계
