@@ -109,9 +109,8 @@ public class MonsterSpawner : MonoBehaviour
     // 기준으로 배수를 곱하므로(위 주석 참고) 함께 절반으로 낮아진다.
     public static float GetNormalAttack(int mainStage, int subStage) => GetNormalValue(mainStage, subStage) * 0.5f;
 
-    // 세 종류가 스폰 절차를 공유한다 - 종류별로 다른 건 크기와 HP/공격력뿐이다.
-    // 보스를 부를 때는 subStage에 직전 엘리트의 서브스테이지를 넘긴다(아래 Boss 분기 참고).
-    public Monster Spawn(int mainStage, int subStage, MonsterType type)
+    // 몬스터 스폰 함수
+    public void Spawn(int mainStage, int subStage, MonsterType type)
     {
         float scale, hp, attack;
 
@@ -140,12 +139,16 @@ public class MonsterSpawner : MonoBehaviour
 
         MonsterDefinitionSO def = Resolve(mainStage, type);
 
+        // 스폰
         Monster monster = SpawnOffscreen(def.prefab, scale);
+
+        // 데이터 주입
         monster.Initialize(def.monsterType, hp, attack, stageConfig.normalMonsterAttackInterval);
+
+        // 이동 시작
         monster.SetMovement(playerTransform, ApproachSpeed, stageConfig.meleeRange);
 
         GameEvents.RaiseMonsterSpawned(monster);
-        return monster;
     }
 
     private float GetEliteHp(int mainStage, int subStage) => GetNormalHp(mainStage, subStage) * eliteHpMultiplier;
