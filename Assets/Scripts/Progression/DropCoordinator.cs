@@ -61,8 +61,7 @@ public class DropCoordinator : MonoBehaviour
 
     private void HandleMonsterDied(Monster monster)
     {
-        // Elite/Boss는 (서브)스테이지를 마무리 짓는 관문일 뿐 전리품의 출처가 아니다 - 그 사이의
-        // 일반 몬스터 그라인드에서만 뭔가가 드롭된다.
+        // 일반 몬스터 처치 시 일정 확률로 아이템 드롭
         if (monster.Type != MonsterType.Normal) return;
 
         if (Random.value > dropChance) return;
@@ -82,21 +81,14 @@ public class DropCoordinator : MonoBehaviour
             Entry entry = sources[i];
             if (!IsCandidate(entry)) continue;
 
+            // <= 0: Random.value가 정확히 1.0이면 roll이 total과 같아져, < 0으로는
+            // 마지막 후보에서도 통과해 아무것도 뽑히지 않는다.
             roll -= entry.weight;
-            if (roll < 0f)
+            if (roll <= 0f)
             {
                 entry.source.RollAndSpawn(monster);
                 return;
             }
-        }
-
-        // 누적 뺄셈의 부동소수 오차로 마지막 후보에서도 roll이 0 밑으로 내려가지 않는 경우 -
-        // 드롭이 뜨기로 이미 정해졌으므로 조용히 삼키지 않고 마지막 후보에게 넘긴다.
-        for (int i = sources.Count - 1; i >= 0; i--)
-        {
-            if (!IsCandidate(sources[i])) continue;
-            sources[i].source.RollAndSpawn(monster);
-            return;
         }
     }
 
