@@ -240,10 +240,8 @@ public partial class Monster
         }
     }
 
-    // 일반 몬스터 전용: 플레이어의 공격 틱과 무관하게 자기 고정 타이머로 때리므로,
-    // 플레이어의 치명타가 이 몬스터의 스윙을 선점하는 일은 절대 없다 - 공격력이 무한이어도
-    // 최소 한 대는 맞아야 한다는 규칙이라, 임팩트 타이밍 자체를 GuaranteedFirstStrikeMargin만큼
-    // 앞당겨서 강제한다.
+    // 일반 몹: 예고 없이 고정 간격으로 때린다. 클립을 간격에 맞춰 배속하므로 타격이
+    // 플레이어보다 먼저 닿는다 - 한 방에 죽여도 최소 한 대는 맞게 하는 규칙.
     private IEnumerator NormalAttackLoop()
     {
         // TelegraphAttackLoop과 같은 이유의 try/finally - Player.TakeDamage 쪽에서 예외가
@@ -265,9 +263,8 @@ public partial class Monster
         {
             PlayAttackAnimation();
 
-            // 플레이어보다 아주 살짝 먼저 때린다(GuaranteedFirstStrikeMargin 주석 참고).
-            float impactDelay = Mathf.Min(attackImpactDelay,
-                Mathf.Max(0f, PlayerWeaponSwing.AttackImpactDelay - GuaranteedFirstStrikeMargin));
+            // 칼이 닿는 시점에 데미지. 클립이 압축된 만큼 비율로 환산한다.
+            float impactDelay = plainAttackImpactFraction * attackInterval;
             yield return new WaitForSeconds(impactDelay);
 
             if (IsDead) yield break;

@@ -28,6 +28,9 @@ public partial class Monster : MonoBehaviour
     [SerializeField] private string plainAttackClipName = "Attack01";
     [SerializeField] private float windUpClipFallbackLength = 0.3f;
     [SerializeField] private float plainAttackClipFallbackLength = 1.333f;
+    // 클립 안에서 칼이 닿는 지점(0~1). 클립은 attackInterval로 압축 재생되므로
+    // 실제 타격 시각은 이 비율 x attackInterval이다.
+    [Range(0f, 1f)] [SerializeField] private float plainAttackImpactFraction = 0.4f;
     // 별도 타격 클립 없이 윈드업 클립의 착지 비트(뛰어올랐다 쿵 내려찍는 순간)가 곧
     // 타격이다 - 그 지점을 늘리기 전 원래 클립 길이에 대한 비율로 표기. PowerUpNoWeapon은
     // 2.933초 길이 중 t=2.7초 부근의 강한 웅크림 동작.
@@ -95,9 +98,6 @@ public partial class Monster : MonoBehaviour
     private PlayerCharacter playerCache;
     private PlayerCharacter Player => playerCache ??= moveTarget.GetComponent<PlayerCharacter>();
 
-    private WeaponSwing playerWeaponSwingCache;
-    private WeaponSwing PlayerWeaponSwing => playerWeaponSwingCache ??= Player.GetComponentInChildren<WeaponSwing>();
-
     private bool bossLoopStarted;
     private bool normalLoopStarted;
     private float attackInterval;
@@ -110,14 +110,6 @@ public partial class Monster : MonoBehaviour
     // StageManager가 다음 스폰 딜레이를 여기에 맞춰서, 사체가 사라지는 순간과 다음 몬스터
     // 등장이 겹치지 않는다.
     public float DeathVisualDuration => deathAnimDuration;
-
-    // 공격력이 아무리 높아도(즉사여도) 플레이어가 최소 한 대는 맞아야 한다는 디자인 규칙 -
-    // 그래서 일반 몬스터의 타격 판정은 플레이어의 타격 판정(AttackImpactDelay)보다 이 여유만큼
-    // 항상 앞서도록 강제한다. 값 자체가 하드코딩된 두 번째 상수라 서로 어긋날 위험이 있으니,
-    // 매 판정마다 플레이어의 실제 값을 직접 읽어와서 거기서 빼는 식으로 계산한다 - 그래야 나중에
-    // 플레이어 쪽 타이밍이 바뀌어도 "아주 살짝 더 빠름"이 자동으로 유지된다. 겉보기엔 거의 동시에
-    // 슬래시가 뜨지만(margin이 작아서 눈에 안 띔), 데미지 적용 순서는 항상 몬스터가 먼저다.
-    private const float GuaranteedFirstStrikeMargin = 0.02f;
 
     public bool IsDead => CurrentHp <= 0f;
 

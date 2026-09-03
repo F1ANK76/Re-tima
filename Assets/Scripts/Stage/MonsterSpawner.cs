@@ -77,7 +77,7 @@ public class MonsterSpawner : MonoBehaviour
     // HP 곡선의 절반
     public static float GetNormalAttack(int mainStage, int subStage) => GetNormalValue(mainStage, subStage) * 0.5f;
 
-    // 정의 조회 → 스탯 계산 → 화면 밖 생성 → 스탯 주입 → 이동 시작 → 이벤트 발생
+    // Monster SO에서 조회 → 스탯 계산 → 화면 밖 생성 → 스탯 주입 → 이동 시작 → 이벤트 발생
     public void Spawn(int mainStage, int subStage, MonsterType type)
     {
         MonsterDefinitionSO def = Resolve(mainStage, type);
