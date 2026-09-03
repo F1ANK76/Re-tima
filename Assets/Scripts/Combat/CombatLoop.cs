@@ -169,24 +169,30 @@ public class CombatLoop : MonoBehaviour
         PopSuspend();
     }
 
+    // 매 프레임 두 가지를 판단한다: (1) 지금 달리는 모션이어야 하나, (2) 지금 한 대 칠 타이밍인가.
+    // 실제 전투 동작(스윙 재생, 데미지 적중)은 여기가 아니라 DoTick이 시작하는 코루틴이 수행한다 -
+    // 이 함수는 "언제 시작할지"만 재는 감시자다.
     private void Update()
     {
-        // suspend 체크보다 앞인 게 의도적이다: 여기서 일찍 리턴하면 IsScrolling이 마지막
-        // 값에 고정돼, 달리는 중에 시작된 궁극기가 재생되는 동안 세상이 계속 미끄러졌다.
+        // 배경 갱신 여부 결정
         UpdateWorldScroll();
 
+        // 연출 재생 중이면 전투 로직 전체를 쉰다
         if (IsSuspended) return;
 
-        // 몬스터가 존재하는 것(아직 화면 밖에서 걸어오는 중)만으로는 멈추지 않고, 근접
-        // 사거리에 도착한 몬스터만 멈출 이유가 된다.
+        // 이동이 억제되지 않고 제자리 상태도 아니고 몬스터도 도착하지 않은 상태라면 달린다.
         bool shouldBeMoving = !suppressMovement && !IsIdleHeld && (currentMonster == null || !currentMonster.HasArrived);
+
+        // 그 값을 적용
         if (weaponSwing != null) weaponSwing.CharacterAnimator?.SetBool(AnimParams.IsMoving, shouldBeMoving);
 
+        // 궁극기 발동 대기중이거나 패링 반격 중일때는 공격 X
         if (SuppressNewAttacks || RiposteInProgress) return;
 
+        // 때릴 상대가 없거나, 아직 사거리 밖(걸어오는 중)이면 공격 X
         if (currentMonster == null || !currentMonster.HasArrived) return;
 
-        // 첫 타격은 tickInterval을 기다리지 않고 도착 즉시 적중한다.
+        // 이 몬스터에게 첫 타격인가? 그렇다면 tickInterval을 기다리지 않고 도착 즉시 때린다
         if (!hasOpenedOnCurrent)
         {
             hasOpenedOnCurrent = true;
@@ -195,11 +201,12 @@ public class CombatLoop : MonoBehaviour
             return;
         }
 
+        // 두 번째 타격부터는 stageConfig.tickInterval(초)마다 한 대씩. 아직 시간이 안 찼으면 대기.
         tickTimer += Time.deltaTime;
         if (tickTimer < stageConfig.tickInterval) return;
 
         tickTimer = 0f;
-        DoTick();
+        DoTick(); // 스윙 애니메이션 재생 → 칼이 닿는 타이밍에 맞춰 실제 데미지(코루틴)
     }
 
     // 캐릭터가 실제로 달리기 상태일 때만 스크롤한다 - 궁극기/승리/죽음은 모두 캐릭터를
@@ -210,6 +217,8 @@ public class CombatLoop : MonoBehaviour
     private void UpdateWorldScroll()
     {
         bool isRunning = false;
+
+        // 달리기 상태 여부를 그대로 배경·바닥 스크롤에 반영
         if (!IsSuspended && weaponSwing != null && weaponSwing.CharacterAnimator != null)
             isRunning = weaponSwing.CharacterAnimator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Running);
 
@@ -219,12 +228,10 @@ public class CombatLoop : MonoBehaviour
 
     private void DoTick()
     {
-        // 지역 변수로 캡처: 공격이 동기적으로 OnMonsterDied를 유발하면 다음 몬스터가
-        // 스폰되면서 여기로 돌아오기 전에 currentMonster가 덮어써진다.
         Monster target = currentMonster;
         if (target == null) return;
 
-        if (weaponSwing != null) weaponSwing.PlaySwing();
+        if (weaponSwing != null) weaponSwing.PlaySwing(); // 칼 휘두르는 애님
         pendingDamageRoutine = StartCoroutine(DealDamageAfterSwing(target));
     }
 
@@ -233,6 +240,7 @@ public class CombatLoop : MonoBehaviour
         float delay = weaponSwing != null ? weaponSwing.AttackImpactDelay : 0f;
         yield return new WaitForSeconds(delay);
 
+        // 딜레이 후 실제 플레이어 평타 공격
         if (target != null) player.Attack(target);
         pendingDamageRoutine = null;
     }
