@@ -3,21 +3,20 @@ using UnityEngine;
 
 public class MonsterSpawner : MonoBehaviour
 {
-    // 메인 스테이지 하나의 몬스터 구성. 스테이지가 늘어날 때 이 목록에 항목 하나만 추가하면
-    // 되고, 코드는 손댈 필요가 없다 - 예전에는 스테이지당 SerializeField 세 개를 새로 만들고
-    // Resolve 함수 세 개의 분기까지 함께 늘려야 했다.
+    // 메인 스테이지 하나의 몬스터 구성
     [System.Serializable]
     public class StageRoster
     {
-        [Min(1)] public int mainStage = 1;
         public MonsterDefinitionSO normal;
         public MonsterDefinitionSO elite;
         public MonsterDefinitionSO boss;
     }
 
-    // 첫 항목이 기본 구성이다 - 자기 항목이 없는 스테이지, 그리고 항목은 있지만 슬롯이 빈
-    // 경우가 모두 여기로 떨어진다(아래 Resolve 참고). 그래서 새 스테이지를 절반만 채워도
-    // 런타임 오류 없이 스폰된다.
+    // 목록의 순서가 곧 스테이지 번호다 - Element 0이 1스테이지, Element 1이 2스테이지. 그래서
+    // Inspector에서 항목 순서를 바꾸면 스테이지 구성도 함께 바뀐다.
+    //
+    // 그리고 첫 항목이 기본 구성을 겸한다 - 자기 항목이 아직 없는 스테이지는 여기로 떨어진다
+    // (아래 Resolve 참고). 그래서 새 스테이지의 몬스터를 아직 안 만들었어도 스폰은 된다.
     [SerializeField] private List<StageRoster> rosters = new List<StageRoster>();
 
     [SerializeField] private StageConfigSO stageConfig;
@@ -34,10 +33,13 @@ public class MonsterSpawner : MonoBehaviour
     {
         ApproachSpeed = ComputeApproachSpeed();
 
-        // 목록이 비면 어느 스테이지에서도 몬스터가 스폰되지 않는데, 그건 화면상 "아직 안 나왔다"와
-        // 구분이 안 된다. 씬 배선이 끊긴 채로 조용히 굴러가지 않도록 시작할 때 한 번 짚는다.
         if (rosters.Count == 0 || rosters[0] == null || rosters[0].normal == null)
             Debug.LogWarning("MonsterSpawner: 기본 구성(rosters의 첫 항목)이 비어 있다 - 몬스터가 스폰되지 않는다.", this);
+
+        // 항목이 모자란 스테이지는 Resolve가 조용히 1스테이지 구성으로 떨어뜨린다. 의도한
+        // 재사용인지 로스터를 깜빡한 건지 화면상 구분이 안 되므로, 시작할 때 한 번 짚어둔다.
+        if (rosters.Count < StageManager.MaxMainStage)
+            Debug.LogWarning($"MonsterSpawner: rosters 항목이 {rosters.Count}개뿐이다 - {rosters.Count + 1}~{StageManager.MaxMainStage}스테이지는 1스테이지 몬스터를 그대로 재사용한다.", this);
     }
 
     private float ComputeApproachSpeed()
@@ -55,25 +57,37 @@ public class MonsterSpawner : MonoBehaviour
         return stageConfig.monsterApproachDuration > 0f ? travelDistance / stageConfig.monsterApproachDuration : 0f;
     }
 
-    private MonsterDefinitionSO ResolveNormal(int mainStage) => Resolve(mainStage, r => r.normal);
-    private MonsterDefinitionSO ResolveElite(int mainStage) => Resolve(mainStage, r => r.elite);
-    private MonsterDefinitionSO ResolveBoss(int mainStage) => Resolve(mainStage, r => r.boss);
-
-    // 요청한 스테이지의 구성에서 슬롯을 꺼내고, 비어 있으면 기본 구성(첫 항목)으로 떨어진다.
-    // 슬롯 단위로 폴백하는 게 핵심이다: 새 스테이지에 일반 몬스터만 새로 준비했다면 엘리트와
-    // 보스는 기본 구성 것을 그대로 쓰면 되고, 그러다 준비되는 대로 하나씩 채워 넣을 수 있다.
-    private MonsterDefinitionSO Resolve(int mainStage, System.Func<StageRoster, MonsterDefinitionSO> slot)
+    // 해당 스테이지에 해당하는 몬스터 타입의 정보를 반환
+    private MonsterDefinitionSO Resolve(int mainStage, MonsterType type)
     {
-        for (int i = 0; i < rosters.Count; i++)
-        {
-            if (rosters[i] == null || rosters[i].mainStage != mainStage) continue;
+        int index = mainStage - 1;
+        StageRoster roster;
 
-            MonsterDefinitionSO exact = slot(rosters[i]);
-            if (exact != null) return exact;
-            break;
+        if (index >= 0 && index < rosters.Count && rosters[index] != null)
+        {
+            // 이 스테이지 전용 로스터가 있으면 그걸 쓴다.
+            roster = rosters[index];
+        }
+        else
+        {
+            // 없어도 스폰은 해야 하니 첫 항목(기본 구성)으로 대신한다.
+            roster = rosters.Count > 0 ? rosters[0] : null;
         }
 
-        return rosters.Count > 0 && rosters[0] != null ? slot(rosters[0]) : null;
+        return Pick(roster, type);
+    }
+
+    private static MonsterDefinitionSO Pick(StageRoster roster, MonsterType type)
+    {
+        if (roster == null) return null;
+
+        switch (type)
+        {
+            case MonsterType.Normal: return roster.normal;
+            case MonsterType.Elite: return roster.elite;
+            case MonsterType.Boss: return roster.boss;
+            default: return null;
+        }
     }
 
     [SerializeField] private float eliteScale = 1.5f;
@@ -109,7 +123,7 @@ public class MonsterSpawner : MonoBehaviour
 
     public Monster SpawnNormal(int mainStage, int subStage)
     {
-        MonsterDefinitionSO def = ResolveNormal(mainStage);
+        MonsterDefinitionSO def = Resolve(mainStage, MonsterType.Normal);
         if (def == null || def.prefab == null)
         {
             Debug.LogError("MonsterSpawner: normal monster definition or its prefab is not assigned.");
@@ -127,7 +141,7 @@ public class MonsterSpawner : MonoBehaviour
 
     public Monster SpawnBoss(int mainStage, int lastEliteSubStage)
     {
-        MonsterDefinitionSO def = ResolveBoss(mainStage);
+        MonsterDefinitionSO def = Resolve(mainStage, MonsterType.Boss);
         if (def == null || def.prefab == null)
         {
             Debug.LogError("MonsterSpawner: boss definition or its prefab is not assigned.");
@@ -147,7 +161,7 @@ public class MonsterSpawner : MonoBehaviour
 
     public Monster SpawnElite(int mainStage, int subStage)
     {
-        MonsterDefinitionSO def = ResolveElite(mainStage);
+        MonsterDefinitionSO def = Resolve(mainStage, MonsterType.Elite);
         if (def == null || def.prefab == null)
         {
             Debug.LogError("MonsterSpawner: elite definition or its prefab is not assigned.");
