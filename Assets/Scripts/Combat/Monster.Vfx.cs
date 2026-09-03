@@ -9,7 +9,7 @@ public partial class Monster
     // 겹쳐 쌓이는 대신 하나의 Play()/Stop()을 두고 서로 다투게 된다.
     private void SpawnUltimateImpactVfx()
     {
-        if (ultimateImpactVfxPrefab == null || Player == null) return;
+        if (ultimateImpactVfxPrefab == null) return;
 
         // 크레이터/버스트가 이펙트의 원점에 위치하므로 그 원점이 지면에 닿아야 한다.
         // 플레이어 transform은 발이 아니라 캡슐 중심이라, 거기 바로 스폰하면 크리스탈이

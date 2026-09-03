@@ -89,10 +89,7 @@ public partial class Monster
 
             bool parried = ParryManager.Instance != null && ParryManager.Instance.TryConsumeParry();
 
-            if (!parried && Player != null)
-            {
-                Player.TakeDamage(AttackPower);
-            }
+            if (!parried) Player.TakeDamage(AttackPower);
 
             yield return WaitUntilIdle(animator);
 
@@ -225,11 +222,8 @@ public partial class Monster
 
         if (IsDead) yield break;
 
-        if (Player != null)
-        {
-            SpawnUltimateImpactVfx();
-            Player.TakeDamage(AttackPower * ultimateDamageMultiplier);
-        }
+        SpawnUltimateImpactVfx();
+        Player.TakeDamage(AttackPower * ultimateDamageMultiplier);
     }
 
     private IEnumerator WaitForStateToStart(Animator animator, string stateName)
@@ -278,10 +272,7 @@ public partial class Monster
 
             if (IsDead) yield break;
 
-            if (Player != null)
-            {
-                Player.TakeDamage(AttackPower);
-            }
+            Player.TakeDamage(AttackPower);
 
             yield return new WaitForSeconds(Mathf.Max(0f, attackInterval - impactDelay));
         }

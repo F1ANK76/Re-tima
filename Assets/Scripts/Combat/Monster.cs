@@ -93,22 +93,10 @@ public partial class Monster : MonoBehaviour
     }
 
     private PlayerCharacter playerCache;
-    private PlayerCharacter Player => playerCache ??= moveTarget != null ? moveTarget.GetComponent<PlayerCharacter>() : null;
+    private PlayerCharacter Player => playerCache ??= moveTarget.GetComponent<PlayerCharacter>();
 
     private WeaponSwing playerWeaponSwingCache;
-    private bool playerWeaponSwingSearched;
-    private WeaponSwing PlayerWeaponSwing
-    {
-        get
-        {
-            if (!playerWeaponSwingSearched)
-            {
-                playerWeaponSwingSearched = true;
-                playerWeaponSwingCache = Player != null ? Player.GetComponentInChildren<WeaponSwing>() : null;
-            }
-            return playerWeaponSwingCache;
-        }
-    }
+    private WeaponSwing PlayerWeaponSwing => playerWeaponSwingCache ??= Player.GetComponentInChildren<WeaponSwing>();
 
     private bool bossLoopStarted;
     private bool normalLoopStarted;
@@ -182,6 +170,7 @@ public partial class Monster : MonoBehaviour
             Vector3 toTarget = moveTarget.position - transform.position;
             toTarget.y = 0f;
 
+            // 도착하지 않았다면 플레이어 한테 이동
             if (toTarget.magnitude > stoppingDistance)
             {
                 transform.position += toTarget.normalized * moveSpeed * Time.deltaTime;
@@ -189,6 +178,7 @@ public partial class Monster : MonoBehaviour
                 return;
             }
 
+            // 도착 시 멈춤
             HasArrived = true;
             MonsterAnimator.SetBool(AnimParams.IsMoving, false);
         }
@@ -197,7 +187,7 @@ public partial class Monster : MonoBehaviour
         // 이후에도 파괴되지 않고 살아남는 몬스터가(죽음 시퀀스 코루틴이 겹쳐 끊기는 등) 다시는
         // 공격을 시작 못 하는 일이 없도록, 플레이어가 무적(죽음 시퀀스 중)이 아닌 한 멈춰있던
         // 루프를 스스로 재시작하게 한다.
-        if (Player != null && Player.IsInvulnerable) return;
+        if (Player.IsInvulnerable) return;
 
         // 엘리트와 보스는 둘 다 패링 결투로 싸운다: 예고 동작을 보인 뒤 타격한다.
         // 일반 몬스터는 그냥 고정된 타이머로 서로 타격을 주고받는다.
