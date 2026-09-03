@@ -33,8 +33,6 @@ public class EquipmentDropPopup : MonoBehaviour
 
     private void HandleEquipmentPickedUp(EquipmentType equipType, StatGrade grade)
     {
-        if (anchor == null) return;
-
         var go = new GameObject("EquipmentDropPopup");
         go.transform.SetParent(anchor, false);
         go.transform.localPosition = localOffset + new Vector3(Random.Range(-0.15f, 0.15f), 0f, 0f);

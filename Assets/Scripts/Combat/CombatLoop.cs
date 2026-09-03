@@ -106,8 +106,7 @@ public class CombatLoop : MonoBehaviour
     // 다음 배너/스폰을 진행한다.
     public IEnumerator PlayVictorySequence()
     {
-        Animator animator = weaponSwing != null ? weaponSwing.PlayerAnimator : null;
-        if (animator == null) yield break;
+        Animator animator = weaponSwing.PlayerAnimator;
 
         // 궁극기 게이지는 30초로 채워져 킬 순간 거의 항상 가득이다. 막지 않으면
         // UltimateManager의 animator.Play()(트리거가 아니라 뒤에 큐잉되지 않는다)가
@@ -142,8 +141,7 @@ public class CombatLoop : MonoBehaviour
     // 넘어간다) - StageManager는 이때까지 체크포인트 리스폰을 보류한다.
     public IEnumerator PlayDeathSequence()
     {
-        Animator animator = weaponSwing != null ? weaponSwing.PlayerAnimator : null;
-        if (animator == null) yield break;
+        Animator animator = weaponSwing.PlayerAnimator;
 
         // PlayVictorySequence와 같은 이유의 가드 - 발동 직전의 궁극기가 이 트리거도 덮어쓴다.
         PushSuspend();
@@ -184,7 +182,7 @@ public class CombatLoop : MonoBehaviour
         bool shouldBeMoving = !suppressMovement && !IsIdleHeld && (currentMonster == null || !currentMonster.HasArrived);
 
         // 그 값을 적용
-        if (weaponSwing != null) weaponSwing.PlayerAnimator?.SetBool(AnimParams.IsMoving, shouldBeMoving);
+        weaponSwing.PlayerAnimator.SetBool(AnimParams.IsMoving, shouldBeMoving);
 
         // 궁극기 발동 대기중이거나 패링 반격 중일때는 공격 X
         if (SuppressNewAttacks || RiposteInProgress) return;
@@ -219,11 +217,11 @@ public class CombatLoop : MonoBehaviour
         bool isRunning = false;
 
         // 달리기 상태 여부를 그대로 배경·바닥 스크롤에 반영
-        if (!IsSuspended && weaponSwing != null && weaponSwing.PlayerAnimator != null)
+        if (!IsSuspended)
             isRunning = weaponSwing.PlayerAnimator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Running);
 
-        if (groundScroller != null) groundScroller.IsScrolling = isRunning;
-        if (backdropScroller != null) backdropScroller.IsScrolling = isRunning;
+        groundScroller.IsScrolling = isRunning;
+        backdropScroller.IsScrolling = isRunning;
     }
 
     private void DoTick()
@@ -231,13 +229,13 @@ public class CombatLoop : MonoBehaviour
         Monster target = currentMonster;
         if (target == null) return;
 
-        if (weaponSwing != null) weaponSwing.PlaySwing(); // 칼 휘두르는 애님
+        weaponSwing.PlaySwing(); // 칼 휘두르는 애님
         pendingDamageRoutine = StartCoroutine(DealDamageAfterSwing(target));
     }
 
     private IEnumerator DealDamageAfterSwing(Monster target)
     {
-        float delay = weaponSwing != null ? weaponSwing.AttackImpactDelay : 0f;
+        float delay = weaponSwing.AttackImpactDelay;
         yield return new WaitForSeconds(delay);
 
         // 딜레이 후 실제 플레이어 평타 공격
@@ -255,6 +253,6 @@ public class CombatLoop : MonoBehaviour
             pendingDamageRoutine = null;
         }
 
-        if (weaponSwing != null) weaponSwing.CancelSwing();
+        weaponSwing.CancelSwing();
     }
 }

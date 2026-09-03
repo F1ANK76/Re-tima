@@ -59,11 +59,10 @@ public class ManagementWindowView : MonoBehaviour
 
     private void Awake()
     {
-        if (closeButton != null) closeButton.onClick.AddListener(Close);
+        closeButton.onClick.AddListener(Close);
 
         for (int i = 0; i < tabButtonComponents.Length; i++)
         {
-            if (tabButtonComponents[i] == null) continue;
             int captured = i;
             tabButtonComponents[i].onClick.AddListener(() => SelectTab(captured));
         }
@@ -104,15 +103,15 @@ public class ManagementWindowView : MonoBehaviour
     // 때문에 사라져서는 안 되기 때문이다.
     private void RefreshTabUnlocks()
     {
-        int stage = stageManager != null ? stageManager.MainStage : 1;
+        int stage = stageManager.MainStage;
 
         for (int i = 1; i < tabUnlocked.Length; i++)
         {
             if (tabUnlocked[i] || stage < TabUnlockStage[i]) continue;
 
             tabUnlocked[i] = true;
-            if (tabButtonComponents[i] != null) tabButtonComponents[i].interactable = true;
-            if (tabLabels[i] != null) tabLabels[i].color = Color.white;
+            tabButtonComponents[i].interactable = true;
+            tabLabels[i].color = Color.white;
         }
 
         // 잠긴 탭은 선택을 거부하므로(SelectTab 참고) 해금 이후 활성 탭이 잠겨 있을 수는
@@ -127,7 +126,6 @@ public class ManagementWindowView : MonoBehaviour
     {
         for (int i = 0; i < tabButtons.Length; i++)
         {
-            if (tabButtons[i] == null) continue;
             tabButtons[i].color = !tabUnlocked[i] ? TabLocked : (i == activeTab ? TabActive : TabIdle);
         }
     }
@@ -141,8 +139,6 @@ public class ManagementWindowView : MonoBehaviour
 
     private void RefreshStat()
     {
-        if (statAtk == null || player == null) return;
-
         PlayerStats stats = player.Stats;
         statAtk.text = $"ATK          {stats.AttackPower:0.0}";
         statHp.text = $"MAX HP       {stats.MaxHp:0}";
@@ -158,7 +154,7 @@ public class ManagementWindowView : MonoBehaviour
         activeTab = index;
         for (int i = 0; i < tabPages.Length; i++)
         {
-            if (tabPages[i] != null) tabPages[i].SetActive(i == index);
+            tabPages[i].SetActive(i == index);
         }
         ApplyTabColors();
         RefreshAll();
@@ -168,8 +164,6 @@ public class ManagementWindowView : MonoBehaviour
     // 버전이 서로 어긋나게 두지 않는다.
     private void BuildEquipPage(Transform parent)
     {
-        if (equipmentPanelPrefab == null) return;
-
         // 프리팹 자체가 비활성 상태로 저장돼 있다: EquipmentPanelView.Awake는 이 참조들로
         // 스스로를 빌드하는데, 활성 상태로 인스턴스화하면 그게 Configure보다 먼저 실행된다.
         var panel = Instantiate(equipmentPanelPrefab);

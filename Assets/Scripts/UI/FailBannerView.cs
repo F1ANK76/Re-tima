@@ -26,7 +26,6 @@ public class FailBannerView : MonoBehaviour
     private void Awake()
     {
         canvasGroup = GetComponent<CanvasGroup>();
-        if (scaleTarget == null) scaleTarget = (RectTransform)transform;
 
         canvasGroup.alpha = 0f;
         gameObject.SetActive(false);
@@ -36,7 +35,7 @@ public class FailBannerView : MonoBehaviour
     // 재생된다 (어차피 이 시점엔 다른 무엇도 동작하고 있지 않을 것으로 예상된다).
     public IEnumerator Play(string text = "FAIL !")
     {
-        if (label != null) label.text = text;
+        label.text = text;
 
         scaleTarget.localScale = Vector3.one * startScale;
         gameObject.SetActive(true);

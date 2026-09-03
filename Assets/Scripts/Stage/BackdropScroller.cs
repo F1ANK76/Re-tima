@@ -31,8 +31,6 @@ public class BackdropScroller : MonoBehaviour
 
     private void Update()
     {
-        if (segments == null || segments.Length == 0) return;
-
         float targetFactor = IsScrolling ? 1f : 0f;
         speedFactor = Mathf.SmoothDamp(speedFactor, targetFactor, ref speedFactorVelocity, speedEaseTime);
 

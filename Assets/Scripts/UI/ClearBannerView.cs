@@ -32,7 +32,6 @@ public class ClearBannerView : CancellableBannerView
     private void Awake()
     {
         canvasGroup = GetComponent<CanvasGroup>();
-        if (scaleTarget == null) scaleTarget = (RectTransform)transform;
 
         // 첫 재생 전에 미리 캡처해둔다 - 애니메이션 자체가 위치를 덮어써버리기 때문에,
         // 나중에 읽으면 마지막 실행이 남겨놓은 값을 그대로 읽게 된다.
@@ -48,7 +47,7 @@ public class ClearBannerView : CancellableBannerView
         // 애니메이션을 하나 더 겹쳐 쌓는 게 아니라 처음부터 다시 시작한다.
         if (routine != null) StopCoroutine(routine);
 
-        if (label != null) label.text = text;
+        label.text = text;
 
         gameObject.SetActive(true);
         routine = StartCoroutine(PlayRoutine());

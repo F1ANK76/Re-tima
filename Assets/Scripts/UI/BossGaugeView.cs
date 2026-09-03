@@ -38,9 +38,9 @@ public class BossGaugeView : MonoBehaviour
 
     private void Awake()
     {
-        fillImage = fillRect != null ? fillRect.GetComponent<Image>() : null;
-        if (fillImage != null) fillBaseColor = fillImage.color;
-        if (percentText != null) textBaseColor = percentText.color;
+        fillImage = fillRect.GetComponent<Image>();
+        fillBaseColor = fillImage.color;
+        textBaseColor = percentText.color;
 
         SetBossReady(false);
     }
@@ -93,22 +93,17 @@ public class BossGaugeView : MonoBehaviour
     {
         displayedPercent = percent;
 
-        if (fillRect != null)
-        {
-            Vector2 anchorMax = fillRect.anchorMax;
-            anchorMax.x = Mathf.Clamp01(percent / 100f);
-            fillRect.anchorMax = anchorMax;
-        }
+        Vector2 anchorMax = fillRect.anchorMax;
+        anchorMax.x = Mathf.Clamp01(percent / 100f);
+        fillRect.anchorMax = anchorMax;
 
-        if (percentText != null) percentText.text = $"{percent}%";
+        percentText.text = $"{percent}%";
 
         SetBossReady(percent >= 100);
     }
 
     private void SetBossReady(bool ready)
     {
-        if (bossIconImage == null) return;
-
         bossIconImage.color = ready ? bossIconReadyColor : bossIconDimColor;
     }
 
@@ -131,14 +126,14 @@ public class BossGaugeView : MonoBehaviour
 
             // 밝게 번쩍인 뒤, 흰색으로 계속 남아있지 않고 채움 자체의 색으로 다시 페이드된다.
             float flash = 1f - Easing.OutQuad(p);
-            if (fillImage != null) fillImage.color = Color.Lerp(fillBaseColor, Color.white, flash);
-            if (percentText != null) percentText.color = Color.Lerp(textBaseColor, Color.white, flash);
+            fillImage.color = Color.Lerp(fillBaseColor, Color.white, flash);
+            percentText.color = Color.Lerp(textBaseColor, Color.white, flash);
 
             yield return null;
         }
 
         transform.localScale = Vector3.one;
-        if (fillImage != null) fillImage.color = fillBaseColor;
-        if (percentText != null) percentText.color = textBaseColor;
+        fillImage.color = fillBaseColor;
+        percentText.color = textBaseColor;
     }
 }

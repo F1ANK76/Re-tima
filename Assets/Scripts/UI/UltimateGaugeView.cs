@@ -12,8 +12,6 @@ public class UltimateGaugeView : MonoBehaviour
 
     public void SetFraction(float fraction)
     {
-        if (fillTransform == null) return;
-
         fraction = Mathf.Clamp01(fraction);
 
         Vector3 scale = fillTransform.localScale;

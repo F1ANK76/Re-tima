@@ -79,8 +79,6 @@ public class EquipmentPanelView : MonoBehaviour
 
     private void Refresh()
     {
-        if (equipmentDropManager == null) return;
-
         // Equip 탭의 전체 콘텐츠로, 장착 등급 + 숙련도로 결정되는 순수 장비 스탯만 보여준다.
         ApplyRow("Sword", equipmentDropManager.EquippedSwordGrade, EquipmentType.Sword,
             equipmentDropManager.SwordEquipmentBonus, "ATK", swordRig, swordIconFrame, swordLabel);

@@ -13,16 +13,16 @@ public class PanelToggle : MonoBehaviour
 
     private void OnEnable()
     {
-        if (button != null) button.onClick.AddListener(Toggle);
+        button.onClick.AddListener(Toggle);
     }
 
     private void OnDisable()
     {
-        if (button != null) button.onClick.RemoveListener(Toggle);
+        button.onClick.RemoveListener(Toggle);
     }
 
     private void Toggle()
     {
-        if (panel != null) panel.SetActive(!panel.activeSelf);
+        panel.SetActive(!panel.activeSelf);
     }
 }

@@ -49,14 +49,6 @@ public class EquipmentDropManager : DropSource
         EquipmentType equipType = Random.value < 0.5f ? EquipmentType.Sword : EquipmentType.Shield;
         StatGrade grade = GradeRoller.Roll();
 
-        // prefab/player가 없어도 롤은 그대로 처리한다(업그레이드면 장착·보상 지급까지) -
-        // 비주얼이 아직 연결되지 않았다는 이유로 조용히 유실되게 두지 않는다.
-        if (!CanSpawnPickup)
-        {
-            CompleteDrop(equipType, grade);
-            return;
-        }
-
         SpawnPickup(monster).InitializeEquipment(equipType, grade, player.transform, combatLoop, ApproachSpeed, this);
     }
 
@@ -70,7 +62,7 @@ public class EquipmentDropManager : DropSource
 
             if (!equippedSwordGrade.HasValue || grade > equippedSwordGrade.Value) equippedSwordGrade = grade;
 
-            if (player != null) player.IncreaseAttack(SwordEquipmentBonus - oldBonus);
+            player.IncreaseAttack(SwordEquipmentBonus - oldBonus);
         }
         else
         {
@@ -78,7 +70,7 @@ public class EquipmentDropManager : DropSource
 
             if (!equippedShieldGrade.HasValue || grade > equippedShieldGrade.Value) equippedShieldGrade = grade;
 
-            if (player != null) player.IncreaseMaxHp(ShieldEquipmentBonus - oldBonus);
+            player.IncreaseMaxHp(ShieldEquipmentBonus - oldBonus);
         }
 
         // 장착 상태를 바꾸지 않는 픽업도 알린다 - 주웠다는 사실 자체는 팝업으로 보여줘야 한다.

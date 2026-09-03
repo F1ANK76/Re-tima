@@ -58,9 +58,9 @@ public class ParryManager : MonoBehaviour
         GameEvents.OnMonsterDied += HandleMonsterDied;
         GameEvents.OnPlayerDied += HandlePlayerDied;
 
-        if (parryButton != null) parryButton.onClick.AddListener(OnParryButtonPressed);
+        parryButton.onClick.AddListener(OnParryButtonPressed);
 
-        if (cooldownOverlay != null) cooldownOverlay.SetActive(false);
+        cooldownOverlay.SetActive(false);
         UpdateButtonInteractable();
     }
 
@@ -70,7 +70,7 @@ public class ParryManager : MonoBehaviour
         GameEvents.OnMonsterDied -= HandleMonsterDied;
         GameEvents.OnPlayerDied -= HandlePlayerDied;
 
-        if (parryButton != null) parryButton.onClick.RemoveListener(OnParryButtonPressed);
+        parryButton.onClick.RemoveListener(OnParryButtonPressed);
     }
 
     // StageManager는 정상적인 죽음 처리 없이 현재 결투 상대를 파괴하므로, 여기서도
@@ -82,7 +82,7 @@ public class ParryManager : MonoBehaviour
 
         // 리포스트 도중 죽으면 안 그래도 공격 틱이 억제된 채로 리스폰된 스테이지까지
         // 넘어가버리는데, 그걸 풀어줄 대상이 아무것도 남아있지 않게 된다.
-        if (combatLoop != null) combatLoop.RiposteInProgress = false;
+        combatLoop.RiposteInProgress = false;
 
         UpdateButtonInteractable();
     }
@@ -119,16 +119,16 @@ public class ParryManager : MonoBehaviour
 
         // 이미 진행 중이던 일반 스윙은, 아래에서 포즈가 Defend로 전환되고 나면
         // 타격을 적중시키거나 슬래시를 계속 보여줘서는 안 된다.
-        if (combatLoop != null) combatLoop.CancelPendingAttack();
+        combatLoop.CancelPendingAttack();
 
         // Animator.Play는 블렌딩 없이 해당 스테이트로 바로 점프하므로, 진행 중인
         // 공격 스윙을 끝까지 기다리지 않고 즉시 끊어버린다.
-        Animator animator = weaponSwing != null ? weaponSwing.PlayerAnimator : null;
-        if (animator != null) animator.Play(PlayerAnimStates.Defend, 0, 0f);
+        Animator animator = weaponSwing.PlayerAnimator;
+        animator.Play(PlayerAnimStates.Defend, 0, 0f);
 
         // 위와 같은 이유로 궁극기도 하드컷된다 - 애니메이터는 이미 Defend로 넘어갔는데 궁극기
         // 코루틴이 자기 타이머로 계속 돌아 뒤늦게 데미지/폭발을 따로 터뜨리지 않도록 여기서 함께 취소한다.
-        if (ultimateManager != null) ultimateManager.CancelUltimate();
+        ultimateManager.CancelUltimate();
 
         // 방패 이펙트는 성공 여부와 무관하게 시도하는 순간 바로 뜬다 - 실제 성공/실패
         // 판정과는 무관하다.
@@ -138,7 +138,7 @@ public class ParryManager : MonoBehaviour
 
         // 윈도우가 진행되는 동안 다른 무언가(성공한 패링의 리포스트, 새로운 공격, 죽음,
         // 승리)가 이미 애니메이터를 가져가지 않았을 때만 idle로 되돌려 받는다.
-        if (animator != null && animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Defend))
+        if (animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Defend))
         {
             animator.Play(PlayerAnimStates.Idle, 0, 0f);
         }
@@ -158,13 +158,12 @@ public class ParryManager : MonoBehaviour
 
         parryWindowOpen = false;
 
-        Animator animator = weaponSwing != null ? weaponSwing.PlayerAnimator : null;
-        if (animator != null) StartCoroutine(PlayRiposteAnimation(animator));
+        StartCoroutine(PlayRiposteAnimation(weaponSwing.PlayerAnimator));
 
-        if (teleportVfx != null) StartCoroutine(PlayTeleportVfx());
+        StartCoroutine(PlayTeleportVfx());
 
         // 리포스트는 일반 타격의 2배 데미지 - 성공적인 패링에 대한 보상.
-        if (player != null && currentDuelist != null) player.Attack(currentDuelist, RiposteDamageMultiplier);
+        if (currentDuelist != null) player.Attack(currentDuelist, RiposteDamageMultiplier);
 
         StartCooldown(SuccessCooldownSeconds);
 
@@ -176,7 +175,7 @@ public class ParryManager : MonoBehaviour
         // 없으면 공격 틱이 리포스트 도중에도 자유롭게 발동하고, 그 Attack 트리거가 아직 재생 중인
         // 카운터 위에 일반 스윙을 블렌딩해 두 포즈가 동시에 재생된다. 카운터가 끝날 때까지 붙잡아
         // 다음 일반 타격이 겹치지 않고 그 뒤를 잇게 한다.
-        if (combatLoop != null) combatLoop.RiposteInProgress = true;
+        combatLoop.RiposteInProgress = true;
 
         animator.Play(PlayerAnimStates.Riposte, 0, 0f);
 
@@ -191,7 +190,7 @@ public class ParryManager : MonoBehaviour
             animator.Play(PlayerAnimStates.Idle, 0, 0f);
         }
 
-        if (combatLoop != null) combatLoop.RiposteInProgress = false;
+        combatLoop.RiposteInProgress = false;
     }
 
     private IEnumerator PlayTeleportVfx()
@@ -212,28 +211,27 @@ public class ParryManager : MonoBehaviour
 
     private IEnumerator CooldownRoutine(int seconds)
     {
-        if (cooldownOverlay != null) cooldownOverlay.SetActive(true);
+        cooldownOverlay.SetActive(true);
 
         for (int remaining = seconds; remaining >= 1; remaining--)
         {
-            if (cooldownText != null) cooldownText.text = remaining.ToString();
+            cooldownText.text = remaining.ToString();
             yield return new WaitForSeconds(1f);
         }
 
         onCooldown = false;
-        if (cooldownOverlay != null) cooldownOverlay.SetActive(false);
+        cooldownOverlay.SetActive(false);
         UpdateButtonInteractable();
         cooldownRoutine = null;
     }
 
     private void UpdateButtonInteractable()
     {
-        if (parryButton != null) parryButton.interactable = duelActive && !onCooldown;
+        parryButton.interactable = duelActive && !onCooldown;
     }
 
     private void ShowShieldEffect()
     {
-        if (parrySuccessVfx == null) return;
 
         parrySuccessVfx.SetActive(true);
         if (shieldEffectRoutine != null) StopCoroutine(shieldEffectRoutine);

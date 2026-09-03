@@ -26,7 +26,7 @@ public class GameCompleteView : MonoBehaviour
         transform.SetAsLastSibling();
         canvasGroup = GetComponent<CanvasGroup>();
 
-        if (restartButton != null) restartButton.onClick.AddListener(HandleRestartPressed);
+        restartButton.onClick.AddListener(HandleRestartPressed);
 
         canvasGroup.alpha = 0f;
         gameObject.SetActive(false);
@@ -39,9 +39,9 @@ public class GameCompleteView : MonoBehaviour
         int totalSeconds = Mathf.Max(0, Mathf.RoundToInt(elapsedSeconds));
         int minutes = totalSeconds / 60;
         int seconds = totalSeconds % 60;
-        if (timeLabel != null) timeLabel.text = $"CLEAR TIME  {minutes:00}:{seconds:00}";
+        timeLabel.text = $"CLEAR TIME  {minutes:00}:{seconds:00}";
 
-        if (restartButton != null) restartButton.interactable = true;
+        restartButton.interactable = true;
         canvasGroup.blocksRaycasts = true;
         gameObject.SetActive(true);
 
@@ -66,7 +66,7 @@ public class GameCompleteView : MonoBehaviour
     private void HandleRestartPressed()
     {
         // 재진입 방지 - 씬 리로드가 실제로 일어나기 전까지 두 번째 클릭이 콜백을 또 태우지 않게 한다.
-        if (restartButton != null) restartButton.interactable = false;
+        restartButton.interactable = false;
 
         Action callback = onRestart;
         onRestart = null;

@@ -32,8 +32,6 @@ public class MonsterSpawner : MonoBehaviour
 
     private float ComputeApproachSpeed()
     {
-        if (spawnPoint == null || playerTransform == null || stageConfig == null) return 0f;
-
         Vector3 spawnFrom = spawnPoint.position + new Vector3(stageConfig.offscreenSpawnDistance, 0f, 0f);
         Vector3 toPlayer = playerTransform.position - spawnFrom;
         toPlayer.y = 0f;
@@ -59,7 +57,7 @@ public class MonsterSpawner : MonoBehaviour
         else
         {
             // 없어도 스폰은 해야 하니 첫 항목(기본 구성)으로 대신한다.
-            roster = rosters.Count > 0 ? rosters[0] : null;
+            roster = rosters[0];
         }
 
         return Pick(roster, type);
@@ -67,8 +65,6 @@ public class MonsterSpawner : MonoBehaviour
 
     private static MonsterDefinitionSO Pick(StageRoster roster, MonsterType type)
     {
-        if (roster == null) return null;
-
         switch (type)
         {
             case MonsterType.Normal: return roster.normal;
@@ -163,13 +159,7 @@ public class MonsterSpawner : MonoBehaviour
         instance.transform.localScale *= scaleMultiplier;
         SnapToGround(instance);
 
-        Monster monster = instance.GetComponent<Monster>();
-        if (monster == null)
-        {
-            monster = instance.AddComponent<Monster>();
-        }
-
-        return monster;
+        return instance.GetComponent<Monster>();
     }
 
     // spawnPoint.position.y는 스케일 1 캡슐이 바닥에 놓인 기준값이다; 더 큰 프리팹(보스, 최종 보스)은

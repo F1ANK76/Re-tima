@@ -64,7 +64,7 @@ public class WeaponSwing : MonoBehaviour
             if (!animatorSearched)
             {
                 animatorSearched = true;
-                playerAnimator = transform.parent != null ? transform.parent.GetComponentInChildren<Animator>() : null;
+                playerAnimator = transform.parent.GetComponentInChildren<Animator>();
             }
             return playerAnimator;
         }
@@ -92,7 +92,7 @@ public class WeaponSwing : MonoBehaviour
             slashVfxRoutine = StartCoroutine(PlaySlashVfxAtImpact());
         }
 
-        if (PlayerAnimator != null && Time.time >= nextAnimTriggerAllowedTime)
+        if (Time.time >= nextAnimTriggerAllowedTime)
         {
             PlayerAnimator.SetTrigger(AnimParams.Attack);
             nextAnimTriggerAllowedTime = Time.time + AttackAnimSettleDuration;

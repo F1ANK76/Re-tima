@@ -58,7 +58,7 @@ public class UltimateManager : MonoBehaviour
     // 이게 없으면 그 첫 이벤트가 게이지를 숨기기 전까지 화면에 잠깐 번쩍인다.
     private void Start()
     {
-        if (gaugeView != null) gaugeView.gameObject.SetActive(IsUnlocked);
+        gaugeView.gameObject.SetActive(IsUnlocked);
     }
 
     private void HandleMonsterSpawned(Monster monster)
@@ -75,13 +75,11 @@ public class UltimateManager : MonoBehaviour
     {
         currentMainStage = mainStage;
         chargeTimer = 0f;
-        if (gaugeView != null)
-        {
-            gaugeView.SetFraction(0f);
-            // 비워둔 채로 놔두지 않고 아예 숨긴다: 스테이지 1 내내 항상 0%인 바는
-            // 잠긴 스킬이 아니라 고장난 게이지처럼 보인다.
-            gaugeView.gameObject.SetActive(IsUnlocked);
-        }
+
+        gaugeView.SetFraction(0f);
+        // 비워둔 채로 놔두지 않고 아예 숨긴다: 스테이지 1 내내 항상 0%인 바는
+        // 잠긴 스킬이 아니라 고장난 게이지처럼 보인다.
+        gaugeView.gameObject.SetActive(IsUnlocked);
     }
 
     private void Update()
@@ -92,12 +90,12 @@ public class UltimateManager : MonoBehaviour
 
         // 스테이지 배너는 뭔가 스폰되기 전 몇 초간 화면을 덮는다 - 그 사이 충전되면 플레이어가
         // 보지도 못하는 빌드업을 낭비하는 셈이므로, 배너가 사라질 때까지 0에서 대기시킨다.
-        if (stageBanner != null && stageBanner.activeSelf) return;
+        if (stageBanner.activeSelf) return;
 
         // 가득 찬 이후로도 계속 흐르게 두지 않고 클램프한다 - 충전이 끝나면 게이지를 100%로 유지한
         // 채 몬스터가 근처에 있고 현재 애니메이션이 끝나기를 기다릴 뿐이다.
         chargeTimer = Mathf.Min(chargeTimer + Time.deltaTime, ChargeDuration);
-        if (gaugeView != null) gaugeView.SetFraction(chargeTimer / ChargeDuration);
+        gaugeView.SetFraction(chargeTimer / ChargeDuration);
 
         // 단순히 "몬스터가 존재한다"만으로는 부족하다 - 실제로 근접 사거리 안에 있어야
         // 하며, 이는 CombatLoop가 일반 타격을 날리기 전에 확인하는 것과 같은 조건이다.
@@ -105,18 +103,18 @@ public class UltimateManager : MonoBehaviour
         // CombatLoop는 이 클래스가 궁극기용으로 세팅할 때뿐 아니라 자신의 승리/죽음 포즈에도 이
         // 플래그를 세운다 - 보스전은 킬 확정 순간 게이지가 거의 항상 꽉 차 있을 만큼 길어서, 그
         // 포즈 도중 궁극기가 나가면 트리거 기반 전환 위에 hard-Play()로 그대로 덮어써버린다.
-        bool combatLoopBusy = combatLoop != null && combatLoop.IsSuspended;
+        bool combatLoopBusy = combatLoop.IsSuspended;
         bool chargeReady = chargeTimer >= ChargeDuration && targetInRange && !combatLoopBusy;
 
         // 게이지가 가득 차는 순간부터 CombatLoop가 새 일반 스윙을 시작하지 못하게 막는다 - 아니면
         // 아래에서 안전한 타이밍을 기다리는 동안 스윙이 몇 번이고 이어지는데, 애니메이터가 진짜
         // 안전한 틈에 머무는 시간은 한 스윙이 정착하고 다음 틱이 재트리거하기까지 한두 프레임뿐이다.
-        if (combatLoop != null) combatLoop.SuppressNewAttacks = chargeReady;
+        combatLoop.SuppressNewAttacks = chargeReady;
 
         if (chargeReady && IsSafeToInterrupt())
         {
             chargeTimer = 0f;
-            if (combatLoop != null) combatLoop.SuppressNewAttacks = false;
+            combatLoop.SuppressNewAttacks = false;
             ultimateRoutine = StartCoroutine(PlayUltimate());
         }
     }
@@ -128,10 +126,9 @@ public class UltimateManager : MonoBehaviour
         // 애니메이터 상태보다 먼저 체크한다: PlaySwing() 직후 애니메이터가 공격 상태라고 보고하기까지
         // 한두 프레임 동안 스윙 데미지가 여전히 진행 중일 수 있고, 바로 그 틈에 끼어드는 것이 일반
         // 타격과 궁극기가 함께 적중하던 문제의 원인이었다.
-        if (combatLoop != null && combatLoop.HasPendingAttack) return false;
+        if (combatLoop.HasPendingAttack) return false;
 
-        Animator animator = weaponSwing != null ? weaponSwing.PlayerAnimator : null;
-        if (animator == null) return true;
+        Animator animator = weaponSwing.PlayerAnimator;
         if (animator.IsInTransition(0)) return false;
 
         var state = animator.GetCurrentAnimatorStateInfo(0);
@@ -145,13 +142,12 @@ public class UltimateManager : MonoBehaviour
         // 발동" 버그가 난다. `enabled` 대신 IsSuspended를 쓰는 이유: `enabled`를 토글하면 CombatLoop의
         // OnDisable이 OnMonsterDied 구독을 해제해, 이 궁극기의 킬이 타겟을 정리하지 못하고 재개 후에도
         // 시체를 계속 공격하게 된다.
-        if (combatLoop != null) combatLoop.PushSuspend();
+        combatLoop.PushSuspend();
 
-        Animator animator = weaponSwing != null ? weaponSwing.PlayerAnimator : null;
-        if (animator != null) animator.Play(PlayerAnimStates.Ultimate, 0, 0f);
+        Animator animator = weaponSwing.PlayerAnimator;
+        animator.Play(PlayerAnimStates.Ultimate, 0, 0f);
 
         // 이 컨트롤러는 스테이트 이름과 클립 이름이 같아서 상수 하나로 둘 다 가리킨다.
-        // animator가 null이면 ResolveClipLength가 대체값을 돌려주므로 시퀀스는 그대로 굴러간다.
         float ultimateLength = AnimClipTiming.ResolveClipLength(
             animator, PlayerAnimStates.Ultimate, UltimateClipFallbackLength);
         float landingDelay = ultimateLength * LandingFraction;
@@ -159,21 +155,21 @@ public class UltimateManager : MonoBehaviour
         yield return new WaitForSeconds(landingDelay);
 
         Monster target = currentMonster;
-        if (player != null && target != null)
+        if (target != null)
         {
             target.TakeDamage(player.Stats.AttackPower * DamageMultiplier);
         }
 
-        if (explosionVfx != null) StartCoroutine(PlayExplosionVfx());
+        StartCoroutine(PlayExplosionVfx());
 
         yield return new WaitForSeconds(ultimateLength - landingDelay);
 
-        if (animator != null && animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Ultimate))
+        if (animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Ultimate))
         {
             animator.Play(PlayerAnimStates.Idle, 0, 0f);
         }
 
-        if (combatLoop != null) combatLoop.PopSuspend();
+        combatLoop.PopSuspend();
         ultimateRoutine = null;
     }
 
@@ -188,12 +184,12 @@ public class UltimateManager : MonoBehaviour
         StopCoroutine(ultimateRoutine);
         ultimateRoutine = null;
 
-        if (combatLoop != null) combatLoop.PopSuspend();
+        combatLoop.PopSuspend();
     }
 
     private IEnumerator PlayExplosionVfx()
     {
-        if (player != null) explosionVfx.transform.position = player.transform.position;
+        explosionVfx.transform.position = player.transform.position;
 
         explosionVfx.Play(true);
         yield return new WaitForSeconds(ExplosionVfxDuration);

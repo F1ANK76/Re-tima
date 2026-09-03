@@ -6,7 +6,7 @@ public class HealthBarView : MonoBehaviour
 
     public void SetHealth(float current, float max)
     {
-        if (fillTransform == null || max <= 0f) return;
+        if (max <= 0f) return;
 
         float fraction = Mathf.Clamp01(current / max);
         Vector3 scale = fillTransform.localScale;

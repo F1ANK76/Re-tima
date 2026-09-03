@@ -26,12 +26,12 @@ public class HudController : MonoBehaviour
     {
         currentMainStage = mainStage;
         currentSubStage = subStage;
-        if (stageText != null) stageText.text = $"Stage {mainStage}-{subStage}";
+        stageText.text = $"Stage {mainStage}-{subStage}";
     }
 
     private void HandleMonsterSpawned(Monster monster)
     {
-        if (monster.Type == MonsterType.Boss && stageText != null)
+        if (monster.Type == MonsterType.Boss)
         {
             stageText.text = $"Stage {currentMainStage}-Boss";
         }
@@ -39,7 +39,7 @@ public class HudController : MonoBehaviour
 
     private void HandleMonsterDied(Monster monster)
     {
-        if (monster.Type == MonsterType.Boss && stageText != null)
+        if (monster.Type == MonsterType.Boss)
         {
             stageText.text = $"Stage {currentMainStage}-{currentSubStage}";
         }

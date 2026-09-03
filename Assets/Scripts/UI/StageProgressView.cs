@@ -61,7 +61,7 @@ public class StageProgressView : MonoBehaviour
 
     private void Update()
     {
-        bool bannerVisible = banner != null && banner.gameObject.activeSelf;
+        bool bannerVisible = banner.gameObject.activeSelf;
         if (bannerVisible != bannerWasVisible)
         {
             bannerWasVisible = bannerVisible;
@@ -122,7 +122,6 @@ public class StageProgressView : MonoBehaviour
             segments[i].color = currentSubStage >= rightStage ? CompletedDotColor : TrackColor;
         }
 
-        if (arrowRect != null)
         {
             float x = dots[currentSubStage - 1].rectTransform.anchoredPosition.x;
             arrowRect.anchoredPosition = new Vector2(x, arrowOffsetY);

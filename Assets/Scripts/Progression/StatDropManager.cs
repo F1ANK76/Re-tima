@@ -17,10 +17,7 @@ public class StatDropManager : DropSource
         float amount = GetAmount(statType, grade);
 
         // 스탯은 즉시 적용되지 않는다 - 몬스터가 죽은 위치에 드롭되는 포션에 넘겨지고, 그 포션이
-        // 플레이어에게 도달했을 때만 지급된다(DropPickup 참고). prefab이나 player가 없으면
-        // 넘겨줄 대상 자체가 없어 드롭도 없다.
-        if (!CanSpawnPickup) return;
-
+        // 플레이어에게 도달했을 때만 지급된다(DropPickup 참고).
         SpawnPickup(monster).InitializeStatPotion(statType, grade, amount, player.transform, combatLoop, ApproachSpeed);
     }
 

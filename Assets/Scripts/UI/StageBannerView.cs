@@ -23,12 +23,9 @@ public class StageBannerView : CancellableBannerView
     private void Awake()
     {
         canvasGroup = GetComponent<CanvasGroup>();
-        if (bannerText != null)
-        {
-            textRect = bannerText.rectTransform;
-            // 씬이 어떤 텍스트로 저장되어 있었든 상관없이 빈 상태로 시작한다.
-            if (textGroup != null) textGroup.alpha = 0f;
-        }
+        textRect = bannerText.rectTransform;
+        // 씬이 어떤 텍스트로 저장되어 있었든 상관없이 빈 상태로 시작한다.
+        textGroup.alpha = 0f;
 
         // 배너는 기본적으로 비활성화 상태로 시작한다 - 안내가 필요할 때 Show()를 호출한다.
         gameObject.SetActive(false);
@@ -40,7 +37,7 @@ public class StageBannerView : CancellableBannerView
         // 도중에 걸려 콜백 전에 새 루틴을 죽이고, 그 루틴이 쥔 스폰이 영영 일어나지 않는다.
         Cancel();
 
-        if (bannerText != null) bannerText.text = text;
+        bannerText.text = text;
 
         bool openOnBlack = !hasShownOnce;
         hasShownOnce = true;
@@ -48,8 +45,8 @@ public class StageBannerView : CancellableBannerView
         // 오브젝트를 활성화하는 것과 같은 호출에서 불투명하게 설정하여, 오프닝으로 들어가는
         // 도중에 씬이 가려지지 않은 채로 렌더링되는 프레임이 절대 생기지 않게 한다.
         canvasGroup.alpha = openOnBlack ? 1f : 0f;
-        if (textGroup != null) textGroup.alpha = 0f;
-        if (textRect != null) textRect.localScale = Vector3.one * popStartScale;
+        textGroup.alpha = 0f;
+        textRect.localScale = Vector3.one * popStartScale;
         gameObject.SetActive(true);
         routine = StartCoroutine(PlayThenHide(openOnBlack, onComplete));
     }
@@ -88,21 +85,18 @@ public class StageBannerView : CancellableBannerView
     // 밋밋하게 나타나는 대신 안내가 약간의 무게감을 가지고 도착하는 것처럼 보인다.
     private IEnumerator PopTextIn()
     {
-        if (textGroup == null && textRect == null) yield break;
-
         float t = 0f;
         while (t < fadeDuration)
         {
             t += Time.unscaledDeltaTime;
             float p = Mathf.Clamp01(t / fadeDuration);
-            if (textGroup != null) textGroup.alpha = p;
-            if (textRect != null)
-                textRect.localScale = Vector3.one * Mathf.LerpUnclamped(popStartScale, 1f, Easing.OutBack(p, 1.2f));
+            textGroup.alpha = p;
+            textRect.localScale = Vector3.one * Mathf.LerpUnclamped(popStartScale, 1f, Easing.OutBack(p, 1.2f));
             yield return null;
         }
 
-        if (textGroup != null) textGroup.alpha = 1f;
-        if (textRect != null) textRect.localScale = Vector3.one;
+        textGroup.alpha = 1f;
+        textRect.localScale = Vector3.one;
     }
 
     private static IEnumerator FadeGroup(CanvasGroup group, float fromAlpha, float toAlpha, float duration)

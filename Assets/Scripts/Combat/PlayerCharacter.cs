@@ -50,8 +50,6 @@ public class PlayerCharacter : MonoBehaviour
 
     private void PlayBuffVfx()
     {
-        if (buffVfx == null) return;
-
         if (buffVfxRoutine != null) StopCoroutine(buffVfxRoutine);
         buffVfxRoutine = StartCoroutine(PlayBuffVfxRoutine());
     }
@@ -109,8 +107,6 @@ public class PlayerCharacter : MonoBehaviour
 
     private void PlayHitVfx()
     {
-        if (hitVfx == null) return;
-
         if (hitVfxRoutine != null) StopCoroutine(hitVfxRoutine);
         hitVfxRoutine = StartCoroutine(PlayHitVfxRoutine());
     }

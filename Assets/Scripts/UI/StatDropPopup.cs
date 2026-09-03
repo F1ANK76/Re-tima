@@ -42,8 +42,6 @@ public class StatDropPopup : MonoBehaviour
 
     private void HandleStatDropGained(StatGrade grade, StatType statType, float amount)
     {
-        if (anchor == null) return;
-
         var go = new GameObject("StatDropPopup");
         go.transform.SetParent(anchor, false);
         // 드롭이 연달아 몇 개 들어와도 팝업들이 완전히 겹치지 않도록 가로로 흩어지게 한다.
@@ -61,7 +59,7 @@ public class StatDropPopup : MonoBehaviour
         go.AddComponent<Billboard>();
         go.AddComponent<StatDropPopupMotion>();
 
-        if (sparkleBurstPrefab != null) SpawnSparkleBurst(go.transform, grade);
+        SpawnSparkleBurst(go.transform, grade);
     }
 
     private static string GetStatAbbreviation(StatType statType) => statType == StatType.Attack ? "ATK" : "HP";

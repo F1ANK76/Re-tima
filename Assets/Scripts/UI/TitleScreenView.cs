@@ -37,10 +37,10 @@ public class TitleScreenView : MonoBehaviour
 
         canvasGroup = GetComponent<CanvasGroup>();
 
-        if (centerWhileShowing != null) originalSubjectPosition = centerWhileShowing.position;
+        originalSubjectPosition = centerWhileShowing.position;
 
-        if (titleLabel != null) titleLabel.text = titleText;
-        if (playButton != null) playButton.onClick.AddListener(HandlePlayPressed);
+        titleLabel.text = titleText;
+        playButton.onClick.AddListener(HandlePlayPressed);
     }
 
     public void Show(Action playCallback)
@@ -49,7 +49,7 @@ public class TitleScreenView : MonoBehaviour
         playPressed = false;
         canvasGroup.alpha = 1f;
         canvasGroup.blocksRaycasts = true;
-        if (playButton != null) playButton.interactable = true;
+        playButton.interactable = true;
         HideHud();
         CenterSubject();
         gameObject.SetActive(true);
@@ -58,7 +58,6 @@ public class TitleScreenView : MonoBehaviour
     private void CenterSubject()
     {
         Camera cam = Camera.main;
-        if (centerWhileShowing == null || cam == null) return;
 
         // 카메라의 x 좌표에 맞추면, 씬의 전투 간격이 어떻게 되어 있든 그를 중앙선에
         // 위치시킬 수 있다.
@@ -69,8 +68,6 @@ public class TitleScreenView : MonoBehaviour
 
     private void RestoreSubject()
     {
-        if (centerWhileShowing == null) return;
-
         centerWhileShowing.position = originalSubjectPosition;
     }
 
@@ -98,7 +95,7 @@ public class TitleScreenView : MonoBehaviour
 
     private void HideAndFadeOut()
     {
-        if (playButton != null) playButton.interactable = false;
+        playButton.interactable = false;
         canvasGroup.blocksRaycasts = false;
 
         // 런 시작 전에 복원해서, StageManager 자체의 반복 토글 표시/숨김이 한 프레임 뒤에
@@ -112,8 +109,6 @@ public class TitleScreenView : MonoBehaviour
 
     private void HideHud()
     {
-        if (hideWhileShowing == null) return;
-
         hiddenPriorState = new bool[hideWhileShowing.Length];
         for (int i = 0; i < hideWhileShowing.Length; i++)
         {
@@ -125,7 +120,7 @@ public class TitleScreenView : MonoBehaviour
 
     private void RestoreHud()
     {
-        if (hideWhileShowing == null || hiddenPriorState == null) return;
+        if (hiddenPriorState == null) return;
 
         for (int i = 0; i < hideWhileShowing.Length && i < hiddenPriorState.Length; i++)
         {

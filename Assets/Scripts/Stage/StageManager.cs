@@ -90,13 +90,13 @@ public class StageManager : MonoBehaviour
 
         // 배너는 자기 GameObject에서 자기 코루틴을 돌려 위의 StopAllCoroutines가 닿지 않는다.
         // 그냥 두면 배너 뒤에 큐잉된 스폰이 아래 초기화 이후 실행돼 새 스테이지에 몬스터를 떨군다.
-        if (banner != null) banner.Cancel();
+        banner.Cancel();
 
         // 이게 없으면 클리어를 유발한 처치와 같은 순간에 발생한 사망이 사망
         // 시퀀스 위에 "CLEAR !"를 계속 띄운 채로 남겨두게 된다.
-        if (clearBanner != null) clearBanner.Cancel();
+        clearBanner.Cancel();
 
-        if (player != null) player.IsInvulnerable = true;
+        player.IsInvulnerable = true;
 
         foreach (Monster monster in FindObjectsByType<Monster>(FindObjectsSortMode.None))
         {
@@ -108,11 +108,11 @@ public class StageManager : MonoBehaviour
 
     private IEnumerator PlayDeathThenRestart()
     {
-        if (combatLoop != null) yield return combatLoop.PlayDeathSequence();
+        yield return combatLoop.PlayDeathSequence();
 
         // 화면을 어둡게 하고 아래에서 서브스테이지를 재시작하기 전에 잠깐 "FAIL !"을 띄운다 - clearBanner처럼
         // 발사 후 무시가 아니라 yield로 기다리므로, 페이드가 떠 있는 동안 재시작이 일어나지 않는다.
-        if (failBanner != null) yield return failBanner.Play();
+        yield return failBanner.Play();
 
         foreach (Monster monster in FindObjectsByType<Monster>(FindObjectsSortMode.None))
         {
@@ -132,7 +132,7 @@ public class StageManager : MonoBehaviour
         // 상태)일 때 자신의 PopIdleHold 호출을 건너뛴다 - 그러면 풀어줄 주체가 아무것도 남지 않아
         // 플레이어가 영원히 idle에 갇힌다. 이 시점엔 idle hold를 걸었을 모든 픽업이 이미 사라졌으므로
         // 여기서 정리해도 항상 안전하다.
-        if (combatLoop != null) combatLoop.ClearIdleHold();
+        combatLoop.ClearIdleHold();
 
         // 실패한 서브스테이지를 그대로 반복한다 - 다만 보스 조우(항상 마지막 서브스테이지) 도중의
         // 사망만은 그 보스로 이어지는 직전 서브스테이지로 되돌린다, 클리어된 보스를 다시 붙잡고
@@ -144,16 +144,13 @@ public class StageManager : MonoBehaviour
         // 부활 시점: 사망 애니메이션이 끝나고 필드도 정리됐으니, 다시 피격 가능해지기 전에 풀피로
         // 되돌린다. 무적은 배너 이후가 아니라 여기서 해제한다 - 배너 재생 중까지 켜두면 그 사이
         // 또 다른 사망이 끼어들었을 때 플래그가 켜진 채 남을 위험이 있다.
-        if (player != null)
-        {
-            player.RestoreToFullHp();
-            player.IsInvulnerable = false;
-        }
+        player.RestoreToFullHp();
+        player.IsInvulnerable = false;
 
         // 사망 시퀀스 중 두 번째 사망이 나면 HandlePlayerDied가 재호출되고, 위의 StopAllCoroutines()가
         // CombatLoop.PlayDeathSequence를 suspend 플래그 복원 전에 끊어버릴 수 있다 - 그러면 리스폰
         // 후에도 전투가 영구히 멈춘다. 부활 후엔 전투가 항상 살아있어야 하므로 여기서 강제로 켜준다.
-        if (combatLoop != null) combatLoop.ClearSuspend();
+        combatLoop.ClearSuspend();
 
         ShowBannerThenSpawn();
     }
@@ -231,14 +228,14 @@ public class StageManager : MonoBehaviour
     {
         // 엘리트와 보스 처치만 여기를 거치는데, 이는 정확히 "무언가를 클리어했다"고
         // 읽혀야 하는 대상들이다 - 일반 처치는 이 지점 이전에 이미 리턴한다.
-        if (clearBanner != null) clearBanner.Show();
+        clearBanner.Show();
 
-        if (combatLoop != null) yield return combatLoop.PlayVictorySequence();
+        yield return combatLoop.PlayVictorySequence();
 
         // 위의 "CLEAR !"와 동시가 아니라 승리 포즈 이후에 표시한다: 둘 다 같은 단일 배너 오브젝트를
         // 쓰므로 함께 재생하면 두 번째 호출이 첫 번째를 재시작할 뿐이다(ClearBannerView.Show 참고).
         // 순서를 나누면 해금 연출이 다음 스테이지 카드로 넘어가기 전까지 자기 박자를 가진다.
-        if (announceSkillUnlock && clearBanner != null)
+        if (announceSkillUnlock)
         {
             clearBanner.Show("Skill Unlocked !");
             yield return new WaitForSecondsRealtime(SkillUnlockBannerHold);
@@ -254,12 +251,12 @@ public class StageManager : MonoBehaviour
     // 최종 보스(MaxMainStage) 클리어 전용 - 다음 스테이지 배너 대신 종료 화면으로 이어진다.
     private IEnumerator PlayVictoryThenShowGameComplete()
     {
-        if (clearBanner != null) clearBanner.Show();
+        clearBanner.Show();
 
-        if (combatLoop != null) yield return combatLoop.PlayVictorySequence();
+        yield return combatLoop.PlayVictorySequence();
 
         float elapsedSeconds = Time.time - runStartTime;
-        if (gameCompleteView != null) gameCompleteView.Show(elapsedSeconds, HandleRestartRequested);
+        gameCompleteView.Show(elapsedSeconds, HandleRestartRequested);
     }
 
     // 개별 매니저(장비/스톤/스탯/게이지 등)를 하나씩 손으로 되돌리는 대신 씬을 통째로 다시
@@ -286,7 +283,7 @@ public class StageManager : MonoBehaviour
         // 1번 박자: nextMonsterDelay(일반 몬스터 리스폰 사이의 숨 고르기용 값이며 연출 길이와는
         // 무관)가 아니라 게이지 자체의 강조/번쩍임 연출 시간에 맞춘다 - 그래야 아래 배너 딜레이가
         // 어긋난 별도 타이머가 아니라 게이지 축하 연출이 실제로 끝나는 시점부터 카운트된다.
-        float flourishDelay = bossGauge != null ? bossGauge.ReadyFlourishDuration : nextMonsterDelay;
+        float flourishDelay = bossGauge.ReadyFlourishDuration;
         yield return new WaitForSeconds(flourishDelay);
 
         yield return new WaitForSeconds(EliteBannerDelayAfterFlourish);
@@ -294,28 +291,22 @@ public class StageManager : MonoBehaviour
         // 3번 박자: 배너가 등장-유지-페이드아웃까지 스스로 다 재생하기 전엔 엘리트가 걸어 들어오지
         // 않는다 - 엘리트가 존재하기 훨씬 전에 배너가 뜨므로, 텍스트는 이미 화면에 있는 것의 라벨이
         // 아니라 앞으로 올 것의 전조로 읽히며 자신이 예고하는 등장과 절대 겹치지 않는다.
-        if (clearBanner != null)
-        {
-            clearBanner.Show("Elite Boss !");
-            yield return new WaitForSeconds(clearBanner.TotalPlayDuration);
-        }
+        clearBanner.Show("Elite Boss !");
+        yield return new WaitForSeconds(clearBanner.TotalPlayDuration);
 
         spawner.Spawn(MainStage, SubStage, MonsterType.Elite);
     }
 
     private void ShowBannerThenSpawn()
     {
-        if (player != null) player.RestoreToFullHp();
+        player.RestoreToFullHp();
 
         GameEvents.RaiseBossGaugeChanged(bossGaugePercent);
         GameEvents.RaiseStageChanged(MainStage, SubStage);
 
         string label = SubStage == BossSubStage ? $"Stage {MainStage}-Boss" : $"Stage {MainStage}-{SubStage}";
 
-        if (banner != null)
-        {
-            banner.Show(label, SpawnForCurrentSubStage);
-        }
+        banner.Show(label, SpawnForCurrentSubStage);
     }
 
     private void SpawnForCurrentSubStage()
@@ -324,7 +315,7 @@ public class StageManager : MonoBehaviour
         {
             // 보스는 바로 이전 서브스테이지의 엘리트를 기준으로 크기가 정해진다.
             spawner.Spawn(MainStage, BossSubStage - 1, MonsterType.Boss);
-            if (clearBanner != null) clearBanner.Show("Final Boss !");
+            clearBanner.Show("Final Boss !");
         }
         else
         {
@@ -339,8 +330,8 @@ public class StageManager : MonoBehaviour
     {
         StopAllCoroutines();
 
-        if (banner != null) banner.Cancel();
-        if (clearBanner != null) clearBanner.Cancel();
+        banner.Cancel();
+        clearBanner.Cancel();
 
         foreach (Monster monster in FindObjectsByType<Monster>(FindObjectsSortMode.None))
         {
@@ -359,7 +350,7 @@ public class StageManager : MonoBehaviour
         // 상태)일 때 자신의 PopIdleHold 호출을 건너뛴다 - 그러면 풀어줄 주체가 아무것도 남지 않아
         // 플레이어가 영원히 idle에 갇힌다. 이 시점엔 idle hold를 걸었을 모든 픽업이 이미 사라졌으므로
         // 여기서 정리해도 항상 안전하다.
-        if (combatLoop != null) combatLoop.ClearIdleHold();
+        combatLoop.ClearIdleHold();
 
         MainStage = Mathf.Clamp(mainStage, 1, MaxMainStage);
         SubStage = Mathf.Clamp(subStage, 1, BossSubStage);
@@ -367,12 +358,9 @@ public class StageManager : MonoBehaviour
         bossGaugePercent = 0;
         GameEvents.RaiseBossGaugeChanged(bossGaugePercent);
 
-        if (player != null)
-        {
-            player.RestoreToFullHp();
-            player.IsInvulnerable = false;
-        }
-        if (combatLoop != null) combatLoop.ClearSuspend();
+        player.RestoreToFullHp();
+        player.IsInvulnerable = false;
+        combatLoop.ClearSuspend();
 
         ShowBannerThenSpawn();
     }

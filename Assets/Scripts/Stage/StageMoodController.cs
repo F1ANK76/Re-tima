@@ -71,11 +71,8 @@ public class StageMoodController : MonoBehaviour
 
     private void Awake()
     {
-        if (RenderSettings.skybox != null)
-        {
-            skyInstance = new Material(RenderSettings.skybox);
-            RenderSettings.skybox = skyInstance;
-        }
+        skyInstance = new Material(RenderSettings.skybox);
+        RenderSettings.skybox = skyInstance;
 
         if (driveFog)
         {
@@ -126,18 +123,15 @@ public class StageMoodController : MonoBehaviour
 
         // 프로필 교체가 아니라 weight 블렌딩: URP가 두 프로필의 오버라이드 값을 블렌딩해주므로
         // 한 세트가 다른 세트로 뚝 끊기지 않고 모든 그레이딩 값이 함께 움직인다.
-        if (dayVolume != null) dayVolume.weight = 1f - nightAmount;
-        if (nightVolume != null) nightVolume.weight = nightAmount;
+        dayVolume.weight = 1f - nightAmount;
+        nightVolume.weight = nightAmount;
 
-        if (sun != null)
-        {
-            sun.color = Color.Lerp(daySunColor, nightSunColor, nightAmount);
-            sun.intensity = Mathf.Lerp(daySunIntensity, nightSunIntensity, nightAmount);
-        }
+        sun.color = Color.Lerp(daySunColor, nightSunColor, nightAmount);
+        sun.intensity = Mathf.Lerp(daySunIntensity, nightSunIntensity, nightAmount);
 
         RenderSettings.ambientIntensity = Mathf.Lerp(dayAmbientIntensity, nightAmbientIntensity, nightAmount);
 
-        if (skyInstance != null && skyInstance.HasProperty(skyBlendProperty))
+        if (skyInstance.HasProperty(skyBlendProperty))
             skyInstance.SetFloat(skyBlendProperty, Mathf.Lerp(daySkyBlend, nightSkyBlend, nightAmount));
 
         if (driveFog)
@@ -149,6 +143,6 @@ public class StageMoodController : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (skyInstance != null) Destroy(skyInstance);
+        Destroy(skyInstance);
     }
 }

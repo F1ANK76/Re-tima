@@ -17,10 +17,6 @@ public abstract class DropSource : MonoBehaviour
     // 같은 속도로 나란히 딸려온다. 모든 드롭 타입이 같은 컨베이어 위에 있으므로 예외는 없다.
     protected static float ApproachSpeed => MonsterSpawner.ApproachSpeed;
 
-    // 눈에 보이는 픽업을 띄울 수 있는 상태인지. false일 때 어떻게 할지는 타입마다 다르다 -
-    // 포션은 넘겨줄 대상이 없으니 드롭 자체를 포기하고, 장비는 롤 결과만 즉시 확정한다.
-    protected bool CanSpawnPickup => pickupPrefab != null && player != null;
-
     // 몬스터가 죽은 자리에 픽업 본체를 띄운다. 어떤 아이템인지 채워 넣는 초기화는 각 타입이
     // 반환된 인스턴스에 대고 직접 한다 - 픽업 종류마다 필요한 정보가 다르기 때문이다.
     protected DropPickup SpawnPickup(Monster monster)
