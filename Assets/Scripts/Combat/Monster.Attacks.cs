@@ -91,7 +91,6 @@ public partial class Monster
 
             if (!parried && Player != null)
             {
-                SpawnHitImpactVfx();
                 Player.TakeDamage(AttackPower);
             }
 
@@ -207,40 +206,21 @@ public partial class Monster
         }
     }
 
-    // 무겁고 패링 불가능한 공격. 레이저 프리팹이 연결되어 있으면 지속 탄막이 된다:
-    // Attack03(반복 자동 발사)이 ultimateBarrageDuration 동안 유지되는 사이, 플레이어 뒤쪽
-    // 지면의 레이저 고리가 순서대로 이동하며 각각 자기 몫의 데미지를 준다 - 한 번의 타격이
-    // 아니라 여러 번 관통당하는 셈. 프리팹이 없으면 원래의 클립 끝 한 방 타격으로 대체된다.
+    // 무겁고 패링 불가능한 공격 - 클립 끝에 한 방 무겁게 적중한다.
     private IEnumerator PlayUltimateAttack()
     {
         Animator animator = MonsterAnimator;
-        bool barrage = ultimateLaserPrefab != null;
 
-        if (barrage) animator.SetBool(UltimateActiveParam, true);
-            // 여기서 일반 스윙의 트리거가 아직 소비되지 않은 채 남아있을 수 있다;
-            // 그대로 세팅된 채 두면 탄막이 머신을 놓아주는 순간 엉뚱한 공격이 발동한다.
-            animator.ResetTrigger(AnimParams.Attack);
-            animator.SetTrigger(AttackUltimateParam);
+        // 여기서 일반 스윙의 트리거가 아직 소비되지 않은 채 남아있을 수 있다;
+        // 그대로 세팅된 채 두면 궁극기가 끝나는 순간 엉뚱한 공격이 발동한다.
+        animator.ResetTrigger(AnimParams.Attack);
+        animator.SetTrigger(AttackUltimateParam);
 
-            // 트리거는 애니메이터의 업데이트 패스가 돌기 전까지 소비되지 않아 현재 상태가
-            // 한 프레임 동안 여전히 Idle/Run으로 읽힐 수 있다 - Attack03을 벗어나기를
-            // 기다리기 전에 실제 진입부터 기다려야, 공격이 재생되지도 않은 채로
-            // WaitUntilIdle을 바로 통과해버리는 일이 없다.
+        // 트리거는 애니메이터의 업데이트 패스가 돌기 전까지 소비되지 않아 현재 상태가
+        // 한 프레임 동안 여전히 Idle/Run으로 읽힐 수 있다 - Attack03을 벗어나기를
+        // 기다리기 전에 실제 진입부터 기다려야, 공격이 재생되지도 않은 채로
+        // WaitUntilIdle을 바로 통과해버리는 일이 없다.
         yield return WaitForStateToStart(animator, ultimateStateName);
-
-        if (barrage)
-        {
-            yield return FireUltimateLaserRing();
-
-            // 자연스러운 전환(WaitUntilIdle)을 기다리지 않고 바로 Idle로 끊는다 - Attack03은
-            // 반복 재생이라 bool만 끄고 기다리면 다음 루프 사이클이 끝날 때까지 총 쏘는 포즈가
-            // 빛줄기보다 더 오래 남아있었다. VFX/데미지가 끝나는 바로 그 프레임에 애니메이션도
-            // 같이 끊어야 둘이 어긋나지 않는다.
-            animator.SetBool(UltimateActiveParam, false);
-            animator.Play(idleStateName, 0, 0f);
-            yield break;
-        }
-
         yield return WaitUntilIdle(animator);
 
         if (IsDead) yield break;
@@ -248,65 +228,8 @@ public partial class Monster
         if (Player != null)
         {
             SpawnUltimateImpactVfx();
-            SpawnHitImpactVfx();
             Player.TakeDamage(AttackPower * ultimateDamageMultiplier);
         }
-    }
-
-    // VFX는 플레이어 발밑에 딱 한 번만 스폰한다 - 이펙트 자체가 알아서 빛줄기를 여러 번
-    // 떨어뜨리는 것처럼 보이고, 코드는 그 위에 ultimateLaserCount번만 데미지 틱을 맞춰
-    // 넣는다. 궁극기 총 데미지는 그대로고 틱들에 나눠질 뿐이라, 각각이 한 발씩 박히는 느낌.
-    private IEnumerator FireUltimateLaserRing()
-    {
-        if (Player == null) yield break;
-
-        int count = Mathf.Max(1, ultimateLaserCount);
-        SpawnUltimateLaserUnderPlayer();
-
-        float interval = Mathf.Max(0f, ultimateBarrageDuration) / count;
-        float damagePerHit = AttackPower * ultimateDamageMultiplier / count;
-
-        for (int i = 0; i < count; i++)
-        {
-            yield return new WaitForSeconds(interval);
-
-            if (IsDead) yield break;
-            if (Player == null) yield break;
-
-            SpawnHitImpactVfx();
-            // 의도적으로 ParryManager를 거치지 않는다 - 궁극기는 원래부터 패링 불가였고,
-            // 패링 한 번에 취소되는 탄막이라면 그것이 대체한 단일 타격보다 약해진다.
-            Player.TakeDamage(damagePerHit);
-        }
-    }
-
-    private void SpawnUltimateLaserUnderPlayer()
-    {
-        if (Player == null) return;
-
-        Vector3 spawn = Player.transform.position;
-        Collider playerCollider = Player.GetComponent<Collider>();
-        spawn.y = playerCollider != null ? playerCollider.bounds.min.y : spawn.y;
-
-        SpawnUltimateLaserAt(spawn);
-    }
-
-    private void SpawnUltimateLaserAt(Vector3 spawn)
-    {
-        if (ultimateLaserPrefab == null) return;
-
-        GameObject vfx = Instantiate(ultimateLaserPrefab, spawn, Quaternion.identity);
-        vfx.transform.localScale = Vector3.one * ultimateLaserScale;
-
-        // Laser AOE의 11개 시스템은 데모 씬에서 계속 실행되도록 전부 반복 재생이다 -
-        // 그대로 두면 스폰된 각 고리가 영원히 발사된다.
-        foreach (ParticleSystem ps in vfx.GetComponentsInChildren<ParticleSystem>(true))
-        {
-            ParticleSystem.MainModule main = ps.main;
-            main.loop = false;
-        }
-
-        Destroy(vfx, ultimateBarrageDuration + ultimateLaserLingerSeconds);
     }
 
     private IEnumerator WaitForStateToStart(Animator animator, string stateName)
@@ -357,7 +280,6 @@ public partial class Monster
 
             if (Player != null)
             {
-                SpawnHitImpactVfx();
                 Player.TakeDamage(AttackPower);
             }
 

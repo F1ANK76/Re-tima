@@ -73,38 +73,7 @@ public partial class Monster : MonoBehaviour
     [SerializeField] private float ultimateImpactVfxSpeed = 2f;
     [SerializeField] private UltimateGaugeView ultimateGaugeView;
 
-    [Header("Ultimate laser barrage (Boss)")]
-    // Hovl "Laser AOE" - 위에 빔 기둥이 솟은 지면 테크서클 이펙트. null이면 예전 동작
-    // (클립 끝에 무거운 타격 한 번)으로 대체된다.
-    [SerializeField] private GameObject ultimateLaserPrefab;
-    // 탄막이 발사를 계속하는 시간. Laser AOE 자체의 5초 방출 구간과 맞춰서, 유지되는
-    // 애니메이션과 데미지 틱, 이펙트가 모두 함께 끝나도록 한다.
-    [SerializeField] private float ultimateBarrageDuration = 5f;
-    // VFX는 플레이어 발밑에 딱 한 번만 스폰한다 - 그 안에서 빛줄기가 여러 번 떨어지는 건
-    // 이펙트 자체의 연출이고, 코드는 그 위에 정확히 이 횟수만큼만 데미지 틱을 맞춰 넣는다.
-    [SerializeField] private int ultimateLaserCount = 8;
-    [SerializeField] private float ultimateLaserScale = 1f;
-    // Laser AOE에서 가장 오래 사는 파티클의 수명(4초) - 방출이 끝난 뒤에도 이만큼은 더
-    // 살려둬야 꼬리 부분이 페이드 도중에 잘리지 않는다.
-    [SerializeField] private float ultimateLaserLingerSeconds = 4f;
-
-    [Header("Hit impact (on the player, every landed attack)")]
-    // 이펙트를 보여주지 않을 프리팹에서는 null(기본값) - 스테이지 2 로스터만 "Stones hit"에
-    // 연결되어 있어서 스테이지 1 몬스터는 예전과 완전히 동일하게 데미지를 준다.
-    [SerializeField] private GameObject hitImpactVfxPrefab;
-    [SerializeField] private float hitImpactVfxLifetime = 3f;
-    // Hovl 피격 이펙트는 밝은 레이어(glow/flash)를 1초 사이클 중 처음 0.1초쯤에 방출해서,
-    // 원래 속도로는 타격이 적중했다고 인식되기도 전에 끝난다. 1보다 작은 값으로 그 버스트를
-    // 늘리고, 위의 수명은 이 값으로 나눠서 실제 재생 시간을 그대로 추적하게 한다.
-    [SerializeField] private float hitImpactVfxSpeed = 0.4f;
-    // 데모 씬 기본값보다 크게 키운 값이다. 기본값은 이 게임의 뒤로 빠진 전투 프레이밍이
-    // 아니라 클로즈업 카메라에 맞춰 조정된 것이기 때문이다.
-    [SerializeField] private float hitImpactVfxScale = 1.6f;
-
     private const string AttackUltimateParam = "AttackUltimate";
-    // 탄막이 지속되는 동안 Attack03을 계속 열어둔다 - 이 상태를 벗어나는 건 클립 자체의
-    // 0.333초 길이가 아니라 이 값에 의해 결정된다(컨트롤러의 Attack03 -> Idle 전환 참고).
-    private const string UltimateActiveParam = "UltimateActive";
     private float ultimateChargeTimer;
 
     private bool animatorSearched;

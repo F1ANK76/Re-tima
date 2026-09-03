@@ -36,32 +36,4 @@ public partial class Monster
         // 줄여야 한다. 그렇지 않으면 텅 빈 오브젝트가 그대로 남아있게 된다.
         Destroy(vfx, ultimateImpactVfxLifetime / speed);
     }
-
-    // 적중한 모든 공격(일반 스윙, 텔레그래프 타격, 궁극기)과 함께 발동한다 -
-    // SpawnUltimateImpactVfx와 달리 발밑 크레이터가 아니라 타격이 맞닿는 느낌이어야 하므로,
-    // 플레이어의 발이 아니라 중심에서 나타난다.
-    private void SpawnHitImpactVfx()
-    {
-        if (hitImpactVfxPrefab == null || Player == null) return;
-
-        GameObject vfx = Instantiate(hitImpactVfxPrefab, Player.transform.position, Quaternion.identity);
-        vfx.transform.localScale = Vector3.one * hitImpactVfxScale;
-
-        float speed = Mathf.Max(0.01f, hitImpactVfxSpeed);
-
-        // 궁극기 임팩트 프리팹처럼 반복되는 데모 씬 시스템이다 - 한 번의 타격은 계속
-        // 돌아가는 시스템이 아니라 한 번의 버스트로 느껴져야 한다.
-        foreach (ParticleSystem ps in vfx.GetComponentsInChildren<ParticleSystem>(true))
-        {
-            ParticleSystem.MainModule main = ps.main;
-            main.loop = false;
-            // 궁극기 임팩트와 마찬가지로 시스템별 설정 - 서브 이미터 하나라도 1배속으로
-            // 남으면 나머지보다 먼저 끝나서 한 번의 버스트라는 느낌이 깨진다.
-            main.simulationSpeed = speed;
-        }
-
-        // 이펙트를 느리게 하면 실제 재생 시간이 늘어나므로, 정리 타이머도 함께 늘려야
-        // 한다. 그렇지 않으면 버스트 도중에 오브젝트가 파괴돼버린다.
-        Destroy(vfx, hitImpactVfxLifetime / speed);
-    }
 }

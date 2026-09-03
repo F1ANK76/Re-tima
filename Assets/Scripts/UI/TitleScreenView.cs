@@ -112,7 +112,6 @@ public class TitleScreenView : MonoBehaviour
         hiddenPriorState = new bool[hideWhileShowing.Length];
         for (int i = 0; i < hideWhileShowing.Length; i++)
         {
-            if (hideWhileShowing[i] == null) continue;
             hiddenPriorState[i] = hideWhileShowing[i].activeSelf;
             hideWhileShowing[i].SetActive(false);
         }
@@ -124,7 +123,7 @@ public class TitleScreenView : MonoBehaviour
 
         for (int i = 0; i < hideWhileShowing.Length && i < hiddenPriorState.Length; i++)
         {
-            if (hideWhileShowing[i] != null) hideWhileShowing[i].SetActive(hiddenPriorState[i]);
+            hideWhileShowing[i].SetActive(hiddenPriorState[i]);
         }
         hiddenPriorState = null;
     }
