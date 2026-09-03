@@ -1,7 +1,6 @@
 using UnityEngine;
 
-// 스탯 포션이 등급별로 얼마나 올려주는가. 값과 그 조회를 한곳에 둔다 - 등급을 하나 늘릴 때
-// 필드와 switch가 같은 파일 안에 있어야 한쪽만 고치는 일이 없다.
+// 등급별 스탯 포션 수치. 값과 조회를 같이 둬서 등급 추가 시 한 곳만 고친다.
 [CreateAssetMenu(fileName = "StatDropTable", menuName = "Retima/Stat Drop Table")]
 public class StatDropTableSO : ScriptableObject
 {

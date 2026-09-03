@@ -19,10 +19,7 @@ public class MonsterSpawner : MonoBehaviour
     [SerializeField] private Transform spawnPoint;
     [SerializeField] private Transform playerTransform;
 
-    // 몬스터(그리고 몬스터와 같은 속도로 끌려오는 스탯 포션/장비/스톤 픽업)가 실제로 쓰는 속도.
-    // 씬에 배치된 spawnPoint/playerTransform의 실제 위치로부터 역산하므로, 두 마커 사이의 간격이
-    // (지금 씬처럼) offscreenSpawnDistance와 다르더라도 "스폰부터 도달까지 monsterApproachDuration초"가
-    // 항상 정확히 지켜진다.
+    // 몬스터·드롭 공용 이동 속도. 실제 거리 / 목표 시간으로 역산.
     public static float ApproachSpeed { get; private set; }
 
     private void Awake()
@@ -36,14 +33,12 @@ public class MonsterSpawner : MonoBehaviour
         Vector3 toPlayer = playerTransform.position - spawnFrom;
         toPlayer.y = 0f;
 
-        // 근접 사거리(meleeRange)만큼은 실제로 걸어갈 필요가 없으므로 총 거리에서 뺀다 - 스케일
-        // 1(일반 몬스터) 기준이라, 더 일찍 멈추는 엘리트/보스는 같은 속도로도 목표 시간보다
-        // 조금 더 빨리 도착한다.
+        // 사거리만큼은 안 걸어도 되니 제외
         float travelDistance = Mathf.Max(0.01f, toPlayer.magnitude - combatConfig.meleeRange);
         return combatConfig.monsterApproachDuration > 0f ? travelDistance / combatConfig.monsterApproachDuration : 0f;
     }
 
-    // 해당 스테이지에 해당하는 몬스터 타입의 정보를 반환
+    // 스테이지 → 로스터 → 종류별 슬롯
     private MonsterDefinitionSO Resolve(int mainStage, MonsterType type)
     {
         int index = mainStage - 1;
@@ -51,12 +46,12 @@ public class MonsterSpawner : MonoBehaviour
 
         if (index >= 0 && index < rosters.Count && rosters[index] != null)
         {
-            // 이 스테이지 전용 로스터가 있으면 그걸 쓴다.
+            // 전용 로스터
             roster = rosters[index];
         }
         else
         {
-            // 없어도 스폰은 해야 하니 첫 항목(기본 구성)으로 대신한다.
+            // 없으면 첫 항목으로 폴백
             roster = rosters[0];
         }
 
@@ -74,36 +69,24 @@ public class MonsterSpawner : MonoBehaviour
         }
     }
 
-    // 서브스테이지별 HP/공격력 곡선에 대한 단일 진실 공급원(single source of truth).
-    // 종류별 배수(MonsterDefinitionSO)는 항상 이 값 위에 곱해지므로, 엘리트/보스도 결국
-    // 같은 스테이지의 일반 몬스터를 기준으로 세진다.
-    // 메인 스테이지당 실제 일반 서브스테이지 개수(StageManager.BossSubStage - 1)만큼만 칸을
-    // 예약해서, 클리어 순서 그대로 1씩 오른다 - 1-1=1, 1-2=2, 2-1=3, 2-2=4, 3-1=5, ...
-    // (BossSubStage가 바뀌면 이 칸 수도 자동으로 같이 바뀐다.)
+    // 클리어 순서대로 1씩. 1-1=1, 1-2=2, 2-1=3, 2-2=4, ...
     private static float GetNormalValue(int mainStage, int subStage) => (mainStage - 1) * (StageManager.BossSubStage - 1) + subStage;
 
     public static float GetNormalHp(int mainStage, int subStage) => GetNormalValue(mainStage, subStage);
 
-    // HP와 같은 곡선의 절반 - 1-1=0.5, 1-2=1, 2-1=1.5, 2-2=2.
+    // HP 곡선의 절반
     public static float GetNormalAttack(int mainStage, int subStage) => GetNormalValue(mainStage, subStage) * 0.5f;
 
-    // 몬스터 스폰 함수. 보스를 부를 때는 subStage에 직전 엘리트의 서브스테이지를 넘긴다 -
-    // 보스는 자기 곡선이 따로 없고 그 엘리트를 기준으로 삼는다.
+    // 정의 조회 → 스탯 계산 → 화면 밖 생성 → 스탯 주입 → 이동 시작 → 이벤트 발생
     public void Spawn(int mainStage, int subStage, MonsterType type)
     {
         MonsterDefinitionSO def = Resolve(mainStage, type);
 
-        // 스테이지 곡선(진행도) x 종류별 배수(몬스터 정의)
         float hp = GetNormalHp(mainStage, subStage) * def.hpMultiplier;
         float attack = GetNormalAttack(mainStage, subStage) * def.attackMultiplier;
 
-        // 스폰
         Monster monster = SpawnOffscreen(def.prefab, def.scale);
-
-        // 데이터 주입
         monster.Initialize(type, hp, attack, combatConfig.normalMonsterAttackInterval);
-
-        // 이동 시작
         monster.SetMovement(playerTransform, ApproachSpeed, combatConfig.meleeRange);
 
         GameEvents.RaiseMonsterSpawned(monster);
@@ -113,16 +96,14 @@ public class MonsterSpawner : MonoBehaviour
     {
         Vector3 spawnFrom = spawnPoint.position + new Vector3(combatConfig.offscreenSpawnDistance, 0f, 0f);
         GameObject instance = Instantiate(prefab, spawnFrom, spawnPoint.rotation);
-        // 대입이 아니라 곱하기: 일부 프리팹(예: 최종 보스)은 이미 자체적인 기본 스케일을
-        // 갖고 있으며, 이 값은 그것을 덮어쓰는 게 아니라 그 위에 누적되어야 한다.
+        // 대입이 아니라 곱하기 - 프리팹 자체 스케일 위에 누적
         instance.transform.localScale *= scaleMultiplier;
         SnapToGround(instance);
 
         return instance.GetComponent<Monster>();
     }
 
-    // spawnPoint.position.y는 스케일 1 캡슐이 바닥에 놓인 기준값이다; 더 큰 프리팹(보스, 최종 보스)은
-    // 캡슐 밑면이 바닥에 파묻히지 않고 지면에 닿도록 자기 스케일에 비례해 피벗을 올려야 한다.
+    // 피벗이 몸 중앙이라, 키운 만큼 높이도 올려야 발이 땅에 닿는다
     private void SnapToGround(GameObject instance)
     {
         Vector3 pos = instance.transform.position;
