@@ -3,13 +3,12 @@ using UnityEngine;
 // 드롭 타입 하나(스탯 포션/장비/...)의 공통 뼈대. DropCoordinator가 "이번 처치는 이 타입"이라고
 // 정했을 때만 RollAndSpawn이 호출되고, 그 안에서 무엇이 뜰지(종류·등급·수치)만 굴린다.
 //
-// 스폰에 필요한 참조 네 개와 Instantiate 절차는 타입마다 완전히 같아서 여기로 올렸다 - 예전에는
+// 스폰에 필요한 참조와 Instantiate 절차는 타입마다 완전히 같아서 여기로 올렸다 - 예전에는
 // StatDropManager와 EquipmentDropManager가 같은 필드 네 개와 같은 Instantiate 블록을 주석까지
 // 글자 그대로 복제해 들고 있었고, 세 번째 타입을 넣으려면 그걸 한 번 더 복사해야 했다.
 public abstract class DropSource : MonoBehaviour
 {
     [SerializeField] protected PlayerCharacter player;
-    [SerializeField] protected StageConfigSO stageConfig;
     [SerializeField] protected DropPickup pickupPrefab;
     [SerializeField] protected CombatLoop combatLoop;
 

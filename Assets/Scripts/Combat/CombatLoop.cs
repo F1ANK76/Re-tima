@@ -4,7 +4,7 @@ using UnityEngine;
 public class CombatLoop : MonoBehaviour
 {
     [SerializeField] private PlayerCharacter player;
-    [SerializeField] private StageConfigSO stageConfig;
+    [SerializeField] private CombatConfigSO combatConfig;
     [SerializeField] private WeaponSwing weaponSwing;
     [SerializeField] private GroundScroller groundScroller;
     [SerializeField] private BackdropScroller backdropScroller;
@@ -199,9 +199,9 @@ public class CombatLoop : MonoBehaviour
             return;
         }
 
-        // 두 번째 타격부터는 stageConfig.tickInterval(초)마다 한 대씩. 아직 시간이 안 찼으면 대기.
+        // 두 번째 타격부터는 combatConfig.tickInterval(초)마다 한 대씩. 아직 시간이 안 찼으면 대기.
         tickTimer += Time.deltaTime;
-        if (tickTimer < stageConfig.tickInterval) return;
+        if (tickTimer < combatConfig.tickInterval) return;
 
         tickTimer = 0f;
         DoTick(); // 스윙 애니메이션 재생 → 칼이 닿는 타이밍에 맞춰 실제 데미지(코루틴)

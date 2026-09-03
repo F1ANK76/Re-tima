@@ -15,7 +15,7 @@ public class MonsterSpawner : MonoBehaviour
     // 스테이지별 몬스터 정보
     [SerializeField] private List<StageRoster> rosters = new List<StageRoster>();
 
-    [SerializeField] private StageConfigSO stageConfig;
+    [SerializeField] private CombatConfigSO combatConfig;
     [SerializeField] private Transform spawnPoint;
     [SerializeField] private Transform playerTransform;
 
@@ -32,15 +32,15 @@ public class MonsterSpawner : MonoBehaviour
 
     private float ComputeApproachSpeed()
     {
-        Vector3 spawnFrom = spawnPoint.position + new Vector3(stageConfig.offscreenSpawnDistance, 0f, 0f);
+        Vector3 spawnFrom = spawnPoint.position + new Vector3(combatConfig.offscreenSpawnDistance, 0f, 0f);
         Vector3 toPlayer = playerTransform.position - spawnFrom;
         toPlayer.y = 0f;
 
         // 근접 사거리(meleeRange)만큼은 실제로 걸어갈 필요가 없으므로 총 거리에서 뺀다 - 스케일
         // 1(일반 몬스터) 기준이라, 더 일찍 멈추는 엘리트/보스는 같은 속도로도 목표 시간보다
         // 조금 더 빨리 도착한다.
-        float travelDistance = Mathf.Max(0.01f, toPlayer.magnitude - stageConfig.meleeRange);
-        return stageConfig.monsterApproachDuration > 0f ? travelDistance / stageConfig.monsterApproachDuration : 0f;
+        float travelDistance = Mathf.Max(0.01f, toPlayer.magnitude - combatConfig.meleeRange);
+        return combatConfig.monsterApproachDuration > 0f ? travelDistance / combatConfig.monsterApproachDuration : 0f;
     }
 
     // 해당 스테이지에 해당하는 몬스터 타입의 정보를 반환
@@ -101,17 +101,17 @@ public class MonsterSpawner : MonoBehaviour
         Monster monster = SpawnOffscreen(def.prefab, def.scale);
 
         // 데이터 주입
-        monster.Initialize(type, hp, attack, stageConfig.normalMonsterAttackInterval);
+        monster.Initialize(type, hp, attack, combatConfig.normalMonsterAttackInterval);
 
         // 이동 시작
-        monster.SetMovement(playerTransform, ApproachSpeed, stageConfig.meleeRange);
+        monster.SetMovement(playerTransform, ApproachSpeed, combatConfig.meleeRange);
 
         GameEvents.RaiseMonsterSpawned(monster);
     }
 
     private Monster SpawnOffscreen(GameObject prefab, float scaleMultiplier)
     {
-        Vector3 spawnFrom = spawnPoint.position + new Vector3(stageConfig.offscreenSpawnDistance, 0f, 0f);
+        Vector3 spawnFrom = spawnPoint.position + new Vector3(combatConfig.offscreenSpawnDistance, 0f, 0f);
         GameObject instance = Instantiate(prefab, spawnFrom, spawnPoint.rotation);
         // 대입이 아니라 곱하기: 일부 프리팹(예: 최종 보스)은 이미 자체적인 기본 스케일을
         // 갖고 있으며, 이 값은 그것을 덮어쓰는 게 아니라 그 위에 누적되어야 한다.

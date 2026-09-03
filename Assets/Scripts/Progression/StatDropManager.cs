@@ -6,6 +6,8 @@ using UnityEngine;
 // 스폰에 쓰는 참조와 Instantiate 절차는 DropSource가 들고 있다.
 public class StatDropManager : DropSource
 {
+    [SerializeField] private StatDropTableSO dropTable;
+
     public override void RollAndSpawn(Monster monster)
     {
         // 현재는 ATK/HP만 존재하므로 단순 50/50이다 - 하드코딩된 동전 던지기 대신 1-in-N
@@ -14,34 +16,10 @@ public class StatDropManager : DropSource
         StatType statType = Random.Range(0, statTypeCount) == 0 ? StatType.Attack : StatType.Hp;
 
         StatGrade grade = GradeRoller.Roll();
-        float amount = GetAmount(statType, grade);
+        float amount = dropTable.GetAmount(statType, grade);
 
         // 스탯은 즉시 적용되지 않는다 - 몬스터가 죽은 위치에 드롭되는 포션에 넘겨지고, 그 포션이
         // 플레이어에게 도달했을 때만 지급된다(DropPickup 참고).
         SpawnPickup(monster).InitializeStatPotion(statType, grade, amount, player.transform, combatLoop, ApproachSpeed);
-    }
-
-    private float GetAmount(StatType statType, StatGrade grade)
-    {
-        if (statType == StatType.Attack)
-        {
-            switch (grade)
-            {
-                case StatGrade.Normal: return stageConfig.atkAmountNormal;
-                case StatGrade.Rare: return stageConfig.atkAmountRare;
-                case StatGrade.Epic: return stageConfig.atkAmountEpic;
-                case StatGrade.Unique: return stageConfig.atkAmountUnique;
-                default: return stageConfig.atkAmountLegendary;
-            }
-        }
-
-        switch (grade)
-        {
-            case StatGrade.Normal: return stageConfig.hpAmountNormal;
-            case StatGrade.Rare: return stageConfig.hpAmountRare;
-            case StatGrade.Epic: return stageConfig.hpAmountEpic;
-            case StatGrade.Unique: return stageConfig.hpAmountUnique;
-            default: return stageConfig.hpAmountLegendary;
-        }
     }
 }
