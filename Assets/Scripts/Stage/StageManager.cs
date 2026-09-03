@@ -274,7 +274,7 @@ public class StageManager : MonoBehaviour
     {
         yield return new WaitForSeconds(delay);
 
-        spawner.SpawnNormal(MainStage, SubStage);
+        spawner.Spawn(MainStage, SubStage, MonsterType.Normal);
     }
 
     // 2번 박자: 게이지 자체의 연출이 가라앉은 후 "Elite Boss !"가 뜨기까지의
@@ -300,7 +300,7 @@ public class StageManager : MonoBehaviour
             yield return new WaitForSeconds(clearBanner.TotalPlayDuration);
         }
 
-        spawner.SpawnElite(MainStage, SubStage);
+        spawner.Spawn(MainStage, SubStage, MonsterType.Elite);
     }
 
     private void ShowBannerThenSpawn()
@@ -323,12 +323,12 @@ public class StageManager : MonoBehaviour
         if (SubStage == BossSubStage)
         {
             // 보스는 바로 이전 서브스테이지의 엘리트를 기준으로 크기가 정해진다.
-            spawner.SpawnBoss(MainStage, BossSubStage - 1);
+            spawner.Spawn(MainStage, BossSubStage - 1, MonsterType.Boss);
             if (clearBanner != null) clearBanner.Show("Final Boss !");
         }
         else
         {
-            spawner.SpawnNormal(MainStage, SubStage);
+            spawner.Spawn(MainStage, SubStage, MonsterType.Normal);
         }
     }
 

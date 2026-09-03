@@ -12,11 +12,7 @@ public class MonsterSpawner : MonoBehaviour
         public MonsterDefinitionSO boss;
     }
 
-    // 목록의 순서가 곧 스테이지 번호다 - Element 0이 1스테이지, Element 1이 2스테이지. 그래서
-    // Inspector에서 항목 순서를 바꾸면 스테이지 구성도 함께 바뀐다.
-    //
-    // 그리고 첫 항목이 기본 구성을 겸한다 - 자기 항목이 아직 없는 스테이지는 여기로 떨어진다
-    // (아래 Resolve 참고). 그래서 새 스테이지의 몬스터를 아직 안 만들었어도 스폰은 된다.
+    // 스테이지별 몬스터 정보
     [SerializeField] private List<StageRoster> rosters = new List<StageRoster>();
 
     [SerializeField] private StageConfigSO stageConfig;
@@ -32,14 +28,6 @@ public class MonsterSpawner : MonoBehaviour
     private void Awake()
     {
         ApproachSpeed = ComputeApproachSpeed();
-
-        if (rosters.Count == 0 || rosters[0] == null || rosters[0].normal == null)
-            Debug.LogWarning("MonsterSpawner: 기본 구성(rosters의 첫 항목)이 비어 있다 - 몬스터가 스폰되지 않는다.", this);
-
-        // 항목이 모자란 스테이지는 Resolve가 조용히 1스테이지 구성으로 떨어뜨린다. 의도한
-        // 재사용인지 로스터를 깜빡한 건지 화면상 구분이 안 되므로, 시작할 때 한 번 짚어둔다.
-        if (rosters.Count < StageManager.MaxMainStage)
-            Debug.LogWarning($"MonsterSpawner: rosters 항목이 {rosters.Count}개뿐이다 - {rosters.Count + 1}~{StageManager.MaxMainStage}스테이지는 1스테이지 몬스터를 그대로 재사용한다.", this);
     }
 
     private float ComputeApproachSpeed()
@@ -121,57 +109,39 @@ public class MonsterSpawner : MonoBehaviour
     // 기준으로 배수를 곱하므로(위 주석 참고) 함께 절반으로 낮아진다.
     public static float GetNormalAttack(int mainStage, int subStage) => GetNormalValue(mainStage, subStage) * 0.5f;
 
-    public Monster SpawnNormal(int mainStage, int subStage)
+    // 세 종류가 스폰 절차를 공유한다 - 종류별로 다른 건 크기와 HP/공격력뿐이다.
+    // 보스를 부를 때는 subStage에 직전 엘리트의 서브스테이지를 넘긴다(아래 Boss 분기 참고).
+    public Monster Spawn(int mainStage, int subStage, MonsterType type)
     {
-        MonsterDefinitionSO def = Resolve(mainStage, MonsterType.Normal);
-        if (def == null || def.prefab == null)
+        float scale, hp, attack;
+
+        switch (type)
         {
-            Debug.LogError("MonsterSpawner: normal monster definition or its prefab is not assigned.");
-            return null;
+            case MonsterType.Elite:
+                scale = eliteScale;
+                hp = GetEliteHp(mainStage, subStage);
+                attack = GetEliteAttack(mainStage, subStage);
+                break;
+
+            // 보스는 자기 곡선이 따로 없다 - 직전에 싸운 엘리트 값을 이어받아 배수만 곱한다.
+            case MonsterType.Boss:
+                scale = bossScale;
+                hp = GetEliteHp(mainStage, subStage) * bossHpMultiplier;
+                attack = GetEliteAttack(mainStage, subStage) * bossAttackMultiplier;
+                break;
+
+            case MonsterType.Normal:
+            default:
+                scale = 1f;
+                hp = GetNormalHp(mainStage, subStage);
+                attack = GetNormalAttack(mainStage, subStage);
+                break;
         }
 
-        Monster monster = SpawnOffscreen(def.prefab, 1f);
+        MonsterDefinitionSO def = Resolve(mainStage, type);
 
-        monster.Initialize(def.monsterType, GetNormalHp(mainStage, subStage), GetNormalAttack(mainStage, subStage), stageConfig.normalMonsterAttackInterval);
-        monster.SetMovement(playerTransform, ApproachSpeed, stageConfig.meleeRange);
-
-        GameEvents.RaiseMonsterSpawned(monster);
-        return monster;
-    }
-
-    public Monster SpawnBoss(int mainStage, int lastEliteSubStage)
-    {
-        MonsterDefinitionSO def = Resolve(mainStage, MonsterType.Boss);
-        if (def == null || def.prefab == null)
-        {
-            Debug.LogError("MonsterSpawner: boss definition or its prefab is not assigned.");
-            return null;
-        }
-
-        Monster monster = SpawnOffscreen(def.prefab, bossScale);
-
-        float hp = GetEliteHp(mainStage, lastEliteSubStage) * bossHpMultiplier;
-        float attack = GetEliteAttack(mainStage, lastEliteSubStage) * bossAttackMultiplier;
-        monster.Initialize(def.monsterType, hp, attack);
-        monster.SetMovement(playerTransform, ApproachSpeed, stageConfig.meleeRange);
-
-        GameEvents.RaiseMonsterSpawned(monster);
-        return monster;
-    }
-
-    public Monster SpawnElite(int mainStage, int subStage)
-    {
-        MonsterDefinitionSO def = Resolve(mainStage, MonsterType.Elite);
-        if (def == null || def.prefab == null)
-        {
-            Debug.LogError("MonsterSpawner: elite definition or its prefab is not assigned.");
-            return null;
-        }
-
-        Monster monster = SpawnOffscreen(def.prefab, eliteScale);
-
-        float hp = GetEliteHp(mainStage, subStage);
-        monster.Initialize(def.monsterType, hp, GetEliteAttack(mainStage, subStage), stageConfig.normalMonsterAttackInterval);
+        Monster monster = SpawnOffscreen(def.prefab, scale);
+        monster.Initialize(def.monsterType, hp, attack, stageConfig.normalMonsterAttackInterval);
         monster.SetMovement(playerTransform, ApproachSpeed, stageConfig.meleeRange);
 
         GameEvents.RaiseMonsterSpawned(monster);
