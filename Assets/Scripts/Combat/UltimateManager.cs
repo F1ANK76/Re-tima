@@ -130,7 +130,7 @@ public class UltimateManager : MonoBehaviour
         // 타격과 궁극기가 함께 적중하던 문제의 원인이었다.
         if (combatLoop != null && combatLoop.HasPendingAttack) return false;
 
-        Animator animator = weaponSwing != null ? weaponSwing.CharacterAnimator : null;
+        Animator animator = weaponSwing != null ? weaponSwing.PlayerAnimator : null;
         if (animator == null) return true;
         if (animator.IsInTransition(0)) return false;
 
@@ -147,7 +147,7 @@ public class UltimateManager : MonoBehaviour
         // 시체를 계속 공격하게 된다.
         if (combatLoop != null) combatLoop.PushSuspend();
 
-        Animator animator = weaponSwing != null ? weaponSwing.CharacterAnimator : null;
+        Animator animator = weaponSwing != null ? weaponSwing.PlayerAnimator : null;
         if (animator != null) animator.Play(PlayerAnimStates.Ultimate, 0, 0f);
 
         // 이 컨트롤러는 스테이트 이름과 클립 이름이 같아서 상수 하나로 둘 다 가리킨다.

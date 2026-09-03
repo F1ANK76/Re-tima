@@ -123,7 +123,7 @@ public class ParryManager : MonoBehaviour
 
         // Animator.Play는 블렌딩 없이 해당 스테이트로 바로 점프하므로, 진행 중인
         // 공격 스윙을 끝까지 기다리지 않고 즉시 끊어버린다.
-        Animator animator = weaponSwing != null ? weaponSwing.CharacterAnimator : null;
+        Animator animator = weaponSwing != null ? weaponSwing.PlayerAnimator : null;
         if (animator != null) animator.Play(PlayerAnimStates.Defend, 0, 0f);
 
         // 위와 같은 이유로 궁극기도 하드컷된다 - 애니메이터는 이미 Defend로 넘어갔는데 궁극기
@@ -158,7 +158,7 @@ public class ParryManager : MonoBehaviour
 
         parryWindowOpen = false;
 
-        Animator animator = weaponSwing != null ? weaponSwing.CharacterAnimator : null;
+        Animator animator = weaponSwing != null ? weaponSwing.PlayerAnimator : null;
         if (animator != null) StartCoroutine(PlayRiposteAnimation(animator));
 
         if (teleportVfx != null) StartCoroutine(PlayTeleportVfx());

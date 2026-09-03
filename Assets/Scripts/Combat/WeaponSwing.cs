@@ -31,7 +31,7 @@ public class WeaponSwing : MonoBehaviour
     // 실제 길이는 아래에서 클립에서 직접 읽으므로 코드와 클립이 어긋날 여지가 줄어든다.
     private const float AttackImpactFraction = 0.356f;
     public float AttackImpactDelay => AnimClipTiming.ResolveClipTime(
-        CharacterAnimator, attackClipName, attackClipLengthFallback, AttackImpactFraction);
+        PlayerAnimator, attackClipName, attackClipLengthFallback, AttackImpactFraction);
 
     // SwordAndShieldStance.controller의 Attack01 -> Idle 전환 설정 그대로다: 클립의 이 지점에서
     // 전환이 시작되어, 이만큼의 시간에 걸쳐 블렌딩된다. 둘 다 컨트롤러의 전환(Transition) 자체에
@@ -53,20 +53,20 @@ public class WeaponSwing : MonoBehaviour
     private Coroutine slashVfxRoutine;
 
     private bool animatorSearched;
-    private Animator characterAnimator;
+    private Animator playerAnimator;
 
-    // 캐릭터 모델(자체 Animator 보유)은 이 스윙 피벗의 조상이 아니라 같은 부모 아래 형제(sibling)다
-    // - 그래서 GetComponentInParent 대신 부모를 거쳐 옆으로 검색한다.
-    public Animator CharacterAnimator
+    // 플레이어 모델(자체 Animator 보유)은 이 스윙 피벗의 조상이 아니라 같은 부모 아래
+    // 형제(sibling)다 - 그래서 GetComponentInParent 대신 부모를 거쳐 옆으로 검색한다.
+    public Animator PlayerAnimator
     {
         get
         {
             if (!animatorSearched)
             {
                 animatorSearched = true;
-                characterAnimator = transform.parent != null ? transform.parent.GetComponentInChildren<Animator>() : null;
+                playerAnimator = transform.parent != null ? transform.parent.GetComponentInChildren<Animator>() : null;
             }
-            return characterAnimator;
+            return playerAnimator;
         }
     }
 
@@ -76,7 +76,7 @@ public class WeaponSwing : MonoBehaviour
     }
 
     private float ResolveClipLength(string clipName, float fallback)
-        => AnimClipTiming.ResolveClipLength(CharacterAnimator, clipName, fallback);
+        => AnimClipTiming.ResolveClipLength(PlayerAnimator, clipName, fallback);
 
     public void PlaySwing()
     {
@@ -92,9 +92,9 @@ public class WeaponSwing : MonoBehaviour
             slashVfxRoutine = StartCoroutine(PlaySlashVfxAtImpact());
         }
 
-        if (CharacterAnimator != null && Time.time >= nextAnimTriggerAllowedTime)
+        if (PlayerAnimator != null && Time.time >= nextAnimTriggerAllowedTime)
         {
-            CharacterAnimator.SetTrigger(AnimParams.Attack);
+            PlayerAnimator.SetTrigger(AnimParams.Attack);
             nextAnimTriggerAllowedTime = Time.time + AttackAnimSettleDuration;
         }
     }

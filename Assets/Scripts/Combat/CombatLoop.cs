@@ -106,7 +106,7 @@ public class CombatLoop : MonoBehaviour
     // 다음 배너/스폰을 진행한다.
     public IEnumerator PlayVictorySequence()
     {
-        Animator animator = weaponSwing != null ? weaponSwing.CharacterAnimator : null;
+        Animator animator = weaponSwing != null ? weaponSwing.PlayerAnimator : null;
         if (animator == null) yield break;
 
         // 궁극기 게이지는 30초로 채워져 킬 순간 거의 항상 가득이다. 막지 않으면
@@ -142,7 +142,7 @@ public class CombatLoop : MonoBehaviour
     // 넘어간다) - StageManager는 이때까지 체크포인트 리스폰을 보류한다.
     public IEnumerator PlayDeathSequence()
     {
-        Animator animator = weaponSwing != null ? weaponSwing.CharacterAnimator : null;
+        Animator animator = weaponSwing != null ? weaponSwing.PlayerAnimator : null;
         if (animator == null) yield break;
 
         // PlayVictorySequence와 같은 이유의 가드 - 발동 직전의 궁극기가 이 트리거도 덮어쓴다.
@@ -184,7 +184,7 @@ public class CombatLoop : MonoBehaviour
         bool shouldBeMoving = !suppressMovement && !IsIdleHeld && (currentMonster == null || !currentMonster.HasArrived);
 
         // 그 값을 적용
-        if (weaponSwing != null) weaponSwing.CharacterAnimator?.SetBool(AnimParams.IsMoving, shouldBeMoving);
+        if (weaponSwing != null) weaponSwing.PlayerAnimator?.SetBool(AnimParams.IsMoving, shouldBeMoving);
 
         // 궁극기 발동 대기중이거나 패링 반격 중일때는 공격 X
         if (SuppressNewAttacks || RiposteInProgress) return;
@@ -219,8 +219,8 @@ public class CombatLoop : MonoBehaviour
         bool isRunning = false;
 
         // 달리기 상태 여부를 그대로 배경·바닥 스크롤에 반영
-        if (!IsSuspended && weaponSwing != null && weaponSwing.CharacterAnimator != null)
-            isRunning = weaponSwing.CharacterAnimator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Running);
+        if (!IsSuspended && weaponSwing != null && weaponSwing.PlayerAnimator != null)
+            isRunning = weaponSwing.PlayerAnimator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Running);
 
         if (groundScroller != null) groundScroller.IsScrolling = isRunning;
         if (backdropScroller != null) backdropScroller.IsScrolling = isRunning;
