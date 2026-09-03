@@ -17,7 +17,7 @@ public partial class Monster
         // 플래그를 되돌린다"를 보장한다.
         try
         {
-        CharacterAnimator?.SetBool(UseTelegraphParam, true);
+        MonsterAnimator.SetBool(UseTelegraphParam, true);
 
         float windUpLength = ResolveClipLength(windUpClipName, windUpClipFallbackLength);
         float attack2Length = ResolveClipLength(attack2ClipName, attack2ClipFallbackLength);
@@ -36,12 +36,12 @@ public partial class Monster
                 continue;
             }
 
-            Animator animator = CharacterAnimator;
+            Animator animator = MonsterAnimator;
 
             // 두 번째 패턴을 섞어 쓰는 건 보스뿐(엘리트는 항상 같은 방식으로 예고). 매 스윙
             // 독립적으로 뽑으므로 보스는 같은 패턴을 연달아 낼 수도 있다.
             bool usePattern2 = Type == MonsterType.Boss && Random.value < 0.5f;
-            animator?.SetBool(AttackPattern2Param, usePattern2);
+            animator.SetBool(AttackPattern2Param, usePattern2);
 
             string activeState;
             float activeLength;
@@ -54,7 +54,7 @@ public partial class Monster
                 activeState = attack2StateName;
                 activeLength = attack2Length;
                 impactTime = attack2ImpactTime;
-                animator?.SetFloat(AttackSpeedParam, 1f);
+                animator.SetFloat(AttackSpeedParam, 1f);
                 PlayAttackAnimation();
             }
             else
@@ -73,24 +73,17 @@ public partial class Monster
                 // 속도의 대상이다.
                 float chargeSpanFraction = Mathf.Max(0.05f, windUpChargeEndFraction - windUpEntryOffset);
 
-                animator?.SetFloat(WindUpSpeedParam, chargeSpanFraction * windUpLength / chargeDuration);
-                animator?.SetFloat(AttackSpeedParam, 1f);
+                animator.SetFloat(WindUpSpeedParam, chargeSpanFraction * windUpLength / chargeDuration);
+                animator.SetFloat(AttackSpeedParam, 1f);
                 PlayAttackAnimation();
 
-                if (animator != null) StartCoroutine(RestoreWindUpSpeedAfterCharge(animator));
+                StartCoroutine(RestoreWindUpSpeedAfterCharge(animator));
             }
 
-            if (animator != null)
-            {
-                // 스톱워치 대신 애니메이터를 따라간다. 트리거는 머신이 다시 Idle로 돌아갈
-                // 때까지 소비되지 않고 스테이트 블렌딩도 오차를 더해서, 미리 계산해둔
-                // 스케줄로는 창이 시각적으로 도착하기 전에 데미지가 먼저 들어간다.
-                yield return WaitForStrikeImpact(animator, activeState, activeLength, impactTime);
-            }
-            else
-            {
-                yield return new WaitForSeconds(impactTime);
-            }
+            // 스톱워치 대신 애니메이터를 따라간다. 트리거는 머신이 다시 Idle로 돌아갈
+            // 때까지 소비되지 않고 스테이트 블렌딩도 오차를 더해서, 미리 계산해둔
+            // 스케줄로는 창이 시각적으로 도착하기 전에 데미지가 먼저 들어간다.
+            yield return WaitForStrikeImpact(animator, activeState, activeLength, impactTime);
 
             if (IsDead) yield break;
 
@@ -102,14 +95,7 @@ public partial class Monster
                 Player.TakeDamage(AttackPower);
             }
 
-            if (animator != null)
-            {
-                yield return WaitUntilIdle(animator);
-            }
-            else
-            {
-                yield return new WaitForSeconds(Mathf.Max(0f, activeLength - impactTime));
-            }
+            yield return WaitUntilIdle(animator);
 
             // 한 공격의 착지 스윙과 다음 공격의 진입 동작을 분리해줘서, 연달아 두 번
             // 충전하는 게 하나의 이중 스윙처럼 뭉개져 보이지 않게 한다.
@@ -227,12 +213,10 @@ public partial class Monster
     // 아니라 여러 번 관통당하는 셈. 프리팹이 없으면 원래의 클립 끝 한 방 타격으로 대체된다.
     private IEnumerator PlayUltimateAttack()
     {
-        Animator animator = CharacterAnimator;
+        Animator animator = MonsterAnimator;
         bool barrage = ultimateLaserPrefab != null;
 
-        if (animator != null)
-        {
-            if (barrage) animator.SetBool(UltimateActiveParam, true);
+        if (barrage) animator.SetBool(UltimateActiveParam, true);
             // 여기서 일반 스윙의 트리거가 아직 소비되지 않은 채 남아있을 수 있다;
             // 그대로 세팅된 채 두면 탄막이 머신을 놓아주는 순간 엉뚱한 공격이 발동한다.
             animator.ResetTrigger(AnimParams.Attack);
@@ -242,12 +226,7 @@ public partial class Monster
             // 한 프레임 동안 여전히 Idle/Run으로 읽힐 수 있다 - Attack03을 벗어나기를
             // 기다리기 전에 실제 진입부터 기다려야, 공격이 재생되지도 않은 채로
             // WaitUntilIdle을 바로 통과해버리는 일이 없다.
-            yield return WaitForStateToStart(animator, ultimateStateName);
-        }
-        else if (!barrage)
-        {
-            yield return new WaitForSeconds(ultimateClipFallbackLength);
-        }
+        yield return WaitForStateToStart(animator, ultimateStateName);
 
         if (barrage)
         {
@@ -257,15 +236,12 @@ public partial class Monster
             // 반복 재생이라 bool만 끄고 기다리면 다음 루프 사이클이 끝날 때까지 총 쏘는 포즈가
             // 빛줄기보다 더 오래 남아있었다. VFX/데미지가 끝나는 바로 그 프레임에 애니메이션도
             // 같이 끊어야 둘이 어긋나지 않는다.
-            if (animator != null)
-            {
-                animator.SetBool(UltimateActiveParam, false);
-                animator.Play(idleStateName, 0, 0f);
-            }
+            animator.SetBool(UltimateActiveParam, false);
+            animator.Play(idleStateName, 0, 0f);
             yield break;
         }
 
-        if (animator != null) yield return WaitUntilIdle(animator);
+        yield return WaitUntilIdle(animator);
 
         if (IsDead) yield break;
 
@@ -358,25 +334,23 @@ public partial class Monster
         try
         {
         // 일반 몬스터는 손대지 않은 원본 클립을 그대로 재생한다 - 충전도, 분리도 없다.
-        CharacterAnimator?.SetBool(UseTelegraphParam, false);
+        MonsterAnimator.SetBool(UseTelegraphParam, false);
 
         // 클립을 한 번의 공격 간격 안에 눌러 담는다 - 아니면 다음 공격이 클립이 끝나기도 전에
         // 재트리거해서 클립이 끝까지 못 가고 몬스터가 그냥 씰룩거리기만 한다.
         float clipLength = ResolveClipLength(plainAttackClipName, plainAttackClipFallbackLength);
         if (attackInterval > 0.01f)
         {
-            CharacterAnimator?.SetFloat(AttackSpeedParam, clipLength / attackInterval);
+            MonsterAnimator.SetFloat(AttackSpeedParam, clipLength / attackInterval);
         }
 
         while (!IsDead)
         {
             PlayAttackAnimation();
 
-            float impactDelay = WeaponSwing != null ? WeaponSwing.AttackImpactDelay : fallbackAttackImpactDelay;
-            if (PlayerWeaponSwing != null)
-            {
-                impactDelay = Mathf.Min(impactDelay, Mathf.Max(0f, PlayerWeaponSwing.AttackImpactDelay - GuaranteedFirstStrikeMargin));
-            }
+            // 플레이어보다 아주 살짝 먼저 때린다(GuaranteedFirstStrikeMargin 주석 참고).
+            float impactDelay = Mathf.Min(attackImpactDelay,
+                Mathf.Max(0f, PlayerWeaponSwing.AttackImpactDelay - GuaranteedFirstStrikeMargin));
             yield return new WaitForSeconds(impactDelay);
 
             if (IsDead) yield break;

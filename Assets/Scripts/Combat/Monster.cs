@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 
 public partial class Monster : MonoBehaviour
@@ -15,9 +14,6 @@ public partial class Monster : MonoBehaviour
 
     private HealthBarView healthBarCache;
     private HealthBarView HealthBar => healthBarCache ??= GetComponentInChildren<HealthBarView>();
-
-    private WeaponSwing weaponSwingCache;
-    private WeaponSwing WeaponSwing => weaponSwingCache ??= GetComponentInChildren<WeaponSwing>();
 
     [Header("Attack telegraph (Elite/Boss)")]
     // 차징(대기) 구간 자체의 길이로, 매 스윙마다 새로 뽑는다 - 플레이어가 실제로 반응해야
@@ -70,10 +66,6 @@ public partial class Monster : MonoBehaviour
     [SerializeField] private float ultimateChargeDuration = 5f;
     [SerializeField] private float ultimateDamageMultiplier = 3f;
     [SerializeField] private string ultimateStateName = "Attack03";
-    // Footman_Attack03의 내부 테이크 이름이 (헷갈리게도) "Victory"라 무관한 Victory
-    // 스테이트의 동명 클립과 충돌한다 - 애니메이터 클립 목록의 이름 조회가 모호해지므로
-    // ResolveClipLength를 거치지 않고 클립의 실제 길이를 직접 적었다.
-    [SerializeField] private float ultimateClipFallbackLength = 10f / 3f;
     [SerializeField] private GameObject ultimateImpactVfxPrefab;
     [SerializeField] private float ultimateImpactVfxLifetime = 3f;
     // 임팩트 이펙트의 재생 속도. Hovl의 크리스탈은 쇼케이스 씬에 맞춰진 속도로
@@ -116,19 +108,18 @@ public partial class Monster : MonoBehaviour
     private float ultimateChargeTimer;
 
     private bool animatorSearched;
-    private Animator characterAnimator;
-    // 모든 몬스터 모델이 리그/AnimatorController를 갖춘 건 아니다(아직 정적 임포트인 것도
-    // 있다) - 없는 모델은 아래의 코드로 짠 돌진/축소 연출로 대체된다.
-    private Animator CharacterAnimator
+    private Animator monsterAnimator;
+    // 몬스터 모델의 Animator는 프리팹 루트가 아니라 그 아래 FBX 모델에 붙어 있다.
+    private Animator MonsterAnimator
     {
         get
         {
             if (!animatorSearched)
             {
                 animatorSearched = true;
-                characterAnimator = GetComponentInChildren<Animator>();
+                monsterAnimator = GetComponentInChildren<Animator>();
             }
-            return characterAnimator;
+            return monsterAnimator;
         }
     }
 
@@ -154,17 +145,14 @@ public partial class Monster : MonoBehaviour
     private bool normalLoopStarted;
     private float attackInterval;
 
-    // 코드로 짠 돌진 대체 연출의 속도 조절에 쓰이며, WeaponSwing도 없고 빌려올
-    // WeaponSwing 보고 지연값도 없는 몬스터의 임팩트 지연 대체값으로도 쓰인다.
-    [SerializeField] private float fallbackAttackImpactDelay = 0.3f;
+    // 몬스터가 스윙을 시작하고 실제로 타격이 들어가기까지의 지연.
+    [SerializeField] private float attackImpactDelay = 0.3f;
     [SerializeField] private float deathAnimDuration = 1f;
-    private const float ShrinkDestroyDuration = 0.4f;
 
-    // 이 몬스터의 사체가 실제로 화면에서 사라지기까지 걸리는 시간 - Animator가 있으면
-    // Die 클립 길이(deathAnimDuration), 없으면 ShrinkAndDestroy의 축소 연출 길이를 그대로
-    // 반영한다. StageManager가 다음 스폰 딜레이를 여기에 맞춰서, 사체가 사라지는 순간과
-    // 다음 몬스터 등장이 겹치지 않는다.
-    public float DeathVisualDuration => CharacterAnimator != null ? deathAnimDuration : ShrinkDestroyDuration;
+    // 이 몬스터의 사체가 실제로 화면에서 사라지기까지 걸리는 시간 - Die 클립 길이 그대로다.
+    // StageManager가 다음 스폰 딜레이를 여기에 맞춰서, 사체가 사라지는 순간과 다음 몬스터
+    // 등장이 겹치지 않는다.
+    public float DeathVisualDuration => deathAnimDuration;
 
     // 공격력이 아무리 높아도(즉사여도) 플레이어가 최소 한 대는 맞아야 한다는 디자인 규칙 -
     // 그래서 일반 몬스터의 타격 판정은 플레이어의 타격 판정(AttackImpactDelay)보다 이 여유만큼
@@ -202,13 +190,7 @@ public partial class Monster : MonoBehaviour
 
     public void PlayAttackAnimation()
     {
-        CharacterAnimator?.SetTrigger(AnimParams.Attack);
-        WeaponSwing?.PlaySwing();
-
-        if (CharacterAnimator == null && WeaponSwing == null)
-        {
-            StartCoroutine(LungeAttack());
-        }
+        MonsterAnimator.SetTrigger(AnimParams.Attack);
     }
 
     public void SetMovement(Transform target, float speed, float stopDistance)
@@ -219,7 +201,7 @@ public partial class Monster : MonoBehaviour
         // 전에 커진 몸이 시각적으로 플레이어와 겹치거나 파묻어버린다.
         stoppingDistance = stopDistance * transform.localScale.x;
         HasArrived = false;
-        CharacterAnimator?.SetBool(AnimParams.IsMoving, true);
+        MonsterAnimator.SetBool(AnimParams.IsMoving, true);
     }
 
     private void Update()
@@ -239,7 +221,7 @@ public partial class Monster : MonoBehaviour
             }
 
             HasArrived = true;
-            CharacterAnimator?.SetBool(AnimParams.IsMoving, false);
+            MonsterAnimator.SetBool(AnimParams.IsMoving, false);
         }
 
         // "방금 도착한 프레임"만이 아니라 도착한 뒤 매 프레임 재확인한다 - StopAttacking()
@@ -266,55 +248,8 @@ public partial class Monster : MonoBehaviour
         }
     }
 
-    // 리그/Animator도, 휘두를 WeaponSwing 검도 없는 모델을 위한 대체 공격 연출 -
-    // 플레이어를 향해 앞으로 갔다가 다시 뒤로 돌아오는 짧은 돌진.
-    private IEnumerator LungeAttack()
-    {
-        Vector3 restPosition = transform.position;
-        Vector3 lungeTarget = restPosition + transform.forward * 0.3f;
-        float half = fallbackAttackImpactDelay * 0.5f;
-
-        float t = 0f;
-        while (t < half)
-        {
-            t += Time.deltaTime;
-            transform.position = Vector3.Lerp(restPosition, lungeTarget, t / half);
-            yield return null;
-        }
-
-        t = 0f;
-        while (t < half)
-        {
-            t += Time.deltaTime;
-            transform.position = Vector3.Lerp(lungeTarget, restPosition, t / half);
-            yield return null;
-        }
-
-        transform.position = restPosition;
-    }
-
-    // Animator/Die 스테이트가 없는 모델을 위한 대체 죽음 연출: 그냥 뿅 하고 사라지는
-    // 대신 점점 줄어들며 사라진다.
-    private IEnumerator ShrinkAndDestroy()
-    {
-        Vector3 startScale = transform.localScale;
-        float duration = ShrinkDestroyDuration;
-
-        float t = 0f;
-        while (t < duration)
-        {
-            t += Time.deltaTime;
-            transform.localScale = Vector3.Lerp(startScale, Vector3.zero, t / duration);
-            yield return null;
-        }
-
-        Destroy(gameObject);
-    }
-
-
     private float ResolveClipLength(string clipName, float fallback)
-        => AnimClipTiming.ResolveClipLength(CharacterAnimator, clipName, fallback);
-
+        => AnimClipTiming.ResolveClipLength(MonsterAnimator, clipName, fallback);
 
     public void TakeDamage(float amount)
     {
@@ -328,15 +263,8 @@ public partial class Monster : MonoBehaviour
         {
             GameEvents.RaiseMonsterDied(this);
 
-            if (CharacterAnimator != null)
-            {
-                CharacterAnimator.SetTrigger(AnimParams.Die);
-                Destroy(gameObject, deathAnimDuration);
-            }
-            else
-            {
-                StartCoroutine(ShrinkAndDestroy());
-            }
+            MonsterAnimator.SetTrigger(AnimParams.Die);
+            Destroy(gameObject, deathAnimDuration);
         }
     }
 }
