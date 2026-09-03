@@ -183,10 +183,7 @@ public partial class Monster : MonoBehaviour
             MonsterAnimator.SetBool(AnimParams.IsMoving, false);
         }
 
-        // "방금 도착한 프레임"만이 아니라 도착한 뒤 매 프레임 재확인한다 - StopAttacking()
-        // 이후에도 파괴되지 않고 살아남는 몬스터가(죽음 시퀀스 코루틴이 겹쳐 끊기는 등) 다시는
-        // 공격을 시작 못 하는 일이 없도록, 플레이어가 무적(죽음 시퀀스 중)이 아닌 한 멈춰있던
-        // 루프를 스스로 재시작하게 한다.
+        // 죽음 연출 중(무적)에는 멈춰둔 공격 루프를 다시 켜지 않는다.
         if (Player.IsInvulnerable) return;
 
         // 엘리트와 보스는 둘 다 패링 결투로 싸운다: 예고 동작을 보인 뒤 타격한다.
@@ -194,15 +191,18 @@ public partial class Monster : MonoBehaviour
         if (!bossLoopStarted && (Type == MonsterType.Boss || Type == MonsterType.Elite))
         {
             bossLoopStarted = true;
+
+            // 엘리트, 보스 차징 공격
             StartCoroutine(TelegraphAttackLoop());
 
-            // 보스 전용: 엘리트도 위 텔레그래프 결투는 공유하지만 게이지로 충전되는
-            // 강타는 아니다 - 그건 보스 전투만의 고유한 상승 요소로 남는다.
+            // 보스 궁극기
             if (Type == MonsterType.Boss) StartCoroutine(UltimateChargeLoop());
         }
         else if (!normalLoopStarted && Type == MonsterType.Normal)
         {
             normalLoopStarted = true;
+            
+            // 일반 몬스터 평타
             StartCoroutine(NormalAttackLoop());
         }
     }

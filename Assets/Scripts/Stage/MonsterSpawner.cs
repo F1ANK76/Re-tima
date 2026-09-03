@@ -74,26 +74,9 @@ public class MonsterSpawner : MonoBehaviour
         }
     }
 
-    [SerializeField] private float eliteScale = 1.5f;
-    [SerializeField] private float bossScale = 2f;
-
-    [Header("HP curve")]
-    // 엘리트 한 마리는 같은 서브스테이지의 일반 몬스터 이 개수만큼의 가치를 가진다.
-    [SerializeField] private float eliteHpMultiplier = 10f;
-    // 보스는 플레이어가 도달하기 전 마지막으로 싸운 엘리트의 이 배수만큼의 가치를 가진다.
-    [SerializeField] private float bossHpMultiplier = 3f;
-
-    [Header("Attack curve")]
-    // 공격력도 HP와 같은 서브스테이지 곡선을 따른다 - 한 메인 스테이지 안에서도 서브스테이지가
-    // 오를수록 세진다. 엘리트는 그 값의 배수, 보스는 HP처럼 직전 엘리트 공격력의 배수다.
-    // 일반 몹 공격력이 절반으로 낮아진 만큼(GetNormalAttack 참고) 엘리트가 예전과 같은 실제
-    // 공격력을 유지하도록 이 배수를 2배로 올렸다 - 보스는 엘리트 값을 그대로 이어받으므로
-    // bossAttackMultiplier는 손댈 필요가 없다.
-    [SerializeField] private float eliteAttackMultiplier = 10f;
-    [SerializeField] private float bossAttackMultiplier = 1.5f;
-
-    // 서브스테이지별 HP/공격력 곡선에 대한 단일 진실 공급원(single source of truth)으로,
-    // 엘리트/보스 배수는 항상 해당 스테이지의 일반 몬스터가 실제로 갖는 값을 기준으로 한다.
+    // 서브스테이지별 HP/공격력 곡선에 대한 단일 진실 공급원(single source of truth).
+    // 종류별 배수(MonsterDefinitionSO)는 항상 이 값 위에 곱해지므로, 엘리트/보스도 결국
+    // 같은 스테이지의 일반 몬스터를 기준으로 세진다.
     // 메인 스테이지당 실제 일반 서브스테이지 개수(StageManager.BossSubStage - 1)만큼만 칸을
     // 예약해서, 클리어 순서 그대로 1씩 오른다 - 1-1=1, 1-2=2, 2-1=3, 2-2=4, 3-1=5, ...
     // (BossSubStage가 바뀌면 이 칸 수도 자동으로 같이 바뀐다.)
@@ -101,54 +84,30 @@ public class MonsterSpawner : MonoBehaviour
 
     public static float GetNormalHp(int mainStage, int subStage) => GetNormalValue(mainStage, subStage);
 
-    // HP와 같은 곡선의 절반 - 1-1=0.5, 1-2=1, 2-1=1.5, 2-2=2. 엘리트/보스 공격력은 이 값을
-    // 기준으로 배수를 곱하므로(위 주석 참고) 함께 절반으로 낮아진다.
+    // HP와 같은 곡선의 절반 - 1-1=0.5, 1-2=1, 2-1=1.5, 2-2=2.
     public static float GetNormalAttack(int mainStage, int subStage) => GetNormalValue(mainStage, subStage) * 0.5f;
 
-    // 몬스터 스폰 함수
+    // 몬스터 스폰 함수. 보스를 부를 때는 subStage에 직전 엘리트의 서브스테이지를 넘긴다 -
+    // 보스는 자기 곡선이 따로 없고 그 엘리트를 기준으로 삼는다.
     public void Spawn(int mainStage, int subStage, MonsterType type)
     {
-        float scale, hp, attack;
-
-        switch (type)
-        {
-            case MonsterType.Elite:
-                scale = eliteScale;
-                hp = GetEliteHp(mainStage, subStage);
-                attack = GetEliteAttack(mainStage, subStage);
-                break;
-
-            // 보스는 자기 곡선이 따로 없다 - 직전에 싸운 엘리트 값을 이어받아 배수만 곱한다.
-            case MonsterType.Boss:
-                scale = bossScale;
-                hp = GetEliteHp(mainStage, subStage) * bossHpMultiplier;
-                attack = GetEliteAttack(mainStage, subStage) * bossAttackMultiplier;
-                break;
-
-            case MonsterType.Normal:
-            default:
-                scale = 1f;
-                hp = GetNormalHp(mainStage, subStage);
-                attack = GetNormalAttack(mainStage, subStage);
-                break;
-        }
-
         MonsterDefinitionSO def = Resolve(mainStage, type);
 
+        // 스테이지 곡선(진행도) x 종류별 배수(몬스터 정의)
+        float hp = GetNormalHp(mainStage, subStage) * def.hpMultiplier;
+        float attack = GetNormalAttack(mainStage, subStage) * def.attackMultiplier;
+
         // 스폰
-        Monster monster = SpawnOffscreen(def.prefab, scale);
+        Monster monster = SpawnOffscreen(def.prefab, def.scale);
 
         // 데이터 주입
-        monster.Initialize(def.monsterType, hp, attack, stageConfig.normalMonsterAttackInterval);
+        monster.Initialize(type, hp, attack, stageConfig.normalMonsterAttackInterval);
 
         // 이동 시작
         monster.SetMovement(playerTransform, ApproachSpeed, stageConfig.meleeRange);
 
         GameEvents.RaiseMonsterSpawned(monster);
     }
-
-    private float GetEliteHp(int mainStage, int subStage) => GetNormalHp(mainStage, subStage) * eliteHpMultiplier;
-    private float GetEliteAttack(int mainStage, int subStage) => GetNormalAttack(mainStage, subStage) * eliteAttackMultiplier;
 
     private Monster SpawnOffscreen(GameObject prefab, float scaleMultiplier)
     {
