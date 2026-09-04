@@ -33,3 +33,5 @@ Action Idle RPG · Unity 6 (URP) · C#
 7. 아이템이 플레이어 발밑(`pickupRadius`)에 들어오면 획득 후 `ApplyEffect()` 호출
 - 호출 시 물약은 즉시 스탯 적용, 장비는 현재 장착분보다 등급이 높을 때만 교체
 8. 일반 몬스터 10회 처치 시 엘리트 보스가 소환되고 ParryManager.HandleMonsterSpawned()를 통해 패링 버튼이 활성화됨
+9. 패링 버튼 클릭 시 0.5초 동안 ParryWindowRoutine() 코루틴 시작, 해당 상태에서 보스 공격 시 TryConsumeParry() 호출 후 패링 상태였다면 반격
+10. 각 스테이지의 마지막 스테이지 도달 시 보스 소환, 맨 마지막 보스 클리어 시 게임 종료
