@@ -218,9 +218,13 @@ public class ParryManager : MonoBehaviour
         cooldownRoutine = null;
     }
 
+    // 둘 다 참일 때만 켜진다 -> 하나라도 아니면 꺼진다
     private void UpdateButtonInteractable()
     {
-        parryButton.interactable = parryTarget != null && !onCooldown;
+        bool hasTarget = parryTarget != null;      // 엘리트/보스가 나와 있다
+        bool cooldownEnded = !onCooldown;          // 직전 패링의 쿨다운이 끝났다
+
+        parryButton.interactable = hasTarget && cooldownEnded;
     }
 
     private void ShowShieldEffect()
