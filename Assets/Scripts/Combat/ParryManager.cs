@@ -85,11 +85,12 @@ public class ParryManager : MonoBehaviour
     private void HandleMonsterSpawned(Monster monster)
     {
         // 예비 동작이 있는 놈만 패링 대상 -> 일반 몬스터는 조짐 없이 고정 타이머로 때린다
-        if (monster.Type != MonsterType.Boss && monster.Type != MonsterType.Elite) return;
-
-        currentDuelist = monster;
-        duelActive = true;
-        UpdateButtonInteractable();
+        if (monster.Type == MonsterType.Boss || monster.Type == MonsterType.Elite)
+        {
+            currentDuelist = monster;
+            duelActive = true;
+            UpdateButtonInteractable();
+        }
     }
 
     private void HandleMonsterDied(Monster monster)
