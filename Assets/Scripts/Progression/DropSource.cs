@@ -18,9 +18,9 @@ public abstract class DropSource : MonoBehaviour
 
     // 몬스터가 죽은 자리에 픽업 본체를 띄운다. 어떤 아이템인지 채워 넣는 초기화는 각 타입이
     // 반환된 인스턴스에 대고 직접 한다 - 픽업 종류마다 필요한 정보가 다르기 때문이다.
-    protected DropPickup SpawnPickup(Monster monster)
-        => Instantiate(pickupPrefab, monster.transform.position, Quaternion.identity);
+    protected DropPickup SpawnPickup(Vector3 position)
+        => Instantiate(pickupPrefab, position, Quaternion.identity);
 
-    // DropCoordinator가 이 타입을 드롭하기로 정했을 때 호출한다.
-    public abstract void RollAndSpawn(Monster monster);
+    // DropCoordinator가 이 타입을 드롭하기로 정했을 때, 몬스터가 죽은 자리를 넘겨 호출한다.
+    public abstract void RollAndSpawn(Vector3 position);
 }

@@ -8,7 +8,7 @@ public class StatDropManager : DropSource
 {
     [SerializeField] private StatDropTableSO dropTable;
 
-    public override void RollAndSpawn(Monster monster)
+    public override void RollAndSpawn(Vector3 position)
     {
         // 현재는 ATK/HP만 존재하므로 단순 50/50이다 - 하드코딩된 동전 던지기 대신 1-in-N
         // 형태로 작성해서, 나중에 세 번째 스탯이 추가되더라도 이 롤의 범위만 넓히면 되게 했다.
@@ -20,6 +20,6 @@ public class StatDropManager : DropSource
 
         // 스탯은 즉시 적용되지 않는다 - 몬스터가 죽은 위치에 드롭되는 포션에 넘겨지고, 그 포션이
         // 플레이어에게 도달했을 때만 지급된다(DropPickup 참고).
-        SpawnPickup(monster).InitializeStatPotion(statType, grade, amount, player.transform, combatLoop, ApproachSpeed);
+        SpawnPickup(position).InitializeStatPotion(statType, grade, amount, player.transform, combatLoop, ApproachSpeed);
     }
 }

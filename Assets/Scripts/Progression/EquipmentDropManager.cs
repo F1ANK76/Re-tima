@@ -44,12 +44,12 @@ public class EquipmentDropManager : DropSource
         }
     }
 
-    public override void RollAndSpawn(Monster monster)
+    public override void RollAndSpawn(Vector3 position)
     {
         EquipmentType equipType = Random.value < 0.5f ? EquipmentType.Sword : EquipmentType.Shield;
         StatGrade grade = GradeRoller.Roll();
 
-        SpawnPickup(monster).InitializeEquipment(equipType, grade, player.transform, combatLoop, ApproachSpeed, this);
+        SpawnPickup(position).InitializeEquipment(equipType, grade, player.transform, combatLoop, ApproachSpeed, this);
     }
 
     // 플레이어가 픽업에 도달하면 DropPickup이 호출한다. 장착분보다 높은 등급일 때만 장착

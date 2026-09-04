@@ -45,9 +45,6 @@ public partial class DropPickup : MonoBehaviour
     // 발밑으로 간주할 거리. XZ 평면으로만 비교한다 - 아이템은 바닥에 놓여있고 플레이어의
     // transform은 캡슐 중심이라, 진짜 3D 거리로는 이렇게 작은 값까지 절대 내려가지 않는다.
     [SerializeField] private float pickupRadius = 0.45f;
-    // 그저 안전장치일 뿐이다. 접근 속도라면 이만큼 오래 걸릴 일은 원래 없어야 한다;
-    // 이게 없으면 player가 null이거나 도달 불가능할 때 아이템이 영원히 미끄러지게 된다.
-    [SerializeField] private float approachTimeout = 6f;
 
     // 드롭 매니저가 MonsterSpawner.ApproachSpeed로 설정한다 - 몬스터가 걸어 들어오는
     // 것과 같은 속도여야 한다. 다르면 플레이어가 두 가지 속도로 달리는 것처럼 보인다.

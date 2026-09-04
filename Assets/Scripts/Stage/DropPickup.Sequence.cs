@@ -17,8 +17,6 @@ public partial class DropPickup
 
         yield return new WaitForSeconds(settleHoldDuration);
         yield return PlayRunOver();
-
-        Collect();
     }
 
     // 플레이어로부터 멀어지는 포물선을 그리며 튕겨서 정지하기까지, 전부
@@ -66,18 +64,13 @@ public partial class DropPickup
         transform.position = landingPos;
     }
 
-    // 지면에 붙은 등속 접근 - 달리는 플레이어를 스쳐 지나가는 세계 같은 느낌. 정해진 시간이
-    // 아니라 아이템이 발밑에 올 때까지 돌므로, 실제 이동해야 할 거리가 소요 시간을 결정한다.
+    // 플레이어한테 아이템 빨려들어 가게 하기
     private IEnumerator PlayRunOver()
     {
         float restY = transform.position.y;
-        float elapsed = 0f;
 
-        while (elapsed < approachTimeout)
+        while (true)
         {
-            elapsed += Time.deltaTime;
-            if (player == null) yield break;
-
             Vector3 pos = transform.position;
 
             // 평면화: 아이템은 바닥 평면상에서 플레이어의 위치를 추적하며 이동하는 내내
@@ -85,7 +78,8 @@ public partial class DropPickup
             Vector3 toPlayer = player.position - pos;
             toPlayer.y = 0f;
 
-            if (toPlayer.magnitude <= pickupRadius) yield break;
+            // 아이템이 플레이어 범위 내에 들어오면 수집하는 판정
+            if (toPlayer.magnitude <= pickupRadius) break;
 
             pos += toPlayer.normalized * approachSpeed * Time.deltaTime;
             pos.y = restY;
@@ -93,6 +87,8 @@ public partial class DropPickup
 
             yield return null;
         }
+
+        Collect();
     }
 
     // 이 게임의 지면 라인 기준은 플레이어 콜라이더의 바닥이다(Monster.SpawnUltimateImpactVfx도
