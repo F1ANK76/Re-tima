@@ -42,11 +42,6 @@ public class ParryManager : MonoBehaviour
     private Coroutine cooldownRoutine;
     private Coroutine shieldEffectRoutine;
 
-    // 타격 전에 예비 동작(텔레그래프)을 보이는 몬스터만 패링 가능하다 - 일반 몬스터는
-    // 아무 조짐 없이 고정된 타이머로 공격하므로 반응할 대상이 애초에 없다.
-    private static bool IsParryTarget(MonsterType type) =>
-        type == MonsterType.Boss || type == MonsterType.Elite;
-
     private void Awake()
     {
         Instance = this;
@@ -89,12 +84,12 @@ public class ParryManager : MonoBehaviour
 
     private void HandleMonsterSpawned(Monster monster)
     {
-        if (IsParryTarget(monster.Type))
-        {
-            currentDuelist = monster;
-            duelActive = true;
-            UpdateButtonInteractable();
-        }
+        // 예비 동작이 있는 놈만 패링 대상 -> 일반 몬스터는 조짐 없이 고정 타이머로 때린다
+        if (monster.Type != MonsterType.Boss && monster.Type != MonsterType.Elite) return;
+
+        currentDuelist = monster;
+        duelActive = true;
+        UpdateButtonInteractable();
     }
 
     private void HandleMonsterDied(Monster monster)
