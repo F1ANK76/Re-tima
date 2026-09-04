@@ -39,7 +39,6 @@ public class ParryManager : MonoBehaviour
     private bool onCooldown;
     // null이면 패링 대상이 없다는 뜻 -> 버튼도 이 값으로 켜고 끈다
     private Monster parryTarget;
-    private Coroutine cooldownRoutine;
     private Coroutine shieldEffectRoutine;
 
     private void Awake()
@@ -102,7 +101,8 @@ public class ParryManager : MonoBehaviour
 
     private void OnParryButtonPressed()
     {
-        if (onCooldown || parryWindowOpen) return;
+        // 패링 진행중일땐 안 눌리게
+        if (parryWindowOpen) return;
         StartCoroutine(ParryWindowRoutine());
     }
 
@@ -110,33 +110,29 @@ public class ParryManager : MonoBehaviour
     {
         parryWindowOpen = true;
 
-        // 이미 진행 중이던 일반 스윙은, 아래에서 포즈가 Defend로 전환되고 나면
-        // 타격을 적중시키거나 슬래시를 계속 보여줘서는 안 된다.
+        // 평타 캔슬
         combatLoop.CancelPendingAttack();
 
-        // Animator.Play는 블렌딩 없이 해당 스테이트로 바로 점프하므로, 진행 중인
-        // 공격 스윙을 끝까지 기다리지 않고 즉시 끊어버린다.
+        // 플레이어 가드 애님 재생
         Animator animator = weaponSwing.PlayerAnimator;
         animator.Play(PlayerAnimStates.Defend, 0, 0f);
 
-        // 위와 같은 이유로 궁극기도 하드컷된다 - 애니메이터는 이미 Defend로 넘어갔는데 궁극기
-        // 코루틴이 자기 타이머로 계속 돌아 뒤늦게 데미지/폭발을 따로 터뜨리지 않도록 여기서 함께 취소한다.
+        // 궁극기 재생중일시 캔슬
         ultimateManager.CancelUltimate();
 
-        // 방패 이펙트는 성공 여부와 무관하게 시도하는 순간 바로 뜬다 - 실제 성공/실패
-        // 판정과는 무관하다.
+        // 실드 이펙트 생성
         ShowShieldEffect();
 
+        // 0.5초 패링 시작
         yield return new WaitForSeconds(ParryWindowDuration);
 
-        // 윈도우가 진행되는 동안 다른 무언가(성공한 패링의 리포스트, 새로운 공격, 죽음,
-        // 승리)가 이미 애니메이터를 가져가지 않았을 때만 idle로 되돌려 받는다.
+        // 가드 자세 변경
         if (animator.GetCurrentAnimatorStateInfo(0).IsName(PlayerAnimStates.Defend))
         {
             animator.Play(PlayerAnimStates.Idle, 0, 0f);
         }
 
-        // 여전히 열려 있다는 건 윈도우 동안 아무도 이걸 소비하지 않았다는 뜻 - 타이밍을 놓친 시도다.
+        // 패링 실패
         if (parryWindowOpen)
         {
             parryWindowOpen = false;
@@ -193,13 +189,13 @@ public class ParryManager : MonoBehaviour
         teleportVfx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
     }
 
+    // 쿨다운 중에는 버튼이 꺼져 있어 다시 들어올 수 없다 -> 코루틴이 겹칠 일이 없다
     private void StartCooldown(int seconds)
     {
         onCooldown = true;
         UpdateButtonInteractable();
 
-        if (cooldownRoutine != null) StopCoroutine(cooldownRoutine);
-        cooldownRoutine = StartCoroutine(CooldownRoutine(seconds));
+        StartCoroutine(CooldownRoutine(seconds));
     }
 
     private IEnumerator CooldownRoutine(int seconds)
@@ -215,16 +211,20 @@ public class ParryManager : MonoBehaviour
         onCooldown = false;
         cooldownOverlay.SetActive(false);
         UpdateButtonInteractable();
-        cooldownRoutine = null;
     }
 
     // 둘 다 참일 때만 켜진다 -> 하나라도 아니면 꺼진다
     private void UpdateButtonInteractable()
     {
-        bool hasTarget = parryTarget != null;      // 엘리트/보스가 나와 있다
-        bool cooldownEnded = !onCooldown;          // 직전 패링의 쿨다운이 끝났다
-
-        parryButton.interactable = hasTarget && cooldownEnded;
+        // 패링 대상이 존재하면서 패링 쿨타임 상태가 아닐 경우 패링 버튼을 누를 수 있음
+        if(parryTarget != null && onCooldown == false)
+        {
+            parryButton.interactable = true;
+        }
+        else
+        {
+            parryButton.interactable = false;
+        }
     }
 
     private void ShowShieldEffect()
