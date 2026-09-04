@@ -30,5 +30,7 @@ Action Idle RPG · Unity 6 (URP) · C#
 5. 서로 TakeDamage()로 피해를 입히고 몬스터 처치 시 GameEvents.RaiseMonsterDied(this)로 알림
 6. DropCoordinator.HandleMonsterDied()가 50% 확률로 아이템 드롭
 - PickSource()로 드롭 타입 결정 후, 결정된 DropSource가 자신의 override RollAndSpawn()을 실행하면서 아이템 스폰
-7. 
+7. 아이템이 플레이어 발밑(`pickupRadius`)에 들어오면 획득 후 `ApplyEffect()` 호출
+- 호출 시 물약은 즉시 스탯 적용, 장비는 현재 장착분보다 등급이 높을 때만 교체
+
 ## 설계
