@@ -37,8 +37,8 @@ public class ParryManager : MonoBehaviour
 
     private bool parryWindowOpen;
     private bool onCooldown;
-    private bool duelActive;
-    private Monster currentDuelist;
+    // null이면 패링 대상이 없다는 뜻 -> 버튼도 이 값으로 켜고 끈다
+    private Monster parryTarget;
     private Coroutine cooldownRoutine;
     private Coroutine shieldEffectRoutine;
 
@@ -72,8 +72,7 @@ public class ParryManager : MonoBehaviour
     // 결투 상태를 명시적으로 정리해줘야 한다.
     private void HandlePlayerDied()
     {
-        currentDuelist = null;
-        duelActive = false;
+        parryTarget = null;
 
         // 리포스트 도중 죽으면 안 그래도 공격 틱이 억제된 채로 리스폰된 스테이지까지
         // 넘어가버리는데, 그걸 풀어줄 대상이 아무것도 남아있지 않게 된다.
@@ -87,18 +86,16 @@ public class ParryManager : MonoBehaviour
         // 예비 동작이 있는 놈만 패링 대상 -> 일반 몬스터는 조짐 없이 고정 타이머로 때린다
         if (monster.Type == MonsterType.Boss || monster.Type == MonsterType.Elite)
         {
-            currentDuelist = monster;
-            duelActive = true;
+            parryTarget = monster;
             UpdateButtonInteractable();
         }
     }
 
     private void HandleMonsterDied(Monster monster)
     {
-        if (monster == currentDuelist)
+        if (monster == parryTarget)
         {
-            currentDuelist = null;
-            duelActive = false;
+            parryTarget = null;
             UpdateButtonInteractable();
         }
     }
@@ -159,7 +156,7 @@ public class ParryManager : MonoBehaviour
         StartCoroutine(PlayTeleportVfx());
 
         // 리포스트는 일반 타격의 2배 데미지 - 성공적인 패링에 대한 보상.
-        if (currentDuelist != null) player.Attack(currentDuelist, RiposteDamageMultiplier);
+        if (parryTarget != null) player.Attack(parryTarget, RiposteDamageMultiplier);
 
         StartCooldown(SuccessCooldownSeconds);
 
@@ -223,7 +220,7 @@ public class ParryManager : MonoBehaviour
 
     private void UpdateButtonInteractable()
     {
-        parryButton.interactable = duelActive && !onCooldown;
+        parryButton.interactable = parryTarget != null && !onCooldown;
     }
 
     private void ShowShieldEffect()
