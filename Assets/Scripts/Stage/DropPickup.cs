@@ -232,16 +232,11 @@ public partial class DropPickup : MonoBehaviour
     {
         if (kind == Kind.StatPotion)
         {
-            PlayerCharacter pc = player != null ? player.GetComponent<PlayerCharacter>() : null;
-            if (pc != null)
-            {
-                if (statType == StatType.Attack) pc.IncreaseAttack(amount);
-                else pc.IncreaseMaxHp(amount);
-            }
+            PlayerCharacter pc = player.GetComponent<PlayerCharacter>();
 
-            // "+N STAT" 팝업과 플레이어 버프 아우라 VFX를 둘 다 구동한다 - 처치 순간이 아니라
-            // 픽업 순간에 반응한다. 별도 포즈는 의도적으로 넣지 않았다: 플레이어는 달리는
-            // 중이고(PlayRunOver 참고) 이걸 먹는 건 달리기를 멈추는 게 아니라 그 중 한 박자다.
+            if (statType == StatType.Attack) pc.IncreaseAttack(amount);
+            else pc.IncreaseMaxHp(amount);
+            
             GameEvents.RaiseStatDropGained(grade, statType, amount);
         }
         else

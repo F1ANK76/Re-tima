@@ -28,13 +28,11 @@ public partial class DropPickup
 
         // 플레이어에서 아이템으로 이어지는 직선을 따라 곧장 뒤쪽으로 - 몬스터가
         // 어디서 죽든 아이템은 항상 옆이 아니라 그 너머 쪽에 떨어지게 된다.
+        Vector3 delta = startPos - player.position;
+        delta.y = 0f;
+
         Vector3 away = Vector3.right;
-        if (player != null)
-        {
-            Vector3 delta = startPos - player.position;
-            delta.y = 0f;
-            if (delta.sqrMagnitude > 0.0001f) away = delta.normalized;
-        }
+        if (delta.sqrMagnitude > 0.0001f) away = delta.normalized;
 
         Vector3 landingPos = startPos + away * tossDistance;
         landingPos.y = groundY;
@@ -96,8 +94,6 @@ public partial class DropPickup
     // 던지기 동작이 이상해지지 않게 한다.
     private float ResolveGroundY()
     {
-        if (player == null) return transform.position.y;
-
         Collider playerCollider = player.GetComponent<Collider>();
         return playerCollider != null ? playerCollider.bounds.min.y : transform.position.y;
     }
