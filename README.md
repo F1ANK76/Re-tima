@@ -29,5 +29,6 @@ Action Idle RPG · Unity 6 (URP) · C#
 - 일반 몬스터: `NormalAttackLoop()` 코루틴이 같은 일을 반복
 5. 서로 TakeDamage()로 피해를 입히고 몬스터 처치 시 GameEvents.RaiseMonsterDied(this)로 알림
 6. DropCoordinator.HandleMonsterDied()가 50% 확률로 아이템 드롭
-
+- PickSource()로 드롭 타입 결정 후, 결정된 DropSource가 자신의 override RollAndSpawn()을 실행하면서 아이템 스폰
+7. 
 ## 설계
