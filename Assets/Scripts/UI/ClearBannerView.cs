@@ -2,11 +2,9 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 화면 상단 중앙에서 한 번 재생되는 팝인/유지/페이드아웃 연출. 원래는 엘리트/보스 처치 시
-// "CLEAR !"만 띄웠는데, 지금은 Show(text)가 엘리트/보스 *등장* 알림("Elite Boss !", "Final Boss !")
-// 에도 같은 애니메이션을 재사용한다 - 같은 연출을 다른 순간, 다른 문구로 쓴다. 순수 연출용이라
-// 아무것도 이걸 기다리지 않으므로 unscaled time으로 돌며, 그 밖에 무슨 일이 벌어지고 있든
-// (승리 포즈, 다음 스테이지 배너) 스스로 재생을 끝낸다.
+// 화면 상단 중앙에서 한 번 재생되는 팝인/유지/페이드아웃 연출.
+// 처치 시 "CLEAR !", 등장 예고 시 "Elite Boss !"/"Stage Boss !" -> 같은 연출을 다른 문구로 재사용.
+// 아무도 이걸 기다리지 않는다 -> unscaled time으로 돌며, 무슨 일이 벌어지든 스스로 끝낸다.
 public class ClearBannerView : CancellableBannerView
 {
     [SerializeField] private RectTransform scaleTarget;

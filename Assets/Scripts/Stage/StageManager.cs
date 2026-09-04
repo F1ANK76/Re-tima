@@ -315,7 +315,7 @@ public class StageManager : MonoBehaviour
         {
             // 보스는 바로 이전 서브스테이지의 엘리트를 기준으로 크기가 정해진다.
             spawner.Spawn(MainStage, BossSubStage - 1, MonsterType.Boss);
-            clearBanner.Show("Final Boss !");
+            clearBanner.Show("Stage Boss !");
         }
         else
         {
