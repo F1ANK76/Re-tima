@@ -32,4 +32,4 @@ Action Idle RPG · Unity 6 (URP) · C#
 - PickSource()로 드롭 타입 결정 후, 결정된 DropSource가 자신의 override RollAndSpawn()을 실행하면서 아이템 스폰
 7. 아이템이 플레이어 발밑(`pickupRadius`)에 들어오면 획득 후 `ApplyEffect()` 호출
 - 호출 시 물약은 즉시 스탯 적용, 장비는 현재 장착분보다 등급이 높을 때만 교체
-8. 처치 사이클 10회 반복 시 엘리트 보스가 소환되고 패링이 활성화 됨
+8. 일반 몬스터 10회 처치 시 엘리트 보스가 소환되고 ParryManager.HandleMonsterSpawned()를 통해 패링 버튼이 활성화됨
