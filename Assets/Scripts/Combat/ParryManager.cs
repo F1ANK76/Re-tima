@@ -140,7 +140,7 @@ public class ParryManager : MonoBehaviour
         }
     }
 
-    // 엘리트/보스의 공격이 텔레그래프 충전을 마치는 순간 호출된다.
+    // 패링 성공
     public bool TryConsumeParry()
     {
         if (!parryWindowOpen) return false;
