@@ -34,7 +34,7 @@ public class EquipmentDropPopup : MonoBehaviour
             GradeVisuals.GetPopupTextColor(grade));
 
         go.AddComponent<Billboard>();
-        go.AddComponent<StatDropPopupMotion>();
+        PopupMotion.AttachPickup(go);
     }
 
     private static string GetEquipLabel(EquipmentType equipType) => equipType == EquipmentType.Sword ? "Sword" : "Shield";

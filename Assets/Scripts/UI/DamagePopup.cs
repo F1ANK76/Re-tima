@@ -47,6 +47,6 @@ public class DamagePopup : MonoBehaviour
         tm.text = amount.ToString("0.#");
 
         go.AddComponent<Billboard>();
-        go.AddComponent<DamagePopupMotion>();
+        PopupMotion.AttachDamage(go);
     }
 }

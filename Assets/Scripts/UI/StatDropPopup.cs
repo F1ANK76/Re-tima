@@ -41,7 +41,7 @@ public class StatDropPopup : MonoBehaviour
             GradeVisuals.GetPopupTextColor(grade));
 
         go.AddComponent<Billboard>();
-        go.AddComponent<StatDropPopupMotion>();
+        PopupMotion.AttachPickup(go);
 
         SpawnSparkleBurst(go.transform, grade);
     }
