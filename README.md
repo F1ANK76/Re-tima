@@ -28,10 +28,11 @@ Action Idle RPG · Unity 6 (URP) · C#
 - 플레이어: `DoTick()`이 스윙을 재생하고 `DealDamageAfterSwing()` 코루틴이 칼 닿는 타이밍에 데미지를 넣음
 - 일반 몬스터: `NormalAttackLoop()` 코루틴이 같은 일을 반복
 5. 서로 TakeDamage()로 피해를 입히고 몬스터 처치 시 GameEvents.RaiseMonsterDied(this)로 알림
-6. DropCoordinator.HandleMonsterDied()가 50% 확률로 아이템 드롭
+6. 이벤트를 받은 DropCoordinator.HandleMonsterDied()가 50% 확률로 아이템 드롭
 - PickSource()로 드롭 타입 결정 후, 결정된 DropSource가 자신의 override RollAndSpawn()을 실행하면서 아이템 스폰
 7. 아이템이 플레이어 발밑(`pickupRadius`)에 들어오면 획득 후 `ApplyEffect()` 호출
 - 호출 시 물약은 즉시 스탯 적용, 장비는 현재 장착분보다 등급이 높을 때만 교체
-8. 일반 몬스터 10회 처치 시 엘리트 보스가 소환되고 ParryManager.HandleMonsterSpawned()를 통해 패링 버튼이 활성화됨
-9. 패링 버튼 클릭 시 0.5초 동안 ParryWindowRoutine() 코루틴 시작, 해당 상태에서 보스 공격 시 TryConsumeParry() 호출 후 패링 상태였다면 반격
-10. 각 스테이지의 마지막 스테이지 도달 시 보스 소환, 맨 마지막 보스 클리어 시 게임 종료
+8. 일반 몬스터 사망 시 StartCoroutine(SpawnNormalAfterDelay(monster.DeathVisualDuration))를 통해 몬스터 재소환 반복
+9. 일정 횟수(10회) 처치 시 엘리트 보스가 소환되고 ParryManager.HandleMonsterSpawned()를 통해 패링 버튼이 활성화됨
+10. 패링 버튼 클릭 시 0.5초 동안 ParryWindowRoutine() 코루틴 시작, 해당 상태에서 보스 공격 시 TryConsumeParry() 호출 후 패링 상태였다면 반격
+11. 각 스테이지의 마지막 스테이지 도달 시 보스 소환, 맨 마지막 보스 클리어 시 게임 종료
