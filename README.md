@@ -8,11 +8,11 @@ Action Idle RPG · Unity 6 (URP) · C#
 
 ## 폴더 구조
 
-- `Combat/` — 전투 루프, 패링, 궁극기, 몬스터
+- `Combat/` — 전투 루프, 플레이어/몬스터, 패링, 궁극기
 - `Progression/` — 드랍 타입(스탯/장비)과 그 조율
-- `Stage/` — 스테이지 진행, 몬스터 스폰, 드랍 픽업
-- `Data/` — 등급 롤, 등급별 색·크기 램프, 스테이지/몬스터 정의(ScriptableObject)
-- `UI/` — HUD, 관리창, 배너/게이지 연출
+- `Stage/` — 스테이지 진행, 몬스터 스폰, 드랍 픽업, 배경 스크롤·낮밤 연출
+- `Data/` — 전투/드랍 수치와 몬스터 정의(ScriptableObject), 등급 롤과 등급별 색·크기 램프
+- `UI/` — HUD, 관리창, 배너/게이지, 팝업, 타이틀·종료 화면
 - `Core/` — 이벤트 버스(`GameEvents`), 이징 곡선(`Easing`)
 - `Debug/` — 개발용 디버그 도구
 
