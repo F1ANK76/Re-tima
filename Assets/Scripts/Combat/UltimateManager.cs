@@ -84,8 +84,7 @@ public class UltimateManager : MonoBehaviour
 
     private void Update()
     {
-        // 해금 전에는 충전도, 발동도, CombatLoop 억제도 없다 - 스테이지 1은 이 스킬이 존재하기
-        // 전과 완전히 동일하게 진행된다.
+        // 스킬 해금 전이면 사용 불가
         if (!IsUnlocked) return;
 
         // 스테이지 배너는 뭔가 스폰되기 전 몇 초간 화면을 덮는다 - 그 사이 충전되면 플레이어가
