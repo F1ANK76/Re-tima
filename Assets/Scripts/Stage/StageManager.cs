@@ -167,27 +167,20 @@ public class StageManager : MonoBehaviour
             // 지금 제작된 콘텐츠는 여기서 끝난다 - 다음 스테이지로 넘기는 대신 종료 화면을 띄운다.
             bool isFinalClear = clearedStage >= MaxMainStage;
 
+            bossGaugePercent = 0;
+            GameEvents.RaiseBossGaugeChanged(bossGaugePercent);
+
             // 보스를 물리치면 항상 다음으로 진행한다. 마지막 제작 스테이지를 지나면 갈 곳이 없으므로,
             // 보스는 자신으로 이어지는 서브스테이지로 되돌아가 계속 파밍 가능한 상태로 남는다.
             if (isFinalClear)
             {
                 SubStage = BossSubStage - 1;
+                StartCoroutine(PlayVictoryThenShowGameComplete());
             }
             else
             {
                 MainStage++;
                 SubStage = 1;
-            }
-
-            bossGaugePercent = 0;
-            GameEvents.RaiseBossGaugeChanged(bossGaugePercent);
-
-            if (isFinalClear)
-            {
-                StartCoroutine(PlayVictoryThenShowGameComplete());
-            }
-            else
-            {
                 // 코루틴 실행 전에 미리 캡처한다: 위에서 MainStage가 이미 진행됐으므로, 판단 기준은
                 // 현재 위치가 아니라 방금 클리어한 스테이지여야 한다.
                 StartCoroutine(PlayVictoryThenShowBanner(clearedStage == SkillUnlockStage));
