@@ -1,9 +1,5 @@
 using UnityEngine;
 
-// 필드에 떨어지는 모든 드롭. 종류는 kind로만 갈리고 동작은 같다.
-// 세 박자: 튕겨 안착(그동안 플레이어 idle) -> 정지 해제 -> 미끄러져 와서 접촉 시 지급.
-// 플레이어는 제자리 달리기라 실제로 안 움직인다 -> 대신 아이템이 몬스터와 같은 속도로 온다.
-// 종류별로 다른 곳은 두 군데뿐 - SpawnVisual의 메시 선택, ApplyEffect의 지급.
 public partial class DropPickup : MonoBehaviour
 {
     public enum Kind
@@ -53,8 +49,6 @@ public partial class DropPickup : MonoBehaviour
     [SerializeField] private Vector3 shieldVisualEuler = new Vector3(90f, 0f, 0f);
 
     [Header("Grade aura")]
-    // 세 레이어 모두 GradeVisuals.GetAuraStrength를 이 상한값에 곱한다.
-    // 크기는 뺐다 -> 메시가 이미 등급별로 커져서 중복
     [SerializeField] private float auraSize = 1.5f;
     // 가산 헤일로 밝기 (등급 색에 곱해짐)
     [SerializeField] private float auraBrightnessMax = 1.7f;

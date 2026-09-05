@@ -10,14 +10,10 @@ public class StageBannerView : CancellableBannerView
     [SerializeField] private float displayDuration = 1f;
     [SerializeField] private float fadeDuration = 0.25f;
     [SerializeField] private float popStartScale = 1.6f;
-    // 오프닝 카드가 비어있는 상태로 얼마나 머무른 뒤 타이틀이 애니메이션으로 나타나는지 -
-    // 이렇게 해야 커튼이 끊긴 프레임이 아니라 의도된 박자로 읽힌다.
     [SerializeField] private float openingHoldDuration = 0.4f;
 
     private RectTransform textRect;
 
-    // 세션 첫 안내는 완전히 불투명한 커튼 뒤에서 시작해 타이틀 전에 게임이 보이지 않게 한다.
-    // 이후 안내(새 서브스테이지, 사망 후 재시작)는 이미 보고 있던 게임플레이 위로 페이드인된다.
     private bool hasShownOnce;
 
     private void Awake()
@@ -33,8 +29,6 @@ public class StageBannerView : CancellableBannerView
 
     public void Show(string text, Action onComplete)
     {
-        // 새 안내는 대기 중이던 이전 안내를 대체한다. 안 그러면 이전 루틴의 SetActive(false)가
-        // 도중에 걸려 콜백 전에 새 루틴을 죽이고, 그 루틴이 쥔 스폰이 영영 일어나지 않는다.
         Cancel();
 
         bannerText.text = text;
@@ -42,8 +36,6 @@ public class StageBannerView : CancellableBannerView
         bool openOnBlack = !hasShownOnce;
         hasShownOnce = true;
 
-        // 오브젝트를 활성화하는 것과 같은 호출에서 불투명하게 설정하여, 오프닝으로 들어가는
-        // 도중에 씬이 가려지지 않은 채로 렌더링되는 프레임이 절대 생기지 않게 한다.
         canvasGroup.alpha = openOnBlack ? 1f : 0f;
         textGroup.alpha = 0f;
         textRect.localScale = Vector3.one * popStartScale;
@@ -53,15 +45,10 @@ public class StageBannerView : CancellableBannerView
 
     private IEnumerator PlayThenHide(bool openOnBlack, Action onComplete)
     {
-        // 한 프레임 건너뛴다: Play 모드 진입(또는 씬 로드 완료) 프레임의 deltaTime이 매우 커서,
-        // 배너 시간에 포함시키면 노출 시간과 아래 페이드가 짧아진다. 대기는 realtime으로 해서
-        // 지속 시간이 실제 시계 기준으로 정확히 유지되게 한다.
         yield return null;
 
         if (openOnBlack)
         {
-            // Show()에서 이미 완전히 검게 만들어 놓았으니, 타이틀이 나타나기 전에 잠깐
-            // 머무르게 해서 커튼이 의도된 것처럼 보이게 한다.
             yield return new WaitForSecondsRealtime(openingHoldDuration);
         }
         else
@@ -72,8 +59,6 @@ public class StageBannerView : CancellableBannerView
         yield return PopTextIn();
         yield return new WaitForSecondsRealtime(displayDuration);
 
-        // 텍스트는 따로 페이드아웃되지 않고 배경과 함께 사라진다 - 커튼이 한 번에 걷히면서
-        // 그 아래의 스테이지가 드러난다.
         yield return FadeGroup(canvasGroup, 1f, 0f, fadeDuration);
 
         routine = null;
@@ -81,8 +66,6 @@ public class StageBannerView : CancellableBannerView
         onComplete?.Invoke();
     }
 
-    // 타이틀을 과장된 팝 크기에서 원래 크기로 가라앉히면서 동시에 페이드인시킨다 - 그냥
-    // 밋밋하게 나타나는 대신 안내가 약간의 무게감을 가지고 도착하는 것처럼 보인다.
     private IEnumerator PopTextIn()
     {
         float t = 0f;

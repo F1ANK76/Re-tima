@@ -3,10 +3,6 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 현재 제작된 마지막 메인 스테이지(StageManager.MaxMainStage)의 보스를 클리어하면 뜨는 종료
-// 화면. UI(배경/타이틀/버튼)는 씬에 미리 구성되어 있고, 이 스크립트는 그 위에서
-// 페이드 인/아웃과 재시작 콜백만 담당한다. "Coming Soon"은 지금 여기가 실제 콘텐츠의
-// 끝이라는 뜻이라 다음 스테이지로 이어지는 배너 대신 이 화면에서 완전히 멈춘다.
 [RequireComponent(typeof(RectTransform))]
 [RequireComponent(typeof(CanvasGroup))]
 public class GameCompleteView : MonoBehaviour

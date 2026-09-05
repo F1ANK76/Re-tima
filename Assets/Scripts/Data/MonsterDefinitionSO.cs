@@ -1,7 +1,5 @@
 using UnityEngine;
 
-// 몬스터 한 종류의 겉모습과 배수. 스테이지 곡선은 MonsterSpawner에 있다.
-// 종류(일반/엘리트/보스)는 로스터의 어느 슬롯에 꽂혔는지가 정한다.
 [CreateAssetMenu(fileName = "MonsterDefinition", menuName = "Retima/Monster Definition")]
 public class MonsterDefinitionSO : ScriptableObject
 {

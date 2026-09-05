@@ -1,7 +1,5 @@
 using UnityEngine;
 
-// 전투의 박자와 거리. 스테이지와 무관한 전역 값이라 에셋은 하나뿐이다.
-// 드롭 수치는 StatDropTableSO.
 [CreateAssetMenu(fileName = "CombatConfig", menuName = "Retima/Combat Config")]
 public class CombatConfigSO : ScriptableObject
 {

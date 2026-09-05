@@ -43,8 +43,6 @@ public class DropCoordinator : MonoBehaviour
         picked.RollAndSpawn(monster.transform.position);
     }
 
-    // 리스트 순서 = 해금 순서. sources[i]는 i+1 스테이지에 풀리고, 가중치도 i+1이다.
-    // 3스테 -> 후보 [0,1,2], 가중치 1:2:3, 합계 6 -> 각각 1/6, 2/6, 3/6
     private DropSource PickSource()
     {
         // 소스가 스테이지보다 적으면 있는 만큼만
