@@ -7,7 +7,7 @@ public class StageBannerView : CancellableBannerView
 {
     [SerializeField] private Text bannerText;
     [SerializeField] private CanvasGroup textGroup;
-    [SerializeField] private float displayDuration = 2f;
+    [SerializeField] private float displayDuration = 1f;
     [SerializeField] private float fadeDuration = 0.25f;
     [SerializeField] private float popStartScale = 1.6f;
     // 오프닝 카드가 비어있는 상태로 얼마나 머무른 뒤 타이틀이 애니메이션으로 나타나는지 -

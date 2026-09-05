@@ -3,8 +3,8 @@ using UnityEngine;
 
 public class PlayerCharacter : MonoBehaviour
 {
-    [SerializeField] private float startingMaxHp = 50f;
-    [SerializeField] private float startingAttackPower = 1f;
+    [SerializeField] private float startingMaxHp = 20f;
+    [SerializeField] private float startingAttackPower = 0.5f;
     [SerializeField] private ParticleSystem hitVfx;
     // Hovl의 오라 프리팹(Play On Awake, 자체 루프 길이 1초) - 기본은 비활성이고 스탯 드롭 시점에
     // 켜고 끄기만 한다. hitVfx처럼 Play()/Stop()으로 제어하지 않는 이유는, 활성화만으로 이미 한
