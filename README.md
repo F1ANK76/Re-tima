@@ -39,4 +39,4 @@ Action Idle RPG · Unity 6 (URP) · C#
 12. 스테이지 보스는 `UltimateChargeLoop()` 코루틴으로 일정 시간이 지나면, `TelegraphAttackLoop()`이 다음 공격 사이클에 평타 대신 `PlayUltimateAttack()`로 궁극기 공격
 13. 스테이지 보스 클리어 시 MainStage++로 다음 스테이지 이동, 최종 보스 처치 시 게임 클리어
 - 1스테이지 클리어 시 IsUnlocked가 true가 되면서 플레이어도 일정 시간마다 자동으로 사용하는 스킬 코루틴 PlayUltimate() 추가
-- 플레이어 사망 시 도달했던 제일 높은 서브 스테이지에서 부활 후 자동 전투 재시작
+- 플레이어 사망 시 PlayDeathThenRestart() 코루틴 시작 후 ShowBannerThenSpawn()를 통해 도달했던 제일 높은 서브 스테이지에서 부활 후 자동 전투 재시작
