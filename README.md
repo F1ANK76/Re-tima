@@ -13,7 +13,7 @@ Action Idle RPG · Unity 6 (URP) · C#
 - `Stage/` — 스테이지 진행, 몬스터 스폰, 드랍 픽업, 배경 스크롤·낮밤 연출
 - `Data/` — 전투/드랍 수치와 몬스터 정의(ScriptableObject), 등급 롤과 등급별 색·크기 램프
 - `UI/` — HUD, 관리창, 배너/게이지, 팝업, 타이틀·종료 화면
-- `Core/` — 이벤트 버스(`GameEvents`), 이징 곡선(`Easing`)
+- `Core/` — 이벤트 버스(`GameEvents`)
 - `Debug/` — 개발용 디버그 도구
 
 ## 동작 과정
