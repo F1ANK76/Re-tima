@@ -8,10 +8,14 @@ public class DamagePopup : MonoBehaviour
 
     private static readonly Color TextColor = new Color(1f, 0.95f, 0.85f);
     private Font font;
+    private Transform poolRoot;
 
     private void Awake()
     {
         font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+        poolRoot = new GameObject("DamagePopupPool").transform;
+        poolRoot.SetParent(transform, false);
     }
 
     private void OnEnable()
@@ -31,10 +35,28 @@ public class DamagePopup : MonoBehaviour
         HealthBarView healthBar = monster.GetComponentInChildren<HealthBarView>();
         Transform anchor = healthBar != null ? healthBar.transform : monster.transform;
 
-        var go = new GameObject("DamagePopup");
+        GameObject go = Rent();
         go.transform.SetParent(anchor, false);
         // 연속으로 몇 번 맞았을 때 숫자가 완전히 겹치지 않도록 수평으로 흩어지게 한다.
         go.transform.localPosition = localOffset + new Vector3(Random.Range(-0.15f, 0.15f), 0f, 0f);
+
+        go.GetComponent<TextMesh>().text = amount.ToString("0.#");
+
+        go.SetActive(true);
+        go.GetComponent<PopupMotion>().Replay();
+    }
+
+    // 재생 중인 팝업은 몬스터 밑에 붙어 있다 -> 풀 루트에 남은 자식이 곧 여분이다
+    private GameObject Rent()
+    {
+        if (poolRoot.childCount > 0) return poolRoot.GetChild(0).gameObject;
+
+        return Create();
+    }
+
+    private GameObject Create()
+    {
+        var go = new GameObject("DamagePopup");
 
         var tm = go.AddComponent<TextMesh>();
         tm.font = font;
@@ -44,9 +66,10 @@ public class DamagePopup : MonoBehaviour
         tm.anchor = TextAnchor.MiddleCenter;
         tm.alignment = TextAlignment.Center;
         tm.color = TextColor;
-        tm.text = amount.ToString("0.#");
 
         go.AddComponent<Billboard>();
-        PopupMotion.AttachDamage(go);
+        PopupMotion.AttachDamage(go).RecycleParent = poolRoot;
+
+        return go;
     }
 }
