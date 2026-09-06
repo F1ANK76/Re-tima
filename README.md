@@ -2,7 +2,7 @@
 
 Action Idle RPG · Unity 6 (URP) · C#
 
-▶︎ **[브라우저에서 바로 플레이](https://ksg76.itch.io/re-tima)**
+▶︎ **[브라우저에서 바로 플레이](https://ksg76.itch.io/re-tima)** · [플레이 영상](https://youtu.be/i8OS6XZw-2Q)
 
 ![일반 몬스터를 자동으로 처치하면 드롭이 나오고 보스 게이지가 차오른다](docs/gameplay.gif)
 
