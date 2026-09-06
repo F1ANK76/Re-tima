@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 
 // 팝업 텍스트 공통 모션: 튀어나오며 커지고, 떠오르며 사라진다.
@@ -19,7 +20,7 @@ public class PopupMotion : MonoBehaviour
     private float riseDistance;
     private float opaqueFraction;
 
-    private TextMesh[] labels;
+    private TMP_Text[] labels;
     private Color[] baseColors;
     private Vector3 startPos;
     private float elapsed;
@@ -37,7 +38,7 @@ public class PopupMotion : MonoBehaviour
     // AddComponent가 Awake를 즉시 부르므로 값 주입 후 여기서 초기화한다
     private void Init()
     {
-        labels = GetComponentsInChildren<TextMesh>();
+        labels = GetComponentsInChildren<TMP_Text>();
         baseColors = new Color[labels.Length];
         for (int i = 0; i < labels.Length; i++) baseColors[i] = labels[i].color;
 

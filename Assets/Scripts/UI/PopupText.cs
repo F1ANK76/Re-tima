@@ -1,59 +1,40 @@
+using TMPro;
 using UnityEngine;
 
+// 아웃라인은 셰이더가 그린다 -> 텍스트 하나로 렌더러 1개
 public static class PopupText
 {
-    private const float OutlineWidthFactor = 0.07f;
+    private const float OutlineWidth = 0.2f;
 
-    private const float HeightPerCharacterSizeUnit = 8.955f;
+    // TextMesh의 fontSize×characterSize를 같은 크기의 TMP fontSize로 옮기는 계수
+    public const float FontSizeScale = 0.93f;
 
-    private static readonly Vector2[] OutlineOffsets =
+    public static TMP_Text Build(GameObject go, string text, int fontSize, float characterSize, Color color)
     {
-        new Vector2(1f, 0f), new Vector2(-1f, 0f), new Vector2(0f, 1f), new Vector2(0f, -1f),
-        new Vector2(0.7071f, 0.7071f), new Vector2(-0.7071f, 0.7071f),
-        new Vector2(0.7071f, -0.7071f), new Vector2(-0.7071f, -0.7071f),
-    };
+        var tmp = go.AddComponent<TextMeshPro>();
+        tmp.fontSharedMaterial = OutlineMaterial;
+        tmp.fontSize = fontSize * characterSize * FontSizeScale;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.color = color;
+        tmp.text = text;
+        return tmp;
+    }
 
-    public static TextMesh Build(GameObject go, Font font, string text, int fontSize, float characterSize, Color color)
+    // 팝업마다 머티리얼을 새로 만들지 않도록 하나만 만들어 공유한다
+    private static Material outlineMaterial;
+    private static Material OutlineMaterial
     {
-        TextMesh main = Configure(go, font, text, fontSize, characterSize);
-        main.color = ToVertexColor(color);
-        main.GetComponent<MeshRenderer>().sortingOrder = 1;
-
-        float glyphHeight = main.GetComponent<Renderer>().localBounds.size.y;
-        if (glyphHeight <= 0.0001f) glyphHeight = characterSize * fontSize / HeightPerCharacterSizeUnit;
-        float width = glyphHeight * OutlineWidthFactor;
-
-        foreach (Vector2 dir in OutlineOffsets)
+        get
         {
-            var outlineGo = new GameObject("Outline");
-            outlineGo.transform.SetParent(go.transform, false);
-            outlineGo.transform.localPosition = new Vector3(dir.x * width, dir.y * width, 0f);
+            if (outlineMaterial != null) return outlineMaterial;
 
-            TextMesh outline = Configure(outlineGo, font, text, fontSize, characterSize);
-            outline.color = Color.black;
-            outline.GetComponent<MeshRenderer>().sortingOrder = 0;
+            outlineMaterial = new Material(TMP_Settings.defaultFontAsset.material);
+            outlineMaterial.EnableKeyword(ShaderUtilities.Keyword_Outline);
+            outlineMaterial.SetColor(ShaderUtilities.ID_OutlineColor, Color.black);
+            outlineMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, OutlineWidth);
+            return outlineMaterial;
         }
-
-        return main;
-    }
-
-    private static Color ToVertexColor(Color srgb)
-    {
-        return QualitySettings.activeColorSpace == ColorSpace.Linear ? srgb.linear : srgb;
-    }
-
-    private static TextMesh Configure(GameObject go, Font font, string text, int fontSize, float characterSize)
-    {
-        var tm = go.AddComponent<TextMesh>();
-        tm.font = font;
-        tm.GetComponent<MeshRenderer>().material = font.material;
-        // fontSize는 텍스처 공간 해상도(반드시 int); characterSize가 실제 화면상의 크기다.
-        tm.fontSize = fontSize;
-        tm.characterSize = characterSize;
-        tm.fontStyle = FontStyle.Bold;
-        tm.anchor = TextAnchor.MiddleCenter;
-        tm.alignment = TextAlignment.Center;
-        tm.text = text;
-        return tm;
     }
 }

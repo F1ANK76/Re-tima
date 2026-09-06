@@ -9,13 +9,6 @@ public class StatDropPopup : MonoBehaviour
 
     [SerializeField] private ParticleSystem sparkleBurstPrefab;
 
-    private Font font;
-
-    private void Awake()
-    {
-        font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-    }
-
     private void OnEnable()
     {
         GameEvents.OnStatDropGained += HandleStatDropGained;
@@ -36,7 +29,7 @@ public class StatDropPopup : MonoBehaviour
         string amountText = statType == StatType.Attack ? amount.ToString("0.#") : amount.ToString("0");
         string text = $"+{amountText} {GetStatAbbreviation(statType)}";
 
-        PopupText.Build(go, font, text, fontSize,
+        PopupText.Build(go, text, fontSize,
             characterSize * GradeVisuals.GetSizeScale(grade),
             GradeVisuals.GetPopupTextColor(grade));
 
