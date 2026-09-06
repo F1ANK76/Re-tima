@@ -73,17 +73,31 @@ public partial class DropPickup
         auraMaterial = CreateAdditiveGlowMaterial(color * (auraBrightnessMax * strength));
         aura.GetComponent<MeshRenderer>().material = auraMaterial;
 
-        Light light = aura.AddComponent<Light>();
-        light.type = LightType.Point;
-        light.color = color;
-        light.intensity = auraLightIntensityMax * strength;
-        light.range = auraLightRange;
-        light.shadows = LightShadows.None;
-
         aura.AddComponent<Billboard>();
         aura.AddComponent<DropPickupAuraMotion>();
 
+        SpawnGroundGlow(color, strength);
         SpawnSparkles(color, strength);
+    }
+
+    // 실시간 라이트는 URP 추가 라이트 상한(4개)에 걸려 드랍이 겹치면 일부가 빠진다 -> 바닥에 눕힌 쿼드로 대체
+    private void SpawnGroundGlow(Color color, float strength)
+    {
+        GameObject glow = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        glow.name = "GroundGlow";
+        Destroy(glow.GetComponent<Collider>());
+
+        glow.transform.SetParent(transform, false);
+        glow.transform.localScale = Vector3.one * groundGlowSize;
+        // 눕혀서 바닥을 향하게. 지면과 겹쳐 깜빡이지 않도록 살짝 띄운다
+        glow.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        glow.AddComponent<DropPickupGroundGlow>()
+            .Initialize(ResolveGroundY() + GroundGlowLift);
+
+        groundGlowMaterial = CreateAdditiveGlowMaterial(color * (groundGlowBrightness * strength));
+        glow.GetComponent<MeshRenderer>().material = groundGlowMaterial;
+
+        glow.AddComponent<DropPickupAuraMotion>();
     }
 
     private void SpawnSparkles(Color color, float strength)
@@ -147,6 +161,7 @@ public partial class DropPickup
     private void OnDestroy()
     {
         if (auraMaterial != null) Destroy(auraMaterial);
+        if (groundGlowMaterial != null) Destroy(groundGlowMaterial);
         if (sparkleMaterial != null) Destroy(sparkleMaterial);
         if (visualMaterialInstance != null) Destroy(visualMaterialInstance);
     }

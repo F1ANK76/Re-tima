@@ -52,9 +52,10 @@ public partial class DropPickup : MonoBehaviour
     [SerializeField] private float auraSize = 1.5f;
     // 가산 헤일로 밝기 (등급 색에 곱해짐)
     [SerializeField] private float auraBrightnessMax = 1.7f;
-    // 바닥에도 빛을 던진다 -> 데칼이 아니라 실제로 내뿜는 것처럼 보이는 요인
-    [SerializeField] private float auraLightIntensityMax = 3f;
-    [SerializeField] private float auraLightRange = 2.6f;
+    // 바닥에 깔리는 빛 자국. 아이템이 지면에서 떠 보이지 않게 하는 요인
+    [SerializeField] private float groundGlowSize = 2.6f;
+    [SerializeField] private float groundGlowBrightness = 1.1f;
+    private const float GroundGlowLift = 0.02f;
 
     [Header("Twinkle sparkles")]
     // 위상을 서로 어긋나게 줄 것 -> 동시에 번쩍이면 반짝임이 아니라 깜빡이는 조명 하나가 된다
@@ -96,6 +97,7 @@ public partial class DropPickup : MonoBehaviour
     private float restBottomOffset;
     // 인스턴스마다 코드 생성 -> OnDestroy에서 직접 수거해야 한다
     private Material auraMaterial;
+    private Material groundGlowMaterial;
     // 이 아이템의 반짝임 전부가 공유. auraMaterial과 같이 OnDestroy에서 수거
     private Material sparkleMaterial;
     // 공용 sword/shield 재질의 인스턴스별 복사본 -> 원본 애셋은 건드리면 안 된다

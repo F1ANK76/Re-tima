@@ -7,19 +7,14 @@ public class DropPickupAuraMotion : MonoBehaviour
     [SerializeField] private float pulseSpeed = 3f;
 
     private Material material;
-    private Light auraLight;
     private Color baseTint;
-    private float baseIntensity;
     private float elapsed;
 
+    // 머티리얼을 붙인 뒤에 AddComponent한다 -> Awake 시점에 이미 준비돼 있다
     private void Awake()
     {
-        var meshRenderer = GetComponent<MeshRenderer>();
-        if (meshRenderer != null) material = meshRenderer.sharedMaterial;
-        auraLight = GetComponent<Light>();
-
-        if (material != null) baseTint = material.GetColor("_BaseColor");
-        if (auraLight != null) baseIntensity = auraLight.intensity;
+        material = GetComponent<MeshRenderer>().sharedMaterial;
+        baseTint = material.GetColor("_BaseColor");
     }
 
     private void Update()
@@ -28,9 +23,7 @@ public class DropPickupAuraMotion : MonoBehaviour
 
         float fade = fadeInDuration > 0f ? Mathf.Clamp01(elapsed / fadeInDuration) : 1f;
         float pulse = 1f + Mathf.Sin(elapsed * pulseSpeed * Mathf.PI) * pulseAmplitude;
-        float factor = fade * pulse;
 
-        if (material != null) material.SetColor("_BaseColor", baseTint * factor);
-        if (auraLight != null) auraLight.intensity = baseIntensity * factor;
+        material.SetColor("_BaseColor", baseTint * (fade * pulse));
     }
 }
