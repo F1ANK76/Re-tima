@@ -8,48 +8,14 @@ public partial class DropPickup : MonoBehaviour
         Equipment
     }
 
-    [Header("Toss + bounce (beat 1)")]
-    // 던지기~안착 전체 시간
-    [SerializeField] private float landDuration = 0.75f;
-    // 플레이어 반대쪽으로 던지는 거리 -> 아이템이 몬스터 뒤편에 놓인다
-    [SerializeField] private float tossDistance = 1.4f;
-    // 첫 포물선 정점. 이후 반동은 HopHeights 배율
-    [SerializeField] private float tossHeight = 1.1f;
-
-    [Header("Run-over (beats 2-3)")]
-    // 안착 후 정지 시간 -> 배경 스크롤이 속도 붙는 동안 아이템도 멈춰 있어야 한다
-    [SerializeField] private float settleHoldDuration = 0.2f;
-    // 획득 판정 반경. XZ 평면 -> 플레이어 transform이 캡슐 중심이라 3D 거리로는 안 닿는다
-    [SerializeField] private float pickupRadius = 0.45f;
+    // 종류별 애셋 + 모션/이펙트 튜닝값 전부
+    [SerializeField] private DropPickupConfigSO config;
 
     // 몬스터 걷는 속도와 같아야 한다 -> 다르면 플레이어가 두 속도로 달리는 것처럼 보인다
     private float approachSpeed = 5f;
 
-    [Header("Visual")]
-    // 종류별 프리팹/재질/회전/크기. 등급 틴트는 아우라 담당 -> 여기엔 종류 구분만 있다
-    [SerializeField] private DropVisualTableSO visualTable;
-
-    [Header("Grade aura")]
-    [SerializeField] private float auraSize = 1.5f;
-    // 가산 헤일로 밝기 (등급 색에 곱해짐)
-    [SerializeField] private float auraBrightnessMax = 1.7f;
-    // 바닥에 깔리는 빛 자국. 아이템이 지면에서 떠 보이지 않게 하는 요인
-    [SerializeField] private float groundGlowSize = 2.6f;
-    [SerializeField] private float groundGlowBrightness = 1.1f;
+    // 지면과 겹쳐 깜빡이지 않을 만큼만. 디자인 손잡이가 아니라 구현 여유값이다
     private const float GroundGlowLift = 0.02f;
-
-    [Header("Twinkle sparkles")]
-    // 위상을 서로 어긋나게 줄 것 -> 동시에 번쩍이면 반짝임이 아니라 깜빡이는 조명 하나가 된다
-    [SerializeField] private int sparkleCount = 4;
-    // 로컬 단위 -> 등급 스케일에 맞춰 고리도 넓어진다
-    [SerializeField] private float sparkleOrbitRadius = 0.5f;
-    [SerializeField] private float sparkleSize = 0.6f;
-    // 헤일로보다 강해야 반짝임으로 인지된다
-    [SerializeField] private float sparkleBrightnessMax = 2.4f;
-    // 별 하나당 초당 깜빡임 횟수
-    [SerializeField] private float sparkleBlinkSpeed = 1.1f;
-    // 고리 전체 회전 -> 반짝임이 한자리에 박히지 않게
-    [SerializeField] private float sparkleOrbitSpeed = 35f;
 
     // 첫 던지기 + 줄어드는 반동들. 각 도약은 지면->지면 사인 곡선. HopDurations 합 = 1
     private static readonly float[] HopHeights = { 1f, 0.34f, 0.13f, 0.05f };

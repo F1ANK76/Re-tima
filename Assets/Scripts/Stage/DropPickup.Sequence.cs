@@ -10,7 +10,7 @@ public partial class DropPickup
         if (combatLoop != null) combatLoop.PopIdleHold();
         idleHoldActive = false;
 
-        yield return new WaitForSeconds(settleHoldDuration);
+        yield return new WaitForSeconds(config.settleHoldDuration);
         yield return PlayRunOver();
     }
 
@@ -25,21 +25,21 @@ public partial class DropPickup
         Vector3 away = Vector3.right;
         if (delta.sqrMagnitude > 0.0001f) away = delta.normalized;
 
-        Vector3 landingPos = startPos + away * tossDistance;
+        Vector3 landingPos = startPos + away * config.tossDistance;
         landingPos.y = groundY;
 
         transform.localScale = Vector3.zero;
 
         float t = 0f;
-        while (t < landDuration)
+        while (t < config.landDuration)
         {
             t += Time.deltaTime;
-            float p = Mathf.Clamp01(t / landDuration);
+            float p = Mathf.Clamp01(t / config.landDuration);
 
             transform.localScale = restScale * Mathf.Clamp01(p / 0.3f);
 
             Vector3 flat = Vector3.Lerp(startPos, landingPos, Easing.OutQuad(p));
-            flat.y = Mathf.Lerp(startPos.y, groundY, Easing.OutQuad(p)) + tossHeight * HopHeight(p);
+            flat.y = Mathf.Lerp(startPos.y, groundY, Easing.OutQuad(p)) + config.tossHeight * HopHeight(p);
             transform.position = flat;
 
             yield return null;
@@ -62,7 +62,7 @@ public partial class DropPickup
             toPlayer.y = 0f;
 
             // 아이템이 플레이어 범위 내에 들어오면 수집하는 판정
-            if (toPlayer.magnitude <= pickupRadius) break;
+            if (toPlayer.magnitude <= config.pickupRadius) break;
 
             pos += toPlayer.normalized * approachSpeed * Time.deltaTime;
             pos.y = restY;

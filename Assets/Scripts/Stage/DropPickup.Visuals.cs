@@ -19,7 +19,7 @@ public partial class DropPickup
 
     private void SpawnVisual()
     {
-        DropVisualTableSO.Entry entry = visualTable.Get(kind, statType, equipType);
+        DropPickupConfigSO.Entry entry = config.Get(kind, statType, equipType);
 
         if (entry.prefab == null)
         {
@@ -63,9 +63,9 @@ public partial class DropPickup
 
         aura.transform.SetParent(transform, false);
         aura.transform.localPosition = Vector3.zero;
-        aura.transform.localScale = Vector3.one * auraSize;
+        aura.transform.localScale = Vector3.one * config.auraSize;
 
-        auraMaterial = CreateAdditiveGlowMaterial(color * (auraBrightnessMax * strength));
+        auraMaterial = CreateAdditiveGlowMaterial(color * (config.auraBrightnessMax * strength));
         aura.GetComponent<MeshRenderer>().material = auraMaterial;
 
         aura.AddComponent<Billboard>();
@@ -83,13 +83,13 @@ public partial class DropPickup
         Destroy(glow.GetComponent<Collider>());
 
         glow.transform.SetParent(transform, false);
-        glow.transform.localScale = Vector3.one * groundGlowSize;
+        glow.transform.localScale = Vector3.one * config.groundGlowSize;
         // 눕혀서 바닥을 향하게. 지면과 겹쳐 깜빡이지 않도록 살짝 띄운다
         glow.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
         glow.AddComponent<DropPickupGroundGlow>()
             .Initialize(ResolveGroundY() + GroundGlowLift);
 
-        groundGlowMaterial = CreateAdditiveGlowMaterial(color * (groundGlowBrightness * strength));
+        groundGlowMaterial = CreateAdditiveGlowMaterial(color * (config.groundGlowBrightness * strength));
         glow.GetComponent<MeshRenderer>().material = groundGlowMaterial;
 
         glow.AddComponent<DropPickupAuraMotion>();
@@ -97,31 +97,31 @@ public partial class DropPickup
 
     private void SpawnSparkles(Color color, float strength)
     {
-        if (sparkleCount <= 0) return;
+        if (config.sparkleCount <= 0) return;
 
-        sparkleMaterial = CreateAdditiveGlowMaterial(color * (sparkleBrightnessMax * strength), SparkleTexture);
+        sparkleMaterial = CreateAdditiveGlowMaterial(color * (config.sparkleBrightnessMax * strength), SparkleTexture);
 
         var ring = new GameObject("SparkleRing");
         ring.transform.SetParent(transform, false);
         ring.transform.localPosition = Vector3.zero;
-        ring.AddComponent<DropPickupSparkleRing>().Initialize(sparkleOrbitSpeed);
+        ring.AddComponent<DropPickupSparkleRing>().Initialize(config.sparkleOrbitSpeed);
 
-        for (int i = 0; i < sparkleCount; i++)
+        for (int i = 0; i < config.sparkleCount; i++)
         {
             GameObject sparkle = GameObject.CreatePrimitive(PrimitiveType.Quad);
             sparkle.name = "Sparkle" + i;
             Destroy(sparkle.GetComponent<Collider>());
 
-            float angle = (360f / sparkleCount) * i;
+            float angle = (360f / config.sparkleCount) * i;
             sparkle.transform.SetParent(ring.transform, false);
-            sparkle.transform.localPosition = Quaternion.Euler(0f, 0f, angle) * (Vector3.up * sparkleOrbitRadius);
-            sparkle.transform.localScale = Vector3.one * sparkleSize;
+            sparkle.transform.localPosition = Quaternion.Euler(0f, 0f, angle) * (Vector3.up * config.sparkleOrbitRadius);
+            sparkle.transform.localScale = Vector3.one * config.sparkleSize;
 
             sparkle.GetComponent<MeshRenderer>().material = sparkleMaterial;
 
             sparkle.AddComponent<Billboard>();
             sparkle.AddComponent<DropPickupSparkle>()
-                   .Initialize(sparkleSize, sparkleBlinkSpeed, (float)i / sparkleCount);
+                   .Initialize(config.sparkleSize, config.sparkleBlinkSpeed, (float)i / config.sparkleCount);
         }
     }
 
