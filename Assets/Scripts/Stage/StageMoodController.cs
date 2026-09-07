@@ -4,6 +4,9 @@ using UnityEngine.Rendering;
 
 public class StageMoodController : MonoBehaviour
 {
+    // Skybox/Cubemap Blend 셰이더에 종속된 이름 -> 바꿀 여지가 없다
+    private const string SkyBlendProperty = "_CubemapTransition";
+
     [Header("Volumes (both global, same priority)")]
     [SerializeField] private Volume dayVolume;
     [SerializeField] private Volume nightVolume;
@@ -20,12 +23,10 @@ public class StageMoodController : MonoBehaviour
     [SerializeField] private float nightAmbientIntensity = 0.65f;
 
     [Header("Sky")]
-    [SerializeField] private string skyBlendProperty = "_CubemapTransition";
     [SerializeField] private float daySkyBlend = 0f;
     [SerializeField] private float nightSkyBlend = 0.85f;
 
     [Header("Fog")]
-    [SerializeField] private bool driveFog = true;
     [SerializeField] private Color dayFogColor = new Color(0.78f, 0.85f, 0.92f);
     [SerializeField] private float dayFogDensity = 0.012f;
     [SerializeField] private Color nightFogColor = new Color(0.13f, 0.15f, 0.30f);
@@ -54,11 +55,8 @@ public class StageMoodController : MonoBehaviour
         skyInstance = new Material(RenderSettings.skybox);
         RenderSettings.skybox = skyInstance;
 
-        if (driveFog)
-        {
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.ExponentialSquared;
-        }
+        RenderSettings.fog = true;
+        RenderSettings.fogMode = FogMode.ExponentialSquared;
     }
 
     private void HandleStageChanged(int mainStage, int subStage)
@@ -105,14 +103,10 @@ public class StageMoodController : MonoBehaviour
 
         RenderSettings.ambientIntensity = Mathf.Lerp(dayAmbientIntensity, nightAmbientIntensity, nightAmount);
 
-        if (skyInstance.HasProperty(skyBlendProperty))
-            skyInstance.SetFloat(skyBlendProperty, Mathf.Lerp(daySkyBlend, nightSkyBlend, nightAmount));
+        skyInstance.SetFloat(SkyBlendProperty, Mathf.Lerp(daySkyBlend, nightSkyBlend, nightAmount));
 
-        if (driveFog)
-        {
-            RenderSettings.fogColor = Color.Lerp(dayFogColor, nightFogColor, nightAmount);
-            RenderSettings.fogDensity = Mathf.Lerp(dayFogDensity, nightFogDensity, nightAmount);
-        }
+        RenderSettings.fogColor = Color.Lerp(dayFogColor, nightFogColor, nightAmount);
+        RenderSettings.fogDensity = Mathf.Lerp(dayFogDensity, nightFogDensity, nightAmount);
     }
 
     private void OnDestroy()
