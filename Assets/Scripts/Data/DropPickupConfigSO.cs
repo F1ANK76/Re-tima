@@ -43,9 +43,9 @@ public class DropPickupConfigSO : ScriptableObject
     public float auraSize = 1.5f;
     // 가산 헤일로 밝기 (등급 색에 곱해짐)
     public float auraBrightnessMax = 1.7f;
-    // 바닥에 깔리는 빛 자국. 아이템이 지면에서 떠 보이지 않게 하는 요인
-    public float groundGlowSize = 2.6f;
-    public float groundGlowBrightness = 1.1f;
+    // 지면을 비추는 라이트. 아이템이 바닥에서 떠 보이지 않게 하는 요인
+    public float groundLightIntensity = 3f;
+    public float groundLightRange = 2.6f;
 
     [Header("Twinkle sparkles")]
     // 위상을 서로 어긋나게 줄 것 -> 동시에 번쩍이면 반짝임이 아니라 깜빡이는 조명 하나가 된다

@@ -43,7 +43,6 @@ public partial class DropPickup : MonoBehaviour
     private float restBottomOffset;
     // 인스턴스마다 코드 생성 -> OnDestroy에서 직접 수거해야 한다
     private Material auraMaterial;
-    private Material groundGlowMaterial;
     // 이 아이템의 반짝임 전부가 공유. auraMaterial과 같이 OnDestroy에서 수거
     private Material sparkleMaterial;
     // 공용 sword/shield 재질의 인스턴스별 복사본 -> 원본 애셋은 건드리면 안 된다

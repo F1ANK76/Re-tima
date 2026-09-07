@@ -3,6 +3,12 @@ using UnityEngine;
 
 public partial class DropPickup
 {
+    // 동시에 지면을 비출 드랍 수 상한. 100개가 떨어져도 라이트는 이만큼만 켜진다
+    private const int MaxLitDrops = 8;
+    private static int litDropCount;
+
+    private bool hasFullEffects;
+
     private Renderer[] renderers;
     // 아우라 쿼드 제외, 메시 렌더러만 -> EquipmentPreviewRig가 실제 실루엣에 맞춰 아이콘을 잡는다
     public Renderer[] VisualRenderers => renderers;
@@ -71,28 +77,32 @@ public partial class DropPickup
         aura.AddComponent<Billboard>();
         aura.AddComponent<DropPickupAuraMotion>();
 
+        // 아우라는 등급 색을 알리는 최소 정보라 항상 붙인다.
+        // 지면 라이트와 반짝임은 비싸므로 예산 안에 드는 드랍만 받는다 -> 100개가 떨어져도 상한만큼만 켜진다
+        if (litDropCount >= MaxLitDrops) return;
+
+        litDropCount++;
+        hasFullEffects = true;
+
         SpawnGroundGlow(color, strength);
         SpawnSparkles(color, strength);
     }
 
-    // 실시간 라이트는 URP 추가 라이트 상한(4개)에 걸려 드랍이 겹치면 일부가 빠진다 -> 바닥에 눕힌 쿼드로 대체
+    // 바닥에 눕힌 쿼드는 판의 범위가 각진 경계로 드러난다 -> 라이트로 지면을 비춘다.
+    // 라이트는 표면 색에 곱해지므로 잔디 결이 살아있고, 지오메트리가 없어 경계가 생기지 않는다
     private void SpawnGroundGlow(Color color, float strength)
     {
-        GameObject glow = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        glow.name = "GroundGlow";
-        Destroy(glow.GetComponent<Collider>());
-
+        var glow = new GameObject("GroundLight");
         glow.transform.SetParent(transform, false);
-        glow.transform.localScale = Vector3.one * config.groundGlowSize;
-        // 눕혀서 바닥을 향하게. 지면과 겹쳐 깜빡이지 않도록 살짝 띄운다
-        glow.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
         glow.AddComponent<DropPickupGroundGlow>()
             .Initialize(ResolveGroundY() + GroundGlowLift);
 
-        groundGlowMaterial = CreateAdditiveGlowMaterial(color * (config.groundGlowBrightness * strength));
-        glow.GetComponent<MeshRenderer>().material = groundGlowMaterial;
-
-        glow.AddComponent<DropPickupAuraMotion>();
+        Light light = glow.AddComponent<Light>();
+        light.type = LightType.Point;
+        light.color = color;
+        light.intensity = config.groundLightIntensity * strength;
+        light.range = config.groundLightRange;
+        light.shadows = LightShadows.None;
     }
 
     private void SpawnSparkles(Color color, float strength)
@@ -160,8 +170,9 @@ public partial class DropPickup
 
     private void OnDestroy()
     {
+        if (hasFullEffects) litDropCount--;
+
         if (auraMaterial != null) Destroy(auraMaterial);
-        if (groundGlowMaterial != null) Destroy(groundGlowMaterial);
         if (sparkleMaterial != null) Destroy(sparkleMaterial);
         if (visualMaterialInstance != null) Destroy(visualMaterialInstance);
     }
@@ -233,8 +244,10 @@ public partial class DropPickup
                     float dy = (y - center) / center;
                     float r = Mathf.Sqrt(dx * dx + dy * dy);
 
+                    // 세제곱 -> 실시간 라이트처럼 중심에 몰리고 급히 감쇠한다.
+                    // 제곱이면 중간 밝기가 넓게 퍼져서 지면 삼각형 경계가 각진 영역으로 드러난다
                     float falloff = Mathf.SmoothStep(1f, 0f, Mathf.Clamp01(r));
-                    falloff *= falloff;
+                    falloff *= falloff * falloff;
 
                     pixels[y * size + x] = new Color(falloff, falloff, falloff, falloff);
                 }
