@@ -19,9 +19,25 @@ public partial class DropPickup
 
     private void SpawnVisual()
     {
-        GameObject prefab = kind == Kind.StatPotion
-            ? (statType == StatType.Attack ? atkVisualPrefab : hpVisualPrefab)
-            : (equipType == EquipmentType.Sword ? swordVisualPrefab : shieldVisualPrefab);
+        GameObject prefab;
+        switch (kind)
+        {
+            case Kind.StatPotion:
+                switch (statType)
+                {
+                    case StatType.Attack: prefab = atkVisualPrefab; break;
+                    default: prefab = hpVisualPrefab; break;
+                }
+                break;
+
+            default:
+                switch (equipType)
+                {
+                    case EquipmentType.Sword: prefab = swordVisualPrefab; break;
+                    default: prefab = shieldVisualPrefab; break;
+                }
+                break;
+        }
 
         if (prefab == null)
         {
