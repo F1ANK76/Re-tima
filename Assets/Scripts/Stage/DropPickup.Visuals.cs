@@ -141,6 +141,11 @@ public partial class DropPickup
         mat.SetTexture("_BaseMap", texture != null ? texture : GlowTexture);
         mat.SetColor("_BaseColor", tint);
 
+        // 가산 블렌딩이라 안개색이 더해진다 -> 텍스처가 0인 가장자리까지 밝아져 쿼드 크기만 한 사각형이 드러난다
+        mat.DisableKeyword("FOG_LINEAR");
+        mat.DisableKeyword("FOG_EXP");
+        mat.DisableKeyword("FOG_EXP2");
+
         return mat;
     }
 
