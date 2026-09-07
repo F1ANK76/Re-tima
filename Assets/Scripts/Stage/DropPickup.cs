@@ -74,10 +74,6 @@ public partial class DropPickup : MonoBehaviour
     private static readonly float[] HopHeights = { 1f, 0.34f, 0.13f, 0.05f };
     private static readonly float[] HopDurations = { 0.42f, 0.26f, 0.18f, 0.14f };
 
-    private Renderer[] renderers;
-    // 아우라 쿼드 제외, 메시 렌더러만 -> EquipmentPreviewRig가 실제 실루엣에 맞춰 아이콘을 잡는다
-    public Renderer[] VisualRenderers => renderers;
-
     private StatGrade grade;
     private Transform player;
     private CombatLoop combatLoop;

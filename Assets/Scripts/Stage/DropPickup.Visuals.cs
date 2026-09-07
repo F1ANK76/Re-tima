@@ -3,6 +3,10 @@ using UnityEngine;
 
 public partial class DropPickup
 {
+    private Renderer[] renderers;
+    // 아우라 쿼드 제외, 메시 렌더러만 -> EquipmentPreviewRig가 실제 실루엣에 맞춰 아이콘을 잡는다
+    public Renderer[] VisualRenderers => renderers;
+
     private float ComputeBottomOffset()
     {
         if (renderers == null || renderers.Length == 0) return 0f;
