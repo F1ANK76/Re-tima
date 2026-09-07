@@ -3,10 +3,8 @@ using UnityEngine;
 public class BackdropScroller : MonoBehaviour
 {
     [SerializeField] private Transform[] segments;
-    [SerializeField] private float scrollSpeed = 0.6f;
-    [SerializeField] private float segmentWidth = 14f;
-    [SerializeField] private float recycleDistance = 21f;
-    [SerializeField] private float speedEaseTime = 0.4f;
+    [SerializeField] private float scrollSpeed = 3f;
+    [SerializeField] private float speedEaseTime = 0.14f;
     [SerializeField] private float paceVariation = 0.08f;
     [SerializeField] private float stopSnapThreshold = 0.04f;
 
@@ -16,9 +14,17 @@ public class BackdropScroller : MonoBehaviour
     private float speedFactorVelocity;
     private float paceSeed;
 
+    // 세그먼트 배치에서 유도 -> 배치를 옮겨도 값이 어긋나지 않는다
+    private float wrapDistance;
+    private float recycleDistance;
+
     private void Awake()
     {
         paceSeed = Random.Range(0f, 100f);
+
+        float segmentWidth = segments[1].position.x - segments[0].position.x;
+        wrapDistance = segmentWidth * segments.Length;
+        recycleDistance = wrapDistance * 0.5f;
     }
 
     private void Update()
@@ -35,7 +41,6 @@ public class BackdropScroller : MonoBehaviour
         if (speedFactor < 0.0001f) return;
 
         float pace = 1f + (Mathf.PerlinNoise(Time.time * 0.15f + paceSeed, 0f) - 0.5f) * 2f * paceVariation;
-        float wrapDistance = segmentWidth * segments.Length;
         float step = scrollSpeed * pace * speedFactor * Time.deltaTime;
 
         foreach (Transform segment in segments)
