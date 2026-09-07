@@ -8,10 +8,6 @@ public partial class DropPickup : MonoBehaviour
         Equipment
     }
 
-    [Header("Kind")]
-    // 프리팹마다 고정 -> 비주얼 슬롯 선택과 지급 내용을 함께 결정
-    [SerializeField] private Kind kind = Kind.StatPotion;
-
     [Header("Toss + bounce (beat 1)")]
     // 던지기~안착 전체 시간
     [SerializeField] private float landDuration = 0.75f;
@@ -30,8 +26,7 @@ public partial class DropPickup : MonoBehaviour
     private float approachSpeed = 5f;
 
     [Header("Visual")]
-    [SerializeField] private float visualBaseScale = 0.4f;
-    // 종류별 프리팹/재질/회전. 등급 틴트는 아우라 담당 -> 여기엔 종류 구분만 있다
+    // 종류별 프리팹/재질/회전/크기. 등급 틴트는 아우라 담당 -> 여기엔 종류 구분만 있다
     [SerializeField] private DropVisualTableSO visualTable;
 
     [Header("Grade aura")]
@@ -59,6 +54,9 @@ public partial class DropPickup : MonoBehaviour
     // 첫 던지기 + 줄어드는 반동들. 각 도약은 지면->지면 사인 곡선. HopDurations 합 = 1
     private static readonly float[] HopHeights = { 1f, 0.34f, 0.13f, 0.05f };
     private static readonly float[] HopDurations = { 0.42f, 0.26f, 0.18f, 0.14f };
+
+    // Initialize에서 정해진다 -> 비주얼 조회와 지급 내용을 함께 결정
+    private Kind kind;
 
     private StatGrade grade;
     private Transform player;

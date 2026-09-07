@@ -13,6 +13,8 @@ public class DropVisualTableSO : ScriptableObject
         public Material material;
         // 애셋별 값 -> 눕혀 임포트된 메시를 세운다
         public Vector3 euler;
+        // 임포트 크기가 애셋마다 달라 여기서 맞춘다. 등급 배율은 따로 곱해진다
+        public float scale = 1f;
     }
 
     [Header("StatPotion")]

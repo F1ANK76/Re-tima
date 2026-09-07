@@ -30,7 +30,7 @@ public partial class DropPickup
         GameObject visual = Instantiate(entry.prefab, transform);
         visual.transform.localPosition = Vector3.zero;
         visual.transform.localRotation = Quaternion.Euler(entry.euler);
-        visual.transform.localScale = Vector3.one * visualBaseScale;
+        visual.transform.localScale = Vector3.one * entry.scale;
 
         if (kind == Kind.StatPotion)
         {
