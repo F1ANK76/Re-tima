@@ -19,39 +19,17 @@ public partial class DropPickup
 
     private void SpawnVisual()
     {
-        GameObject prefab;
-        switch (kind)
-        {
-            case Kind.StatPotion:
-                switch (statType)
-                {
-                    case StatType.Attack: prefab = atkVisualPrefab; break;
-                    default: prefab = hpVisualPrefab; break;
-                }
-                break;
+        DropVisualTableSO.Entry entry = visualTable.Get(kind, statType, equipType);
 
-            default:
-                switch (equipType)
-                {
-                    case EquipmentType.Sword: prefab = swordVisualPrefab; break;
-                    default: prefab = shieldVisualPrefab; break;
-                }
-                break;
-        }
-
-        if (prefab == null)
+        if (entry.prefab == null)
         {
             renderers = GetComponentsInChildren<Renderer>();
             return;
         }
 
-        Quaternion localRotation = kind == Kind.StatPotion
-            ? Quaternion.identity
-            : Quaternion.Euler(equipType == EquipmentType.Sword ? swordVisualEuler : shieldVisualEuler);
-
-        GameObject visual = Instantiate(prefab, transform);
+        GameObject visual = Instantiate(entry.prefab, transform);
         visual.transform.localPosition = Vector3.zero;
-        visual.transform.localRotation = localRotation;
+        visual.transform.localRotation = Quaternion.Euler(entry.euler);
         visual.transform.localScale = Vector3.one * visualBaseScale;
 
         if (kind == Kind.StatPotion)
@@ -62,18 +40,15 @@ public partial class DropPickup
 
         renderers = visual.GetComponentsInChildren<Renderer>();
 
-        if (kind == Kind.Equipment)
+        // 임포트 재질 위에 덮어씌운다 -> FBX가 텍스처 없이 들어와도 보이게
+        if (entry.material != null)
         {
-            Material overrideMaterial = equipType == EquipmentType.Sword ? swordMaterial : shieldMaterial;
-            if (overrideMaterial != null)
+            visualMaterialInstance = new Material(entry.material)
             {
-                visualMaterialInstance = new Material(overrideMaterial)
-                {
-                    color = GradeVisuals.GetColor(grade)
-                };
+                color = GradeVisuals.GetColor(grade)
+            };
 
-                for (int i = 0; i < renderers.Length; i++) renderers[i].sharedMaterial = visualMaterialInstance;
-            }
+            for (int i = 0; i < renderers.Length; i++) renderers[i].sharedMaterial = visualMaterialInstance;
         }
     }
 

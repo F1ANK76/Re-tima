@@ -29,24 +29,10 @@ public partial class DropPickup : MonoBehaviour
     // 몬스터 걷는 속도와 같아야 한다 -> 다르면 플레이어가 두 속도로 달리는 것처럼 보인다
     private float approachSpeed = 5f;
 
-    [Header("Visual (shared)")]
+    [Header("Visual")]
     [SerializeField] private float visualBaseScale = 0.4f;
-
-    [Header("Visual - StatPotion")]
-    // ATK=RedVial, HP=GreenVial. 등급 틴트 없음 -> 색은 종류 구분 전용, 희귀도는 아우라 담당
-    [SerializeField] private GameObject atkVisualPrefab;
-    [SerializeField] private GameObject hpVisualPrefab;
-
-    [Header("Visual - Equipment")]
-    // 타입별 메시 하나씩. 희귀도는 아우라/반짝임/크기로만 표현
-    [SerializeField] private GameObject swordVisualPrefab;
-    [SerializeField] private GameObject shieldVisualPrefab;
-    // 임포트 재질 위에 덮어씌운다 -> FBX가 텍스처 없이 들어와도 보이게
-    [SerializeField] private Material swordMaterial;
-    [SerializeField] private Material shieldMaterial;
-    // 방패 메시가 눕혀진 원반이라 세워야 한다. 애셋별 값이라 로직에 안 박는다
-    [SerializeField] private Vector3 swordVisualEuler = Vector3.zero;
-    [SerializeField] private Vector3 shieldVisualEuler = new Vector3(90f, 0f, 0f);
+    // 종류별 프리팹/재질/회전. 등급 틴트는 아우라 담당 -> 여기엔 종류 구분만 있다
+    [SerializeField] private DropVisualTableSO visualTable;
 
     [Header("Grade aura")]
     [SerializeField] private float auraSize = 1.5f;
