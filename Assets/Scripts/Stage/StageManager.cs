@@ -4,8 +4,6 @@ using UnityEngine.SceneManagement;
 
 public class StageManager : MonoBehaviour
 {
-    [SerializeField] private float nextMonsterDelay = 2f;
-
     [SerializeField] private MonsterSpawner spawner;
     [SerializeField] private StageBannerView banner;
     [SerializeField] private ClearBannerView clearBanner;

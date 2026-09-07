@@ -76,8 +76,6 @@ public partial class Monster : MonoBehaviour
     private bool normalLoopStarted;
     private float attackInterval;
 
-    // 몬스터가 스윙을 시작하고 실제로 타격이 들어가기까지의 지연.
-    [SerializeField] private float attackImpactDelay = 0.3f;
     [SerializeField] private float deathAnimDuration = 1f;
 
     public float DeathVisualDuration => deathAnimDuration;
