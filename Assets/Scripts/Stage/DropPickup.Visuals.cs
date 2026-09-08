@@ -137,7 +137,6 @@ public partial class DropPickup
         var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
 
         mat.SetFloat("_Surface", 1f);
-        mat.SetFloat("_Blend", 2f);
         // 셰이더는 rgb에 안개색을 더한다 -> 감쇠를 알파에 실어 블렌드 단계에서 곱해야 가장자리가 안개색까지 0이 된다.
         // 머티리얼에서 FOG_* 키워드를 끄는 건 안 통한다. multi_compile_fog는 전역 키워드라 RenderSettings.fog가 덮어쓴다
         mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
@@ -242,8 +241,7 @@ public partial class DropPickup
                     float dy = (y - center) / center;
                     float r = Mathf.Sqrt(dx * dx + dy * dy);
 
-                    // 세제곱 -> 실시간 라이트처럼 중심에 몰리고 급히 감쇠한다.
-                    // 제곱이면 중간 밝기가 넓게 퍼져서 지면 삼각형 경계가 각진 영역으로 드러난다
+                    // 세제곱 -> 실시간 라이트처럼 중심에 몰리고 급히 감쇠한다
                     float falloff = Mathf.SmoothStep(1f, 0f, Mathf.Clamp01(r));
                     falloff *= falloff * falloff;
 
