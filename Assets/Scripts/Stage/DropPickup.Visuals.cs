@@ -74,30 +74,27 @@ public partial class DropPickup
         auraMaterial = CreateAdditiveGlowMaterial(color * (config.auraBrightnessMax * strength));
         aura.GetComponent<MeshRenderer>().material = auraMaterial;
 
+        // 아우라는 등급 색을 알리는 최소 정보라 항상 붙인다.
+        // 라이트와 반짝임은 비싸므로 예산 안에 드는 드랍만 받는다 -> 100개가 떨어져도 상한만큼만 켜진다
+        if (litDropCount < MaxLitDrops)
+        {
+            litDropCount++;
+            hasFullEffects = true;
+
+            // AuraMotion보다 앞에 -> 그쪽 Awake가 라이트를 집는다
+            AttachAuraLight(aura, color, strength);
+            SpawnSparkles(color, strength);
+        }
+
         aura.AddComponent<Billboard>();
         aura.AddComponent<DropPickupAuraMotion>();
-
-        // 아우라는 등급 색을 알리는 최소 정보라 항상 붙인다.
-        // 지면 라이트와 반짝임은 비싸므로 예산 안에 드는 드랍만 받는다 -> 100개가 떨어져도 상한만큼만 켜진다
-        if (litDropCount >= MaxLitDrops) return;
-
-        litDropCount++;
-        hasFullEffects = true;
-
-        SpawnGroundGlow(color, strength);
-        SpawnSparkles(color, strength);
     }
 
-    // 바닥에 눕힌 쿼드는 판의 범위가 각진 경계로 드러난다 -> 라이트로 지면을 비춘다.
-    // 라이트는 표면 색에 곱해지므로 잔디 결이 살아있고, 지오메트리가 없어 경계가 생기지 않는다
-    private void SpawnGroundGlow(Color color, float strength)
+    // 라이트를 아우라에 붙인다 -> 아이템과 함께 떠오르며 지면을 비춘다.
+    // 지면에 고정하면 자국은 안정되지만 아이템이 빛을 내뿜는 느낌이 사라진다
+    private void AttachAuraLight(GameObject aura, Color color, float strength)
     {
-        var glow = new GameObject("GroundLight");
-        glow.transform.SetParent(transform, false);
-        glow.AddComponent<DropPickupGroundGlow>()
-            .Initialize(ResolveGroundY() + GroundGlowLift);
-
-        Light light = glow.AddComponent<Light>();
+        Light light = aura.AddComponent<Light>();
         light.type = LightType.Point;
         light.color = color;
         light.intensity = config.groundLightIntensity * strength;
@@ -141,7 +138,9 @@ public partial class DropPickup
 
         mat.SetFloat("_Surface", 1f);
         mat.SetFloat("_Blend", 2f);
-        mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
+        // 셰이더는 rgb에 안개색을 더한다 -> 감쇠를 알파에 실어 블렌드 단계에서 곱해야 가장자리가 안개색까지 0이 된다.
+        // 머티리얼에서 FOG_* 키워드를 끄는 건 안 통한다. multi_compile_fog는 전역 키워드라 RenderSettings.fog가 덮어쓴다
+        mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
         mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
         mat.SetFloat("_ZWrite", 0f);
         mat.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
@@ -149,12 +148,10 @@ public partial class DropPickup
         mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
 
         mat.SetTexture("_BaseMap", texture != null ? texture : GlowTexture);
-        mat.SetColor("_BaseColor", tint);
 
-        // 가산 블렌딩이라 안개색이 더해진다 -> 텍스처가 0인 가장자리까지 밝아져 쿼드 크기만 한 사각형이 드러난다
-        mat.DisableKeyword("FOG_LINEAR");
-        mat.DisableKeyword("FOG_EXP");
-        mat.DisableKeyword("FOG_EXP2");
+        // 알파는 감쇠 전용 -> 밝기는 rgb만 담당한다
+        tint.a = 1f;
+        mat.SetColor("_BaseColor", tint);
 
         return mat;
     }
@@ -208,7 +205,8 @@ public partial class DropPickup
                     float core = Falloff(Mathf.Sqrt(dx * dx + dy * dy) * 2.6f);
 
                     float v = Mathf.Clamp01(horizontal + vertical + core);
-                    pixels[y * size + x] = new Color(v, v, v, v);
+                    // rgb는 흰색 고정, 감쇠는 알파에만 -> 블렌드에서 곱해진다
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, v);
                 }
             }
 
@@ -249,7 +247,8 @@ public partial class DropPickup
                     float falloff = Mathf.SmoothStep(1f, 0f, Mathf.Clamp01(r));
                     falloff *= falloff * falloff;
 
-                    pixels[y * size + x] = new Color(falloff, falloff, falloff, falloff);
+                    // rgb는 흰색 고정, 감쇠는 알파에만 -> 블렌드에서 곱해진다
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, falloff);
                 }
             }
 

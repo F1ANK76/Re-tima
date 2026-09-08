@@ -14,9 +14,6 @@ public partial class DropPickup : MonoBehaviour
     // 몬스터 걷는 속도와 같아야 한다 -> 다르면 플레이어가 두 속도로 달리는 것처럼 보인다
     private float approachSpeed = 5f;
 
-    // 지면과 겹쳐 깜빡이지 않을 만큼만. 디자인 손잡이가 아니라 구현 여유값이다
-    private const float GroundGlowLift = 0.02f;
-
     // 첫 던지기 + 줄어드는 반동들. 각 도약은 지면->지면 사인 곡선. HopDurations 합 = 1
     private static readonly float[] HopHeights = { 1f, 0.34f, 0.13f, 0.05f };
     private static readonly float[] HopDurations = { 0.42f, 0.26f, 0.18f, 0.14f };
