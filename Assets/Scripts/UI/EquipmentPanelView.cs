@@ -39,12 +39,25 @@ public class EquipmentPanelView : MonoBehaviour
     private void OnEnable()
     {
         GameEvents.OnEquipmentPickedUp += HandleEquipmentPickedUp;
+
+        // Refresh보다 앞에 -> 꺼진 리그 밑에서는 프리뷰의 코루틴이 시작되지 않는다
+        SetRigsActive(true);
         Refresh();
     }
 
     private void OnDisable()
     {
         GameEvents.OnEquipmentPickedUp -= HandleEquipmentPickedUp;
+
+        // 리그는 씬 루트에 있어 패널과 함께 안 꺼진다 -> 직접 끈다.
+        // 안 끄면 아이콘 카메라 2대가 창을 닫은 뒤에도 매 프레임 렌더타겟을 갱신한다
+        SetRigsActive(false);
+    }
+
+    private void SetRigsActive(bool active)
+    {
+        swordRig.gameObject.SetActive(active);
+        shieldRig.gameObject.SetActive(active);
     }
 
     private void OnDestroy()
@@ -104,6 +117,9 @@ public class EquipmentPanelView : MonoBehaviour
 
         var rig = go.AddComponent<EquipmentPreviewRig>();
         rig.Initialize(previewPickupPrefab);
+
+        // 패널이 열릴 때 켠다 -> Equip 탭을 안 열면 렌더링 비용이 0이다
+        go.SetActive(false);
         return rig;
     }
 }
