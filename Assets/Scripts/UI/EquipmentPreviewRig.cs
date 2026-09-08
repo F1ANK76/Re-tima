@@ -11,6 +11,8 @@ public class EquipmentPreviewRig : MonoBehaviour
 
     private DropPickup pickupPrefab;
     private DropPickup current;
+    // 지금 세워둔 등급. 리그 하나가 한 슬롯 전담이라 등급만 보면 같은 프리뷰인지 알 수 있다
+    private StatGrade? shownGrade;
     private Camera previewCamera;
     private RenderTexture renderTexture;
 
@@ -41,6 +43,9 @@ public class EquipmentPreviewRig : MonoBehaviour
 
     public void Show(EquipmentType equipType, StatGrade grade)
     {
+        // 패널을 열 때마다, 그리고 다른 슬롯을 주웠을 때도 Show가 불린다 -> 같은 프리뷰면 그냥 둔다
+        if (shownGrade == grade) return;
+
         Clear();
         if (pickupPrefab == null) return;
 
@@ -57,6 +62,7 @@ public class EquipmentPreviewRig : MonoBehaviour
         }
 
         FrameOnVisual();
+        shownGrade = grade;
     }
 
     private void FrameOnVisual()
@@ -78,8 +84,13 @@ public class EquipmentPreviewRig : MonoBehaviour
     public void Clear()
     {
         if (current == null) return;
+
+        // 파괴는 프레임 끝에 처리된다 -> 같은 프레임에 새 프리뷰가 들어오면 둘이 겹쳐 보인다
+        current.gameObject.SetActive(false);
         Destroy(current.gameObject);
+
         current = null;
+        shownGrade = null;
     }
 
     private void OnDestroy()
