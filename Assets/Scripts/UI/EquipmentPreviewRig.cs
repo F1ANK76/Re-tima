@@ -2,8 +2,10 @@ using UnityEngine;
 
 public class EquipmentPreviewRig : MonoBehaviour
 {
-    private const int TextureResolution = 256;
-    private const int TextureAntiAliasing = 4;
+    // 아이콘은 1920 기준 96px로 보인다. 캔버스가 화면에 맞춰 커지니 4K에서 192px -> 거기까지 선명하게
+    private const int TextureResolution = 192;
+    // 1920에서는 2배로 찍어 줄이는 셈이라 MSAA 없이도 테두리가 뭉개지지 않는다
+    private const int TextureAntiAliasing = 1;
 
     private const float CameraFieldOfView = 45f;
     private const float FrameFill = 0.62f;
