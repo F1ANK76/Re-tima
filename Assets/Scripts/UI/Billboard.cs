@@ -9,6 +9,9 @@ public class Billboard : MonoBehaviour
     {
         cam = target != null ? target.transform : null;
         cameraAssigned = true;
+
+        // 한 장만 찍는 아이콘 프리뷰는 LateUpdate를 기다릴 수 없다 -> 그 자리에서 맞춘다
+        Face();
     }
 
     private void Start()
@@ -18,6 +21,11 @@ public class Billboard : MonoBehaviour
     }
 
     private void LateUpdate()
+    {
+        Face();
+    }
+
+    private void Face()
     {
         if (cam == null) return;
         transform.rotation = Quaternion.LookRotation(transform.position - cam.position);

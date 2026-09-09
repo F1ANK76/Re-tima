@@ -23,6 +23,15 @@ public class DropPickupAuraMotion : MonoBehaviour
         if (auraLight != null) baseIntensity = auraLight.intensity;
     }
 
+    // 아이콘 프리뷰용. 페이드와 펄스가 다 올라온 모습으로 세워두고 멈춘다
+    public void FreezeAtRest()
+    {
+        material.SetColor("_BaseColor", baseTint);
+        if (auraLight != null) auraLight.intensity = baseIntensity;
+
+        enabled = false;
+    }
+
     private void Update()
     {
         elapsed += Time.deltaTime;

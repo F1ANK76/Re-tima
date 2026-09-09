@@ -19,6 +19,13 @@ public class DropPickupSparkle : MonoBehaviour
         transform.localScale = Vector3.one * (restScale * MinScaleFactor);
     }
 
+    // 아이콘 프리뷰용. 깜빡임이 가장 커진 크기로 세워두고 멈춘다
+    public void FreezeAtRest()
+    {
+        transform.localScale = Vector3.one * restScale;
+        enabled = false;
+    }
+
     private void Update()
     {
         elapsed += Time.deltaTime;

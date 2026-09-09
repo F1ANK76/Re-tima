@@ -41,6 +41,11 @@ public class EquipmentPreviewRig : MonoBehaviour
         previewCamera.nearClipPlane = 0.05f;
         previewCamera.farClipPlane = 20f;
         previewCamera.targetTexture = renderTexture;
+
+        // 아이콘은 멈춰 있으므로 매 프레임 찍을 이유가 없다 -> 카메라는 끄고 필요할 때만 Render를 부른다
+        previewCamera.enabled = false;
+        // 빈 칸도 한 번은 찍어야 한다 -> 안 찍은 렌더타겟에는 아무 내용도 없다
+        previewCamera.Render();
     }
 
     public void Show(EquipmentType equipType, StatGrade grade)
@@ -48,7 +53,7 @@ public class EquipmentPreviewRig : MonoBehaviour
         // 패널을 열 때마다, 그리고 다른 슬롯을 주웠을 때도 Show가 불린다 -> 같은 프리뷰면 그냥 둔다
         if (shownGrade == grade) return;
 
-        Clear();
+        DestroyCurrent();
         if (pickupPrefab == null) return;
 
         current = Instantiate(pickupPrefab, transform.position, Quaternion.identity, transform);
@@ -58,13 +63,27 @@ public class EquipmentPreviewRig : MonoBehaviour
         current.transform.localPosition = Vector3.zero;
         current.transform.localScale = Vector3.one * GradeVisuals.GetPotionScale(grade);
 
+        // 카메라를 옮긴 뒤에 굳혀야 한다 -> 빌보드가 옮기기 전 카메라를 보고 돌아간다
+        FrameOnVisual();
+        FreezePreview();
+
+        previewCamera.Render();
+        shownGrade = grade;
+    }
+
+    // 아이콘은 움직이지 않는다 -> 연출을 다 올라온 모습으로 세워두고 멈춘 뒤 한 장만 찍는다
+    private void FreezePreview()
+    {
         foreach (Billboard billboard in current.GetComponentsInChildren<Billboard>(true))
         {
+            // SetCamera가 그 자리에서 방향까지 맞춘다 -> LateUpdate를 기다리지 않는다
             billboard.SetCamera(previewCamera);
+            billboard.enabled = false;
         }
 
-        FrameOnVisual();
-        shownGrade = grade;
+        foreach (DropPickupAuraMotion aura in current.GetComponentsInChildren<DropPickupAuraMotion>(true)) aura.FreezeAtRest();
+        foreach (DropPickupSparkle sparkle in current.GetComponentsInChildren<DropPickupSparkle>(true)) sparkle.FreezeAtRest();
+        foreach (DropPickupSparkleRing ring in current.GetComponentsInChildren<DropPickupSparkleRing>(true)) ring.enabled = false;
     }
 
     private void FrameOnVisual()
@@ -87,7 +106,16 @@ public class EquipmentPreviewRig : MonoBehaviour
     {
         if (current == null) return;
 
-        // 파괴는 프레임 끝에 처리된다 -> 같은 프레임에 새 프리뷰가 들어오면 둘이 겹쳐 보인다
+        DestroyCurrent();
+        // 빈 칸으로 다시 찍는다 -> 안 찍으면 마지막 아이템이 그대로 남아 있다
+        previewCamera.Render();
+    }
+
+    private void DestroyCurrent()
+    {
+        if (current == null) return;
+
+        // 파괴는 프레임 끝에 처리된다 -> 지금 찍는 그림에 옛 아이템이 남지 않게 먼저 숨긴다
         current.gameObject.SetActive(false);
         Destroy(current.gameObject);
 
